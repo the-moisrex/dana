@@ -1,22 +1,23 @@
 #include "../sdk/args.hpp"
 #include "../sdk/embed.hpp"
 #include "../sdk/prompt_registry.hpp"
+
 #include <format>
 #include <string>
 #include <string_view>
 
 namespace prompt::prompts {
 
-namespace {
+    namespace {
 
-constexpr std::string_view kSummary = "Rewrite this C++ code to be truly noexcept where it reasonably can be.";
+        constexpr std::string_view kSummary = "Rewrite this C++ code to be truly noexcept where it reasonably can be.";
 
-} // namespace
+    } // namespace
 
-static void execute_cpp_noexcept(view const& v, result& r) {
-    auto opts = file_options_or_throw(v);
+    static void execute_cpp_noexcept(view const& v, result& r) {
+        auto opts = file_options_or_throw(v);
 
-    r.out = R"PROMPT(Make the following C++ code truly noexcept wherever it reasonably can be.
+        r.out = R"PROMPT(Make the following C++ code truly noexcept wherever it reasonably can be.
 
 For each function, judge whether it can honestly promise not to throw. When it
 can, rewrite it so it no longer has any throw site:
@@ -53,11 +54,11 @@ reporting — a failure must still be visible to the caller (return value, statu
 enum, assert, or a documented precondition).
 
 )PROMPT";
-}
+    }
 
-static void render_help_cpp_noexcept(std::ostream& os) {
-    os << file_usage_help("cpp.noexcept") << "\n"
-       << kSummary << R"EOF(
+    static void render_help_cpp_noexcept(std::ostream& os) {
+        os << file_usage_help("cpp.noexcept") << "\n"
+           << kSummary << R"EOF(
 
 For each function that could reasonably become noexcept, find a way to avoid
 throwing — eliminate allocations where you can, make the remaining ones
@@ -69,9 +70,9 @@ Return the answer primarily as a git diff.
 
 Options:
 )EOF" << file_options_help("the embedded C++ code");
-}
+    }
 
-bool const registered =
-    prompt::register_prompt("cpp.noexcept", kSummary, &execute_cpp_noexcept, &render_help_cpp_noexcept);
+    bool const registered =
+      prompt::register_prompt("cpp.noexcept", kSummary, &execute_cpp_noexcept, &render_help_cpp_noexcept);
 
 } // namespace prompt::prompts

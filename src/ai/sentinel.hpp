@@ -13,39 +13,45 @@
 
 namespace prompt::ai::sentinel {
 
-// The sentinel gate rejected us, or a puzzle could not be solved.
-class error : public std::runtime_error {
-  public:
-    using std::runtime_error::runtime_error;
-};
+    // The sentinel gate rejected us, or a puzzle could not be solved.
+    class error : public std::runtime_error {
+      public:
+        using std::runtime_error::runtime_error;
+    };
 
-//: `gAAAAAC` — the requirements token prefix.
-inline constexpr std::string_view kRequestPrefix = "gAAAAAC";
-//: `gAAAAAB` — the proof token prefix.
-inline constexpr std::string_view kProofPrefix = "gAAAAAB";
-//: The proof-of-work hash the server currently verifies.
-inline constexpr std::string_view kProofHash = "zvt";
+    //: `gAAAAAC` — the requirements token prefix.
+    inline constexpr std::string_view kRequestPrefix = "gAAAAAC";
+    //: `gAAAAAB` — the proof token prefix.
+    inline constexpr std::string_view kProofPrefix   = "gAAAAAB";
+    //: The proof-of-work hash the server currently verifies.
+    inline constexpr std::string_view kProofHash     = "zvt";
 
-// The 25-element array the client serialises into the `p` token.
-nlohmann::json build_fingerprint(std::string_view user_agent, std::optional<std::string> script_source,
-                                 std::string_view data_build);
+    // The 25-element array the client serialises into the `p` token.
+    nlohmann::json build_fingerprint(
+      std::string_view           user_agent,
+      std::optional<std::string> script_source,
+      std::string_view           data_build);
 
-// `gAAAAAC` + base64(json(fingerprint)) — the value sent as `{"p": …}`.
-std::string requirements_token(nlohmann::json const& fingerprint);
+    // `gAAAAAC` + base64(json(fingerprint)) — the value sent as `{"p": …}`.
+    std::string requirements_token(nlohmann::json const& fingerprint);
 
-// The client's current proof-of-work hash (FNV-1a + murmur finaliser), as eight
-// lowercase hex digits.
-std::string zvt(std::string_view text);
+    // The client's current proof-of-work hash (FNV-1a + murmur finaliser), as eight
+    // lowercase hex digits.
+    std::string zvt(std::string_view text);
 
-// The `gAAAAAB…` proof token for `seed` / `difficulty`.
-std::string solve_proof(std::string const& seed, std::string const& difficulty, nlohmann::json const& fingerprint,
-                        std::string_view algo = kProofHash, int limit = 500000);
+    // The `gAAAAAB…` proof token for `seed` / `difficulty`.
+    std::string solve_proof(
+      std::string const&    seed,
+      std::string const&    difficulty,
+      nlohmann::json const& fingerprint,
+      std::string_view      algo  = kProofHash,
+      int                   limit = 500'000);
 
-// Decode and run a `dx` program; return its base64 result (or nullopt).
-std::optional<std::string> solve_turnstile(std::string const& dx, std::string const& key);
+    // Decode and run a `dx` program; return its base64 result (or nullopt).
+    std::optional<std::string> solve_turnstile(std::string const& dx, std::string const& key);
 
-// Standard base64 (the VM's atob/btoa and the token encoding).
-std::string encode_base64(std::string_view data);
-std::optional<std::string> decode_base64(std::string_view data);
+    // Standard base64 (the VM's atob/btoa and the token encoding).
+    std::string                encode_base64(std::string_view data);
+    std::optional<std::string> decode_base64(std::string_view data);
 
 } // namespace prompt::ai::sentinel

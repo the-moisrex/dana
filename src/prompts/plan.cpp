@@ -1,23 +1,25 @@
 #include "../sdk/prompt_registry.hpp"
+
 #include <ostream>
 #include <string>
 
 namespace prompt::prompts {
 
-static void render_help_plan(std::ostream& os);
+    static void render_help_plan(std::ostream& os);
 
-// The plan-mode instructions. Deliberately data-free: it takes no arguments and
-// embeds nothing, so `prompt .files a.cpp .plan` adds the code exactly once
-// (from `.files`) and then these instructions.
-static void execute_plan(view const& v, result& r) {
-    if (!v.args.empty()) {
-        throw usage_error{"prompt plan: takes no arguments — it only prints the plan-mode instructions.\n"
-                          "Chain it after a file prompt, e.g. `prompt .files a.cpp .plan`.\n" +
-                          help_text(render_help_plan)};
-    }
+    // The plan-mode instructions. Deliberately data-free: it takes no arguments and
+    // embeds nothing, so `prompt .files a.cpp .plan` adds the code exactly once
+    // (from `.files`) and then these instructions.
+    static void execute_plan(view const& v, result& r) {
+        if (!v.args.empty()) {
+            throw usage_error{
+              "prompt plan: takes no arguments — it only prints the plan-mode instructions.\n"
+              "Chain it after a file prompt, e.g. `prompt .files a.cpp .plan`.\n" +
+              help_text(render_help_plan)};
+        }
 
-    r.out =
-        R"HELP(You are in PLAN MODE. Your goal is to produce a detailed, decision-complete
+        r.out =
+          R"HELP(You are in PLAN MODE. Your goal is to produce a detailed, decision-complete
 implementation plan before writing any code.
 
 Work through these phases in order. Ask the user questions at any point when
@@ -79,24 +81,25 @@ Produce a structured plan with these sections:
 - Keep the plan concise enough to scan quickly but detailed enough to
   execute without further questions.
 )HELP";
-}
+    }
 
-static void render_help_plan(std::ostream& os) {
-    os << R"EOF(Usage: prompt plan
+    static void render_help_plan(std::ostream& os) {
+        os << R"EOF(Usage: prompt plan
 
 Generates a structured plan mode prompt for an AI assistant. The AI is instructed to ask clarifying questions, analyze the code in the prompt, and produce a detailed implementation plan before writing any code.
 
 This prompt carries no data and takes no arguments: chain it after a file prompt, e.g. `prompt .files a.cpp .plan`. Designed for chat mode where the AI cannot access files directly.
 )EOF";
-}
+    }
 
-// This file is the prompt: it implements it and registers it at static-init time
-// (no central list — see sdk/prompt_registry.hpp).
-bool const registered =
-    prompt::register_prompt("plan",
-                            "Generates a structured plan mode prompt for an AI assistant. The AI is instructed "
-                            "to ask clarifying questions, analyze the code in the prompt, and produce a detailed "
-                            "implementation plan before writing any code.",
-                            &execute_plan, &render_help_plan);
+    // This file is the prompt: it implements it and registers it at static-init time
+    // (no central list — see sdk/prompt_registry.hpp).
+    bool const registered = prompt::register_prompt(
+      "plan",
+      "Generates a structured plan mode prompt for an AI assistant. The AI is instructed "
+      "to ask clarifying questions, analyze the code in the prompt, and produce a detailed "
+      "implementation plan before writing any code.",
+      &execute_plan,
+      &render_help_plan);
 
 } // namespace prompt::prompts

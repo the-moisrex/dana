@@ -1,21 +1,22 @@
 #include "../sdk/args.hpp"
 #include "../sdk/embed.hpp"
 #include "../sdk/prompt_registry.hpp"
+
 #include <string>
 
 namespace prompt::prompts {
 
-static void execute_cpp_reviewer(view const& v, result& r) {
-    auto head_lines = head_lines_or_throw(v);
-    (void)head_lines; // cpp-reviewer.sh only embeds stdin, which --head never trims
+    static void execute_cpp_reviewer(view const& v, result& r) {
+        auto head_lines = head_lines_or_throw(v);
+        (void) head_lines; // cpp-reviewer.sh only embeds stdin, which --head never trims
 
-    std::string output;
-    if (v.in.piped()) {
-        output += embed_stdin(v.in.text(), head_lines);
-    }
+        std::string output;
+        if (v.in.piped()) {
+            output += embed_stdin(v.in.text(), head_lines);
+        }
 
-    output +=
-        R"PROMPT(You are an expert C++ code reviewer with deep knowledge of modern C++ (C++17, C++20, C++23, C++26) and strict adherence to the C++ Core Guidelines.
+        output +=
+          R"PROMPT(You are an expert C++ code reviewer with deep knowledge of modern C++ (C++17, C++20, C++23, C++26) and strict adherence to the C++ Core Guidelines.
 Follow these principles when reviewing C++ code:
 
 - Check for compliance with C++ Core Guidelines (ES, SL, NL, F, C, Enum, Con, T, I, R, Pro, E, S, Cp)
@@ -38,11 +39,11 @@ Provide constructive feedback highlighting issues, suggesting improvements, and 
 
 )PROMPT";
 
-    r.out = std::move(output);
-}
+        r.out = std::move(output);
+    }
 
-static void render_help_cpp_reviewer(std::ostream& os) {
-    os << R"EOF(Usage: prompt cpp-reviewer [--head N] [FILE...]
+    static void render_help_cpp_reviewer(std::ostream& os) {
+        os << R"EOF(Usage: prompt cpp-reviewer [--head N] [FILE...]
        some-command | prompt cpp-reviewer [--head N] [FILE...]
 
 Builds a prompt for reviewing C++ code from stdin or embedded files.
@@ -50,12 +51,14 @@ Builds a prompt for reviewing C++ code from stdin or embedded files.
 Options:
   --head N   Keep only the first N lines of the embedded context
 )EOF";
-}
+    }
 
-// This file is the prompt: it implements it and registers it at static-init time
-// (no central list — see sdk/prompt_registry.hpp).
-bool const registered =
-    prompt::register_prompt("cpp.review", "Builds a prompt for reviewing C++ code from stdin or embedded files.",
-                            &execute_cpp_reviewer, &render_help_cpp_reviewer);
+    // This file is the prompt: it implements it and registers it at static-init time
+    // (no central list — see sdk/prompt_registry.hpp).
+    bool const registered = prompt::register_prompt(
+      "cpp.review",
+      "Builds a prompt for reviewing C++ code from stdin or embedded files.",
+      &execute_cpp_reviewer,
+      &render_help_cpp_reviewer);
 
 } // namespace prompt::prompts

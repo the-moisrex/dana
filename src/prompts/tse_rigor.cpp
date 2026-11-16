@@ -1,15 +1,16 @@
 #include "../sdk/prompt_registry.hpp"
+
 #include <ostream>
 #include <string>
 
 namespace prompt::prompts {
 
-static void render_help_tse_rigor(std::ostream& os);
+    static void render_help_tse_rigor(std::ostream& os);
 
-// A standalone checklist that keeps market/TSE analysis and backtests honest.
-// Chain it onto a data prompt (`prompt tse فولاد .tse.rigor`) or run it on its own.
-static void execute_tse_rigor([[maybe_unused]] view const& v, result& r) {
-    r.out = R"EOF(**When analyzing Tehran Stock Exchange (TSE) data or any market backtest:**
+    // A standalone checklist that keeps market/TSE analysis and backtests honest.
+    // Chain it onto a data prompt (`prompt tse فولاد .tse.rigor`) or run it on its own.
+    static void execute_tse_rigor([[maybe_unused]] view const& v, result& r) {
+        r.out = R"EOF(**When analyzing Tehran Stock Exchange (TSE) data or any market backtest:**
 
 1. **Never compute buyer/seller power or ratios manually in prose.**
    First build a clear table (or code output) with: date, closing_rial, last_rial, volume, individual_buy_shares, individual_sell_shares, individual_buyers, individual_sellers, and the computed power. Show the exact arithmetic for any example you cite.
@@ -51,10 +52,10 @@ static void execute_tse_rigor([[maybe_unused]] view const& v, result& r) {
 
 12. **Always highlight left-tail risk** (max loss, fat tails) with the same prominence as positive mean returns. If max losses are extreme, state that the edge is unusable without hard stops.
 )EOF";
-}
+    }
 
-static void render_help_tse_rigor(std::ostream& os) {
-    os << R"EOF(Usage: prompt tse.rigor
+    static void render_help_tse_rigor(std::ostream& os) {
+        os << R"EOF(Usage: prompt tse.rigor
 
 A verification checklist that keeps Tehran Stock Exchange (TSE) and general market analysis or backtests honest: compute ratios from a table instead of prose, never cite uncomputed averages or levels, avoid look-ahead bias, require baseline/median/win-loss/expectancy statistics, separate tested facts from discretionary judgment, and give left-tail risk the same prominence as mean returns. Works standalone or chained onto a data prompt.
 
@@ -63,17 +64,18 @@ Examples:
   prompt tse فولاد .tse.rigor
   prompt tse فولاد .tse.analyze .tse.rigor
 )EOF";
-}
+    }
 
-// This file is the prompt: it implements it and registers it at static-init time
-// (no central list — see sdk/prompt_registry.hpp).
-bool const registered = prompt::register_prompt(
-    "tse.rigor",
-    "A verification checklist that keeps Tehran Stock Exchange (TSE) and general market analysis or backtests "
-    "honest: compute ratios from a table instead of prose, never cite uncomputed averages or levels, avoid "
-    "look-ahead bias, require baseline/median/win-loss/expectancy statistics, separate tested facts from "
-    "discretionary judgment, and give left-tail risk the same prominence as mean returns. Works standalone or "
-    "chained onto a data prompt.",
-    &execute_tse_rigor, &render_help_tse_rigor);
+    // This file is the prompt: it implements it and registers it at static-init time
+    // (no central list — see sdk/prompt_registry.hpp).
+    bool const registered = prompt::register_prompt(
+      "tse.rigor",
+      "A verification checklist that keeps Tehran Stock Exchange (TSE) and general market analysis or backtests "
+      "honest: compute ratios from a table instead of prose, never cite uncomputed averages or levels, avoid "
+      "look-ahead bias, require baseline/median/win-loss/expectancy statistics, separate tested facts from "
+      "discretionary judgment, and give left-tail risk the same prominence as mean returns. Works standalone or "
+      "chained onto a data prompt.",
+      &execute_tse_rigor,
+      &render_help_tse_rigor);
 
 } // namespace prompt::prompts

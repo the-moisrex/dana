@@ -1,17 +1,18 @@
 #include "../sdk/args.hpp"
 #include "../sdk/embed.hpp"
 #include "../sdk/prompt_registry.hpp"
+
 #include <filesystem>
 #include <string>
 
 namespace prompt::prompts {
 
-static void execute_branchless(view const& v, result& r) {
-    auto opts = file_options_or_throw(v);
+    static void execute_branchless(view const& v, result& r) {
+        auto opts = file_options_or_throw(v);
 
-    std::string output;
-    output +=
-        R"PROMPT(Rewrite this C++ code to be branchless. Eliminate all conditional branches (if, else, switch, early returns in hot loops) that harm branch prediction.
+        std::string output;
+        output +=
+          R"PROMPT(Rewrite this C++ code to be branchless. Eliminate all conditional branches (if, else, switch, early returns in hot loops) that harm branch prediction.
 
 Use these techniques — each in the shortest sentence:
 
@@ -41,32 +42,35 @@ OUTPUT:
 - Briefly explain which branches you removed and why.
 - Provide a git diff for the changes.
 )PROMPT";
-    output += '\n';
+        output += '\n';
 
-    std::string error;
-    auto sources = collect_file_args(v);
-    for (auto const& file : sources.files) {
-        output += embed_file_block(file, opts);
+        std::string error;
+        auto        sources = collect_file_args(v);
+        for (auto const& file : sources.files) {
+            output += embed_file_block(file, opts);
+        }
+        for (auto arg : sources.missing) {
+            error += std::format("Warning: File not found or is not a regular file: {}\n", std::string(arg));
+        }
+
+        r.out = std::move(output);
+        r.err = std::move(error);
     }
-    for (auto arg : sources.missing) {
-        error += std::format("Warning: File not found or is not a regular file: {}\n", std::string(arg));
-    }
 
-    r.out = std::move(output);
-    r.err = std::move(error);
-}
-
-static void render_help_branchless(std::ostream& os) {
-    os << file_usage_help("branchless") << R"EOF(
+    static void render_help_branchless(std::ostream& os) {
+        os << file_usage_help("branchless") << R"EOF(
 Rewrite this C++ code to be branchless.
 
 Options:
 )EOF" << file_options_help("the embedded context");
-}
+    }
 
-// This file is the prompt: it implements it and registers it at static-init time
-// (no central list — see sdk/prompt_registry.hpp).
-bool const registered = prompt::register_prompt("branchless", "Rewrite this C++ code to be branchless.",
-                                                &execute_branchless, &render_help_branchless);
+    // This file is the prompt: it implements it and registers it at static-init time
+    // (no central list — see sdk/prompt_registry.hpp).
+    bool const registered = prompt::register_prompt(
+      "branchless",
+      "Rewrite this C++ code to be branchless.",
+      &execute_branchless,
+      &render_help_branchless);
 
 } // namespace prompt::prompts

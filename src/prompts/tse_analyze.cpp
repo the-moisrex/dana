@@ -1,25 +1,27 @@
 #include "../sdk/prompt_registry.hpp"
+
 #include <ostream>
 #include <string>
 
 namespace prompt::prompts {
 
-static void render_help_tse_analyze(std::ostream& os);
+    static void render_help_tse_analyze(std::ostream& os);
 
-// The analysis instructions for the dataset collected by `tse`. This prompt is
-// deliberately data-free: it takes no arguments and never fetches, reads the
-// clipboard or embeds a snapshot, so `prompt .tse <symbol> .tse.analyze` adds
-// the dataset exactly once (from `tse`) and then these instructions.
-static void execute_tse_analyze(view const& v, result& r) {
-    if (!v.args.empty()) {
-        throw usage_error{"prompt tse.analyze: takes no arguments — it only prints the analysis "
-                          "instructions.\nChain it after the data prompt, e.g. "
-                          "`prompt .tse فولاد .tse.analyze`.\n" +
-                          help_text(render_help_tse_analyze)};
-    }
+    // The analysis instructions for the dataset collected by `tse`. This prompt is
+    // deliberately data-free: it takes no arguments and never fetches, reads the
+    // clipboard or embeds a snapshot, so `prompt .tse <symbol> .tse.analyze` adds
+    // the dataset exactly once (from `tse`) and then these instructions.
+    static void execute_tse_analyze(view const& v, result& r) {
+        if (!v.args.empty()) {
+            throw usage_error{
+              "prompt tse.analyze: takes no arguments — it only prints the analysis "
+              "instructions.\nChain it after the data prompt, e.g. "
+              "`prompt .tse فولاد .tse.analyze`.\n" +
+              help_text(render_help_tse_analyze)};
+        }
 
-    r.out =
-        R"EOF(You are an institutional analyst of the Tehran Stock Exchange (TSE). Analyze the instrument data in this prompt.
+        r.out =
+          R"EOF(You are an institutional analyst of the Tehran Stock Exchange (TSE). Analyze the instrument data in this prompt.
 
 ### 0. Data provenance and absent sections
 The dataset was produced by `prompt tse` — either a live TSETMC fetch, or one or more cached `.stock` snapshots written by `tse.snapshot`. When it came from snapshots, treat every value as-of its `fetched_at` timestamp and warn if that timestamp is stale (older than 24 hours).
@@ -98,10 +100,10 @@ Treat these as descriptive statistics and reconcile them with the table. A null 
 
 ---
 )EOF";
-}
+    }
 
-static void render_help_tse_analyze(std::ostream& os) {
-    os << R"EOF(Usage: prompt tse.analyze
+    static void render_help_tse_analyze(std::ostream& os) {
+        os << R"EOF(Usage: prompt tse.analyze
 
 Print the institutional-analyst instructions for the TSETMC dataset collected by `tse`. This prompt carries no data and takes no arguments: chain it after `tse`, whose dataset precedes these instructions in the prompt.
 
@@ -118,17 +120,18 @@ Examples:
 Options:
   -h, --help   Show this help
 )EOF";
-}
+    }
 
-// This file is the prompt: it implements it and registers it at static-init time
-// (no central list — see sdk/prompt_registry.hpp).
-bool const registered = prompt::register_prompt(
-    "tse.analyze",
-    "Print the institutional-analyst instructions for the TSETMC dataset collected by `tse` — instrument type, "
-    "market context (including multi-session breadth), adjusted history and derived technicals, the last session's "
-    "order books, حقیقی/حقوقی flows, statistics, fundamentals, fund NAV, optional chained Codal filings and a "
-    "bullish/bearish/neutral scenario plan. Carries no data and takes no arguments: chain it after the data "
-    "prompt (`prompt .tse فولاد .tse.analyze`), adding `.tse.codal` when filings are needed.",
-    &execute_tse_analyze, &render_help_tse_analyze);
+    // This file is the prompt: it implements it and registers it at static-init time
+    // (no central list — see sdk/prompt_registry.hpp).
+    bool const registered = prompt::register_prompt(
+      "tse.analyze",
+      "Print the institutional-analyst instructions for the TSETMC dataset collected by `tse` — instrument type, "
+      "market context (including multi-session breadth), adjusted history and derived technicals, the last session's "
+      "order books, حقیقی/حقوقی flows, statistics, fundamentals, fund NAV, optional chained Codal filings and a "
+      "bullish/bearish/neutral scenario plan. Carries no data and takes no arguments: chain it after the data "
+      "prompt (`prompt .tse فولاد .tse.analyze`), adding `.tse.codal` when filings are needed.",
+      &execute_tse_analyze,
+      &render_help_tse_analyze);
 
 } // namespace prompt::prompts

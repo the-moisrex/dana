@@ -1,17 +1,18 @@
 #include "../sdk/args.hpp"
 #include "../sdk/embed.hpp"
 #include "../sdk/prompt_registry.hpp"
+
 #include <filesystem>
 #include <string>
 #include <vector>
 
 namespace prompt::prompts {
 
-static void execute_table_lookup(view const& v, result& r) {
-    auto opts = file_options_or_throw(v);
+    static void execute_table_lookup(view const& v, result& r) {
+        auto opts = file_options_or_throw(v);
 
-    std::string output;
-    output += R"PROMPT(Replace conditional logic in this C++ code with precomputed table lookups.
+        std::string output;
+        output += R"PROMPT(Replace conditional logic in this C++ code with precomputed table lookups.
 
 TECHNIQUES:
 - Small enum/bool switch → array indexed by value. const T table[] = {...}; result = table[expr];
@@ -39,36 +40,38 @@ OUTPUT:
 - Briefly explain what conditional logic you replaced and why a table is faster.
 - Provide a git diff for the changes.
 )PROMPT";
-    output += '\n';
+        output += '\n';
 
-    std::string error;
-    auto sources = collect_file_args(v);
-    for (auto const& file : sources.files) {
-        output += std::format("File: {}\n\n```{}\n", file.filename().string(), infer_lang(file));
-        output += number_lines(trim_context_nl(read_file(file), opts.head_lines), opts.numbered);
-        // table-lookup.sh closes the fence directly after the content.
-        output += "```\n\n";
+        std::string error;
+        auto        sources = collect_file_args(v);
+        for (auto const& file : sources.files) {
+            output += std::format("File: {}\n\n```{}\n", file.filename().string(), infer_lang(file));
+            output += number_lines(trim_context_nl(read_file(file), opts.head_lines), opts.numbered);
+            // table-lookup.sh closes the fence directly after the content.
+            output += "```\n\n";
+        }
+        for (auto arg : sources.missing) {
+            error += std::format("Warning: File not found or is not a regular file: {}\n", std::string(arg));
+        }
+
+        r.out = std::move(output);
+        r.err = std::move(error);
     }
-    for (auto arg : sources.missing) {
-        error += std::format("Warning: File not found or is not a regular file: {}\n", std::string(arg));
-    }
 
-    r.out = std::move(output);
-    r.err = std::move(error);
-}
-
-static void render_help_table_lookup(std::ostream& os) {
-    os << file_usage_help("table-lookup") << R"EOF(
+    static void render_help_table_lookup(std::ostream& os) {
+        os << file_usage_help("table-lookup") << R"EOF(
 Replace conditional logic with precomputed table lookups.
 
 Options:
 )EOF" << file_options_help("the embedded context");
-}
+    }
 
-// This file is the prompt: it implements it and registers it at static-init time
-// (no central list — see sdk/prompt_registry.hpp).
-bool const registered =
-    prompt::register_prompt("table-lookup", "Replace conditional logic with precomputed table lookups.",
-                            &execute_table_lookup, &render_help_table_lookup);
+    // This file is the prompt: it implements it and registers it at static-init time
+    // (no central list — see sdk/prompt_registry.hpp).
+    bool const registered = prompt::register_prompt(
+      "table-lookup",
+      "Replace conditional logic with precomputed table lookups.",
+      &execute_table_lookup,
+      &render_help_table_lookup);
 
 } // namespace prompt::prompts

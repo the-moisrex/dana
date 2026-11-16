@@ -3,23 +3,24 @@
 #include "../sdk/args.hpp"
 #include "../sdk/embed.hpp"
 #include "../sdk/prompt_registry.hpp"
+
 #include <filesystem>
 #include <string>
 #include <vector>
 
 namespace prompt::prompts {
 
-static void execute_gdb(view const& v, result& r) {
-    auto opts = file_options_or_throw(v);
+    static void execute_gdb(view const& v, result& r) {
+        auto opts = file_options_or_throw(v);
 
-    auto files = positional_args(v);
+        auto files = positional_args(v);
 
-    // gdb.sh: a fixed instruction block (echoes + a quoted heredoc) followed by
-    // the sample `gdb ... | grep` probe, whose stdout is streamed verbatim. The
-    // three markdown hard-break list items end with two trailing spaces, so
-    // they are emitted as ordinary literals (a raw string would drop them).
-    std::string output;
-    output += R"GDBEOF(Write a short GDB script to help debug the core function or algorithm in the provided code.
+        // gdb.sh: a fixed instruction block (echoes + a quoted heredoc) followed by
+        // the sample `gdb ... | grep` probe, whose stdout is streamed verbatim. The
+        // three markdown hard-break list items end with two trailing spaces, so
+        // they are emitted as ordinary literals (a raw string would drop them).
+        std::string output;
+        output += R"GDBEOF(Write a short GDB script to help debug the core function or algorithm in the provided code.
 IMPORTANT: Do NOT provide a generic or generalized GDB template. You must specifically target the code provided below, using the actual function names, variable names, and logic present in these exact snippets.
 
 To ensure the script actually works and doesn't fail due to minor line number mismatches or hanging, use the following techniques:
@@ -38,13 +39,14 @@ Do not use `commands` immediately after `rbreak` unless you first verify that `r
 For templated functions either:
 
 )GDBEOF";
-    output +=
-        " 1. use `set breakpoint pending on` with a concrete mangled/demangled instantiated symbol if known, or  \n";
-    output += " 2. use `break file:function` only if supported, or  \n";
-    output += " 3. use `rbreak ...` only as a standalone optional command and do **not** attach a `commands` block to "
-              "it, or  \n";
-    output +=
-        R"GDBEOF( 4. break on a nearby caller or on a non-template helper function that is actually emitted, then step into the templated function.
+        output +=
+          " 1. use `set breakpoint pending on` with a concrete mangled/demangled instantiated symbol if known, or  \n";
+        output += " 2. use `break file:function` only if supported, or  \n";
+        output +=
+          " 3. use `rbreak ...` only as a standalone optional command and do **not** attach a `commands` block to "
+          "it, or  \n";
+        output +=
+          R"GDBEOF( 4. break on a nearby caller or on a non-template helper function that is actually emitted, then step into the templated function.
 
 The script must be robust when the breakpoint pattern matches nothing. It should not contain a `commands` block that depends on a possibly nonexistent `rbreak` result.
 
@@ -56,42 +58,44 @@ We probably run it using `gdb -batch` as well.
 Running the command: `gdb -q --nh -batch -ex "help" -ex "help data" -ex "help breakpoints" -ex "help tracepoint" | grep -Ev "^(Type|Command name|Making program|set )"``
 )GDBEOF";
 
-    std::vector<std::string> storage = {"bash", "-c"};
-    storage.emplace_back("gdb -q --nh -batch -ex \"help\" -ex \"help data\" -ex \"help breakpoints\" -ex "
-                         "\"help tracepoint\" | grep -Ev \"^(Type|Command name|Making program|set )\"");
-    output += prompt::process::run_command(storage).stdout_data;
+        std::vector<std::string> storage = {"bash", "-c"};
+        storage.emplace_back(
+          "gdb -q --nh -batch -ex \"help\" -ex \"help data\" -ex \"help breakpoints\" -ex "
+          "\"help tracepoint\" | grep -Ev \"^(Type|Command name|Making program|set )\"");
+        output += prompt::process::run_command(storage).stdout_data;
 
-    std::string error;
-    for (auto const& file : files) {
-        std::filesystem::path p(file);
-        if (std::filesystem::is_regular_file(p)) {
-            std::string file_name = p.filename().string();
-            output += std::format("File: {}\n\n```{}\n", file_name, infer_lang(p));
-            output += number_lines(trim_context_nl(read_file(p), opts.head_lines), opts.numbered);
-            output += "\n```\n\n";
-        } else {
-            error += std::format("Warning: File '{}' not found.\n", file);
+        std::string error;
+        for (auto const& file : files) {
+            std::filesystem::path p(file);
+            if (std::filesystem::is_regular_file(p)) {
+                std::string file_name  = p.filename().string();
+                output                += std::format("File: {}\n\n```{}\n", file_name, infer_lang(p));
+                output                += number_lines(trim_context_nl(read_file(p), opts.head_lines), opts.numbered);
+                output                += "\n```\n\n";
+            } else {
+                error += std::format("Warning: File '{}' not found.\n", file);
+            }
         }
+
+        r.out = std::move(output);
+        r.err = std::move(error);
     }
 
-    r.out = std::move(output);
-    r.err = std::move(error);
-}
-
-static void render_help_gdb(std::ostream& os) {
-    os << file_usage_help("gdb") << R"EOF(
+    static void render_help_gdb(std::ostream& os) {
+        os << file_usage_help("gdb") << R"EOF(
 Generates a prompt asking the LLM to write a GDB script that helps debug the specified code (e.g., tracking variables in loops, pretty-printing).
 
 Options:
 )EOF" << file_options_help("the embedded context");
-}
+    }
 
-// This file is the prompt: it implements it and registers it at static-init time
-// (no central list — see sdk/prompt_registry.hpp).
-bool const registered =
-    prompt::register_prompt("gdb",
-                            "Generates a prompt asking the LLM to write a GDB script that helps debug the specified "
-                            "code (e.g., tracking variables in loops, pretty-printing).",
-                            &execute_gdb, &render_help_gdb);
+    // This file is the prompt: it implements it and registers it at static-init time
+    // (no central list — see sdk/prompt_registry.hpp).
+    bool const registered = prompt::register_prompt(
+      "gdb",
+      "Generates a prompt asking the LLM to write a GDB script that helps debug the specified "
+      "code (e.g., tracking variables in loops, pretty-printing).",
+      &execute_gdb,
+      &render_help_gdb);
 
 } // namespace prompt::prompts

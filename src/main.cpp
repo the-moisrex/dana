@@ -15,6 +15,7 @@
 #include "sdk/stage.hpp"
 #include "sdk/terminal.hpp"
 #include "sdk/wire.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cerrno>
@@ -40,302 +41,347 @@
 
 namespace {
 
-// A `.each` body runs as a child `prompt` (PROMPT_INNER=1): the parent already
-// owns the clipboard and prints one redaction legend for the whole chain, so a
-// loop of N items must not copy N times or repeat the legend N times.
-bool inner_process = false;
+    // A `.each` body runs as a child `prompt` (PROMPT_INNER=1): the parent already
+    // owns the clipboard and prints one redaction legend for the whole chain, so a
+    // loop of N items must not copy N times or repeat the legend N times.
+    bool inner_process = false;
 
-// Join two blocks with one blank line, trimming their trailing newlines first.
-std::string prepend_block(std::string_view prefix, std::string_view body) {
-    while (!prefix.empty() && prefix.back() == '\n') prefix.remove_suffix(1);
-    while (!body.empty() && body.back() == '\n') body.remove_suffix(1);
-    if (prefix.empty()) return std::string(body);
-    if (body.empty()) return std::string(prefix);
-    std::string out(prefix);
-    out += "\n\n";
-    out.append(body);
-    return out;
-}
-
-// Every emitted segment goes through `text::append_block`, the same rule the
-// chain context uses: trim the block on both sides, skip an empty segment, and
-// separate consecutive blocks with exactly one blank line. So stdout, the
-// clipboard and the context a sink receives all have the same shape.
-struct output_accumulator {
-    std::string text;
-    std::string clipboard;
-
-    void add(std::string_view output, bool no_clipboard) {
-        prompt::text::append_block(text, output);
-        if (no_clipboard) return;
-        prompt::text::append_block(clipboard, output);
-    }
-};
-
-// Incremental stdout/clipboard emitter for sink chains. Streamed sink output
-// has already reached the terminal; it only needs to enter the clipboard and
-// affect the separator state.
-class output_emitter {
-  public:
-    void emit(std::string_view output, bool no_clipboard, bool redacted) {
-        output = prompt::text::strip_newlines(output);
-        if (output.empty()) return;
-        if (!first_stdout_) std::print(std::cout, "\n");
-        first_stdout_ = false;
-        if (redacted && !stdout_legend_ && !inner_process) {
-            std::println(std::cout, "{}", prompt::sanitize::kRedactionLegend);
-            stdout_legend_ = true;
+    // Join two blocks with one blank line, trimming their trailing newlines first.
+    std::string prepend_block(std::string_view prefix, std::string_view body) {
+        while (!prefix.empty() && prefix.back() == '\n') {
+            prefix.remove_suffix(1);
         }
-        std::println(std::cout, "{}", output);
-        std::cout.flush();
-        add_clipboard(output, no_clipboard, redacted);
-    }
-
-    void streamed(std::string_view output, bool no_clipboard, bool redacted) {
-        if (!output.empty() && output.back() != '\n') std::print(std::cout, "\n");
-        std::cout.flush();
-        output = prompt::text::strip_newlines(output);
-        if (output.empty()) return;
-        first_stdout_ = false;
-        add_clipboard(output, no_clipboard, redacted);
-    }
-
-    // Called before a streamed sink starts writing, so its live output is
-    // separated from the previous segment like a captured result would be.
-    void begin_stream() const {
-        if (!first_stdout_) {
-            std::print(std::cout, "\n");
-            std::cout.flush();
+        while (!body.empty() && body.back() == '\n') {
+            body.remove_suffix(1);
         }
-    }
-
-    [[nodiscard]] std::string clipboard() const { return clipboard_; }
-
-  private:
-    void add_clipboard(std::string_view output, bool no_clipboard, bool redacted) {
-        if (no_clipboard) return;
-        if (!prompt::text::append_block(clipboard_, output)) return;
-        if (redacted && !clipboard_legend_ && !inner_process) {
-            // A one-line header, so it sits directly above the first redacted
-            // block with no blank line between them.
-            clipboard_ = std::string(prompt::sanitize::kRedactionLegend) + "\n" + clipboard_;
-            clipboard_legend_ = true;
+        if (prefix.empty()) {
+            return std::string(body);
         }
+        if (body.empty()) {
+            return std::string(prefix);
+        }
+        std::string out(prefix);
+        out += "\n\n";
+        out.append(body);
+        return out;
     }
 
-    bool first_stdout_ = true;
-    bool stdout_legend_ = false;
-    bool clipboard_legend_ = false;
-    std::string clipboard_;
-};
+    // Every emitted segment goes through `text::append_block`, the same rule the
+    // chain context uses: trim the block on both sides, skip an empty segment, and
+    // separate consecutive blocks with exactly one blank line. So stdout, the
+    // clipboard and the context a sink receives all have the same shape.
+    struct output_accumulator {
+        std::string text;
+        std::string clipboard;
 
-prompt::segment_outcome run_prompt(prompt::view const& in, prompt::prompt_descriptor const& desc) {
-    prompt::result out;
-    prompt::segment_outcome outcome;
-    try {
-        desc.execute_fn(in, out);
-        auto clean = prompt::sanitize::sanitize(out.out);
-        outcome.out = std::move(clean.text);
-        outcome.redacted = clean.redacted;
-        outcome.no_clipboard = out.no_clipboard;
-        outcome.clear = out.clear;
-        outcome.err = std::move(out.err);
-        outcome.stderr_buffer = std::move(out.stderr_buffer);
-        outcome.published = std::move(out.published);
-        outcome.restore = std::move(out.restore);
-        outcome.restore_append = out.restore_append;
-        outcome.silent = out.silent;
-        outcome.stdout_streamed = out.stdout_streamed;
-        outcome.stderr_streamed = out.stderr_streamed;
-    } catch (prompt::prompt_error const& err) {
-        auto clean = prompt::sanitize::sanitize(err.partial_output());
-        outcome.out = std::move(clean.text);
-        outcome.redacted = clean.redacted;
-        outcome.no_clipboard = err.no_clipboard();
-        outcome.clear = out.clear;
-        outcome.published = std::move(out.published);
-        outcome.err = err.what();
-        outcome.stderr_buffer = std::move(out.stderr_buffer);
-        outcome.stdout_streamed = out.stdout_streamed;
-        outcome.stderr_streamed = out.stderr_streamed;
-        outcome.failed = true;
-        outcome.exit_code = err.exit_code();
-    }
-    // Piped stdin is spent by the first executed segment, exactly as before:
-    // the pipe is shared, and a segment that has already inherited it is the
-    // only one that can read it.
-    outcome.stdin_consumed = in.in.piped();
-    return outcome;
-}
-
-bool wants_help(std::span<std::string_view const> args) {
-    return std::ranges::any_of(args, [](std::string_view arg) { return arg == "--help" || arg == "-h"; });
-}
-
-bool invocation_wants_help(prompt::prompt_invocation const& inv) {
-    // `.exec -- COMMAND ...` owns the rest of argv, so a command's own `-h`
-    // (e.g. `shutdown -h now`) must not turn into this prompt's help request.
-    auto args = std::span<std::string_view const>(inv.args);
-    if (inv.name == "exec") {
-        if (auto const it = std::ranges::find(args, std::string_view{"--"}); it != args.end())
-            args = args.first(static_cast<std::size_t>(it - args.begin()));
-    }
-    return wants_help(args);
-}
-
-prompt::segment_outcome render_help_result(prompt::prompt_descriptor const& desc) {
-    prompt::segment_outcome outcome;
-    std::ostringstream help;
-    if (desc.render_help_fn != nullptr) desc.render_help_fn(help);
-    auto clean = prompt::sanitize::sanitize(help.str());
-    outcome.out = std::move(clean.text);
-    outcome.redacted = clean.redacted;
-    return outcome;
-}
-
-prompt::segment_outcome failure_result(std::string message) {
-    prompt::segment_outcome outcome;
-    outcome.err = std::move(message);
-    outcome.failed = true;
-    outcome.exit_code = 1;
-    return outcome;
-}
-
-// The history recorder wants owned strings: argv is a span of C strings, and
-// the store outlives this call.
-std::vector<std::string> argv_strings(std::span<char const* const> argv) {
-    std::vector<std::string> out;
-    out.reserve(argv.size());
-    for (char const* arg : argv) out.emplace_back(arg == nullptr ? "" : arg);
-    return out;
-}
-
-std::filesystem::path current_directory() {
-    std::error_code ec;
-    auto path = std::filesystem::current_path(ec);
-    return ec ? std::filesystem::path{} : path;
-}
-
-// What the dispatcher knows about one chain position: its descriptor and the
-// arguments the prompt actually sees (a sink's shared flags are stripped).
-struct segment {
-    prompt::prompt_descriptor const* desc = nullptr;
-    std::string_view name;
-    std::vector<std::string_view> args;
-    std::span<std::string_view const> body;
-};
-
-// A batch containing a file source or a file-filter step must run in argv
-// order: each file prompt publishes the files it emitted (`keys::files`) and a
-// later one skips them, and `.files.exclude`/`.files.scope` publish the filter
-// a later file prompt reads. Other batches keep the parallel path.
-bool any_sequential(std::span<segment const> segs) {
-    return std::ranges::any_of(segs,
-                               [](segment const& seg) { return seg.desc->emits_files || seg.desc->filters_files; });
-}
-
-// `.files.exclude`/`.files.scope` set chain-wide state, so they run before the
-// other segments of their batch regardless of argv position: a filter written
-// after a file prompt still applies to it. Filter steps emit nothing, so the
-// reorder does not change the output; results stay indexed by argv position.
-std::vector<std::size_t> batch_execution_order(std::span<segment const> segs,
-                                               std::span<prompt::prompt_invocation const> invs) {
-    auto const is_filter = [&](std::size_t k) {
-        return segs[k].desc->filters_files && !invocation_wants_help(invs[k]);
+        void add(std::string_view output, bool no_clipboard) {
+            prompt::text::append_block(text, output);
+            if (no_clipboard) {
+                return;
+            }
+            prompt::text::append_block(clipboard, output);
+        }
     };
-    std::vector<std::size_t> order;
-    order.reserve(segs.size());
-    for (std::size_t k = 0; k < segs.size(); ++k) {
-        if (is_filter(k)) order.push_back(k);
-    }
-    for (std::size_t k = 0; k < segs.size(); ++k) {
-        if (!is_filter(k)) order.push_back(k);
-    }
-    return order;
-}
 
-void write_segment(int fd, prompt::segment_outcome const& outcome) {
-    std::string const blob = prompt::encode_outcome(outcome);
-    std::size_t offset = 0;
-    while (offset < blob.size()) {
-        auto const n = ::write(fd, blob.data() + offset, blob.size() - offset);
-        if (n < 0) {
-            if (errno == EINTR) continue;
-            return;
-        }
-        if (n == 0) return;
-        offset += static_cast<std::size_t>(n);
-    }
-}
-
-// Name how a child ended when it died before writing its blob, so a crash is
-// not reported as a generic "no result".
-std::string child_status_note(int status) {
-    if (WIFSIGNALED(status)) return " (terminated by signal " + std::to_string(WTERMSIG(status)) + ")";
-    if (WIFEXITED(status) && WEXITSTATUS(status) != 0)
-        return " (exit status " + std::to_string(WEXITSTATUS(status)) + ")";
-    return {};
-}
-
-// Run every segment of one batch concurrently: one forked child per segment,
-// each writing its encoded `segment_outcome` back over a pipe. `make_view` runs
-// in the child, so it may only read state that already exists in the parent.
-// `--help` requests are answered in the parent and keep their argv position.
-// Outcomes come back in argv order regardless of which child finishes first.
-std::vector<prompt::segment_outcome> run_parallel(std::span<segment const> segs,
-                                                  std::function<prompt::view(segment const&)> const& make_view) {
-    std::size_t const size = segs.size();
-    std::vector<prompt::segment_outcome> outcomes(size);
-    std::vector<int> read_fds(size, -1);
-    std::vector<pid_t> children(size, -1);
-
-    // Fork every segment before reading anything: a prompt must never fork from
-    // a multi-threaded parent, and forking up front keeps each child
-    // single-threaded for the `process::command` calls it makes.
-    for (std::size_t i = 0; i < size; ++i) {
-        if (wants_help(segs[i].args)) {
-            outcomes[i] = render_help_result(*segs[i].desc);
-            continue;
+    // Incremental stdout/clipboard emitter for sink chains. Streamed sink output
+    // has already reached the terminal; it only needs to enter the clipboard and
+    // affect the separator state.
+    class output_emitter {
+      public:
+        void emit(std::string_view output, bool no_clipboard, bool redacted) {
+            output = prompt::text::strip_newlines(output);
+            if (output.empty()) {
+                return;
+            }
+            if (!first_stdout_) {
+                std::print(std::cout, "\n");
+            }
+            first_stdout_ = false;
+            if (redacted && !stdout_legend_ && !inner_process) {
+                std::println(std::cout, "{}", prompt::sanitize::kRedactionLegend);
+                stdout_legend_ = true;
+            }
+            std::println(std::cout, "{}", output);
+            std::cout.flush();
+            add_clipboard(output, no_clipboard, redacted);
         }
 
-        std::array<int, 2> fds{};
-        if (::pipe2(fds.data(), O_CLOEXEC) != 0) {
-            outcomes[i] = failure_result("prompt: pipe failed: " + std::string(std::strerror(errno)) + "\n");
-            continue;
+        void streamed(std::string_view output, bool no_clipboard, bool redacted) {
+            if (!output.empty() && output.back() != '\n') {
+                std::print(std::cout, "\n");
+            }
+            std::cout.flush();
+            output = prompt::text::strip_newlines(output);
+            if (output.empty()) {
+                return;
+            }
+            first_stdout_ = false;
+            add_clipboard(output, no_clipboard, redacted);
         }
-        pid_t const pid = ::fork();
-        if (pid == 0) {
-            ::close(fds[0]);
-            auto outcome = run_prompt(make_view(segs[i]), *segs[i].desc);
-            write_segment(fds[1], outcome);
+
+        // Called before a streamed sink starts writing, so its live output is
+        // separated from the previous segment like a captured result would be.
+        void begin_stream() const {
+            if (!first_stdout_) {
+                std::print(std::cout, "\n");
+                std::cout.flush();
+            }
+        }
+
+        [[nodiscard]] std::string clipboard() const {
+            return clipboard_;
+        }
+
+      private:
+        void add_clipboard(std::string_view output, bool no_clipboard, bool redacted) {
+            if (no_clipboard) {
+                return;
+            }
+            if (!prompt::text::append_block(clipboard_, output)) {
+                return;
+            }
+            if (redacted && !clipboard_legend_ && !inner_process) {
+                // A one-line header, so it sits directly above the first redacted
+                // block with no blank line between them.
+                clipboard_        = std::string(prompt::sanitize::kRedactionLegend) + "\n" + clipboard_;
+                clipboard_legend_ = true;
+            }
+        }
+
+        bool        first_stdout_     = true;
+        bool        stdout_legend_    = false;
+        bool        clipboard_legend_ = false;
+        std::string clipboard_;
+    };
+
+    prompt::segment_outcome run_prompt(prompt::view const& in, prompt::prompt_descriptor const& desc) {
+        prompt::result          out;
+        prompt::segment_outcome outcome;
+        try {
+            desc.execute_fn(in, out);
+            auto clean              = prompt::sanitize::sanitize(out.out);
+            outcome.out             = std::move(clean.text);
+            outcome.redacted        = clean.redacted;
+            outcome.no_clipboard    = out.no_clipboard;
+            outcome.clear           = out.clear;
+            outcome.err             = std::move(out.err);
+            outcome.stderr_buffer   = std::move(out.stderr_buffer);
+            outcome.published       = std::move(out.published);
+            outcome.restore         = std::move(out.restore);
+            outcome.restore_append  = out.restore_append;
+            outcome.silent          = out.silent;
+            outcome.stdout_streamed = out.stdout_streamed;
+            outcome.stderr_streamed = out.stderr_streamed;
+        } catch (prompt::prompt_error const& err) {
+            auto clean              = prompt::sanitize::sanitize(err.partial_output());
+            outcome.out             = std::move(clean.text);
+            outcome.redacted        = clean.redacted;
+            outcome.no_clipboard    = err.no_clipboard();
+            outcome.clear           = out.clear;
+            outcome.published       = std::move(out.published);
+            outcome.err             = err.what();
+            outcome.stderr_buffer   = std::move(out.stderr_buffer);
+            outcome.stdout_streamed = out.stdout_streamed;
+            outcome.stderr_streamed = out.stderr_streamed;
+            outcome.failed          = true;
+            outcome.exit_code       = err.exit_code();
+        }
+        // Piped stdin is spent by the first executed segment, exactly as before:
+        // the pipe is shared, and a segment that has already inherited it is the
+        // only one that can read it.
+        outcome.stdin_consumed = in.in.piped();
+        return outcome;
+    }
+
+    bool wants_help(std::span<std::string_view const> args) {
+        return std::ranges::any_of(args, [](std::string_view arg) {
+            return arg == "--help" || arg == "-h";
+        });
+    }
+
+    bool invocation_wants_help(prompt::prompt_invocation const& inv) {
+        // `.exec -- COMMAND ...` owns the rest of argv, so a command's own `-h`
+        // (e.g. `shutdown -h now`) must not turn into this prompt's help request.
+        auto args = std::span<std::string_view const>(inv.args);
+        if (inv.name == "exec") {
+            if (auto const it = std::ranges::find(args, std::string_view{"--"}); it != args.end()) {
+                args = args.first(static_cast<std::size_t>(it - args.begin()));
+            }
+        }
+        return wants_help(args);
+    }
+
+    prompt::segment_outcome render_help_result(prompt::prompt_descriptor const& desc) {
+        prompt::segment_outcome outcome;
+        std::ostringstream      help;
+        if (desc.render_help_fn != nullptr) {
+            desc.render_help_fn(help);
+        }
+        auto clean       = prompt::sanitize::sanitize(help.str());
+        outcome.out      = std::move(clean.text);
+        outcome.redacted = clean.redacted;
+        return outcome;
+    }
+
+    prompt::segment_outcome failure_result(std::string message) {
+        prompt::segment_outcome outcome;
+        outcome.err       = std::move(message);
+        outcome.failed    = true;
+        outcome.exit_code = 1;
+        return outcome;
+    }
+
+    // The history recorder wants owned strings: argv is a span of C strings, and
+    // the store outlives this call.
+    std::vector<std::string> argv_strings(std::span<char const* const> argv) {
+        std::vector<std::string> out;
+        out.reserve(argv.size());
+        for (char const* arg : argv) {
+            out.emplace_back(arg == nullptr ? "" : arg);
+        }
+        return out;
+    }
+
+    std::filesystem::path current_directory() {
+        std::error_code ec;
+        auto            path = std::filesystem::current_path(ec);
+        return ec ? std::filesystem::path{} : path;
+    }
+
+    // What the dispatcher knows about one chain position: its descriptor and the
+    // arguments the prompt actually sees (a sink's shared flags are stripped).
+    struct segment {
+        prompt::prompt_descriptor const*  desc = nullptr;
+        std::string_view                  name;
+        std::vector<std::string_view>     args;
+        std::span<std::string_view const> body;
+    };
+
+    // A batch containing a file source or a file-filter step must run in argv
+    // order: each file prompt publishes the files it emitted (`keys::files`) and a
+    // later one skips them, and `.files.exclude`/`.files.scope` publish the filter
+    // a later file prompt reads. Other batches keep the parallel path.
+    bool any_sequential(std::span<segment const> segs) {
+        return std::ranges::any_of(segs, [](segment const& seg) {
+            return seg.desc->emits_files || seg.desc->filters_files;
+        });
+    }
+
+    // `.files.exclude`/`.files.scope` set chain-wide state, so they run before the
+    // other segments of their batch regardless of argv position: a filter written
+    // after a file prompt still applies to it. Filter steps emit nothing, so the
+    // reorder does not change the output; results stay indexed by argv position.
+    std::vector<std::size_t> batch_execution_order(std::span<segment const>                   segs,
+                                                   std::span<prompt::prompt_invocation const> invs) {
+        auto const is_filter = [&](std::size_t k) {
+            return segs[k].desc->filters_files && !invocation_wants_help(invs[k]);
+        };
+        std::vector<std::size_t> order;
+        order.reserve(segs.size());
+        for (std::size_t k = 0; k < segs.size(); ++k) {
+            if (is_filter(k)) {
+                order.push_back(k);
+            }
+        }
+        for (std::size_t k = 0; k < segs.size(); ++k) {
+            if (!is_filter(k)) {
+                order.push_back(k);
+            }
+        }
+        return order;
+    }
+
+    void write_segment(int fd, prompt::segment_outcome const& outcome) {
+        std::string const blob   = prompt::encode_outcome(outcome);
+        std::size_t       offset = 0;
+        while (offset < blob.size()) {
+            auto const n = ::write(fd, blob.data() + offset, blob.size() - offset);
+            if (n < 0) {
+                if (errno == EINTR) {
+                    continue;
+                }
+                return;
+            }
+            if (n == 0) {
+                return;
+            }
+            offset += static_cast<std::size_t>(n);
+        }
+    }
+
+    // Name how a child ended when it died before writing its blob, so a crash is
+    // not reported as a generic "no result".
+    std::string child_status_note(int status) {
+        if (WIFSIGNALED(status)) {
+            return " (terminated by signal " + std::to_string(WTERMSIG(status)) + ")";
+        }
+        if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
+            return " (exit status " + std::to_string(WEXITSTATUS(status)) + ")";
+        }
+        return {};
+    }
+
+    // Run every segment of one batch concurrently: one forked child per segment,
+    // each writing its encoded `segment_outcome` back over a pipe. `make_view` runs
+    // in the child, so it may only read state that already exists in the parent.
+    // `--help` requests are answered in the parent and keep their argv position.
+    // Outcomes come back in argv order regardless of which child finishes first.
+    std::vector<prompt::segment_outcome> run_parallel(std::span<segment const>                           segs,
+                                                      std::function<prompt::view(segment const&)> const& make_view) {
+        std::size_t const                    size = segs.size();
+        std::vector<prompt::segment_outcome> outcomes(size);
+        std::vector<int>                     read_fds(size, -1);
+        std::vector<pid_t>                   children(size, -1);
+
+        // Fork every segment before reading anything: a prompt must never fork from
+        // a multi-threaded parent, and forking up front keeps each child
+        // single-threaded for the `process::command` calls it makes.
+        for (std::size_t i = 0; i < size; ++i) {
+            if (wants_help(segs[i].args)) {
+                outcomes[i] = render_help_result(*segs[i].desc);
+                continue;
+            }
+
+            std::array<int, 2> fds{};
+            if (::pipe2(fds.data(), O_CLOEXEC) != 0) {
+                outcomes[i] = failure_result("prompt: pipe failed: " + std::string(std::strerror(errno)) + "\n");
+                continue;
+            }
+            pid_t const pid = ::fork();
+            if (pid == 0) {
+                ::close(fds[0]);
+                auto outcome = run_prompt(make_view(segs[i]), *segs[i].desc);
+                write_segment(fds[1], outcome);
+                ::close(fds[1]);
+                ::_exit(0);
+            }
+            if (pid < 0) {
+                ::close(fds[0]);
+                ::close(fds[1]);
+                outcomes[i] = failure_result("prompt: fork failed: " + std::string(std::strerror(errno)) + "\n");
+                continue;
+            }
             ::close(fds[1]);
-            ::_exit(0);
+            read_fds[i] = fds[0];
+            children[i] = pid;
         }
-        if (pid < 0) {
-            ::close(fds[0]);
-            ::close(fds[1]);
-            outcomes[i] = failure_result("prompt: fork failed: " + std::string(std::strerror(errno)) + "\n");
-            continue;
-        }
-        ::close(fds[1]);
-        read_fds[i] = fds[0];
-        children[i] = pid;
-    }
 
-    auto const blobs = prompt::drain_all(read_fds);
-    for (std::size_t i = 0; i < size; ++i) {
-        if (children[i] < 0) continue;
-        int status = 0;
-        ::waitpid(children[i], &status, 0);
-        if (auto decoded = prompt::decode_outcome(blobs[i])) {
-            outcomes[i] = std::move(*decoded);
-        } else {
-            outcomes[i] = failure_result("prompt " + std::string(segs[i].name) + ": parallel child produced no result" +
-                                         child_status_note(status) + "\n");
+        auto const blobs = prompt::drain_all(read_fds);
+        for (std::size_t i = 0; i < size; ++i) {
+            if (children[i] < 0) {
+                continue;
+            }
+            int status = 0;
+            ::waitpid(children[i], &status, 0);
+            if (auto decoded = prompt::decode_outcome(blobs[i])) {
+                outcomes[i] = std::move(*decoded);
+            } else {
+                outcomes[i] = failure_result("prompt " + std::string(segs[i].name) +
+                                             ": parallel child produced no result" + child_status_note(status) + "\n");
+            }
         }
+        return outcomes;
     }
-    return outcomes;
-}
 
 } // namespace
 
@@ -350,7 +396,9 @@ int main(int argc, char** argv) {
     bool expand_prompt_files_flag = true;
     if (argc > 1 && std::string_view(argv[1]) == "--no-prompt-files") {
         expand_prompt_files_flag = false;
-        for (int i = 1; i + 1 < argc; ++i) argv[i] = argv[i + 1];
+        for (int i = 1; i + 1 < argc; ++i) {
+            argv[i] = argv[i + 1];
+        }
         --argc;
     }
 
@@ -457,38 +505,54 @@ Notes:
     // Both take their candidates from the same place: the prompt's own help for
     // its flags and its optional complete_fn for everything else.
     {
-        auto arg = [&](int i) { return std::string_view(argv[static_cast<std::size_t>(i)]); };
+        auto arg = [&](int i) {
+            return std::string_view(argv[static_cast<std::size_t>(i)]);
+        };
 
         // Whole-line mode: the shell forwards `commandline -ct` and the tokens
         // typed after `prompt`, and the dispatcher works out whether that token
         // is a prompt name, the start of the next `.`/`-` step, or an argument
         // of the open prompt — adding the `*.prompt` files it can inline.
         if (argc > 1 && arg(1) == "--complete-line") {
-            std::string_view const current = argc > 2 ? arg(2) : std::string_view{};
+            std::string_view const        current = argc > 2 ? arg(2) : std::string_view{};
             std::vector<std::string_view> line;
-            for (int i = 3; i < argc; ++i) line.push_back(arg(i));
+            for (int i = 3; i < argc; ++i) {
+                line.push_back(arg(i));
+            }
             std::ostringstream out;
             prompt::complete_line(current, line, prompt::fs::find_git_root().value_or(std::filesystem::path{}), out);
             std::print(std::cout, "{}", out.str());
             return 0;
         }
 
-        std::string_view complete_name;
-        std::string_view prefix;
+        std::string_view              complete_name;
+        std::string_view              prefix;
         std::vector<std::string_view> prior;
-        bool wants_complete = false;
+        bool                          wants_complete = false;
         if (argc > 1 && arg(1) == "--complete") {
             wants_complete = true;
-            if (argc > 2) complete_name = arg(2);
-            if (argc > 3) prefix = arg(3);
-            for (int i = 4; i < argc; ++i) prior.push_back(arg(i));
+            if (argc > 2) {
+                complete_name = arg(2);
+            }
+            if (argc > 3) {
+                prefix = arg(3);
+            }
+            for (int i = 4; i < argc; ++i) {
+                prior.push_back(arg(i));
+            }
         } else if (argc > 2) {
             for (int i = 2; i < argc; ++i) {
-                if (arg(i) != "--complete") continue;
+                if (arg(i) != "--complete") {
+                    continue;
+                }
                 wants_complete = true;
-                complete_name = arg(1);
-                if (i + 1 < argc) prefix = arg(i + 1);
-                for (int j = i + 2; j < argc; ++j) prior.push_back(arg(j));
+                complete_name  = arg(1);
+                if (i + 1 < argc) {
+                    prefix = arg(i + 1);
+                }
+                for (int j = i + 2; j < argc; ++j) {
+                    prior.push_back(arg(j));
+                }
                 break;
             }
         }
@@ -511,7 +575,9 @@ Notes:
     inner_process = std::getenv("PROMPT_INNER") != nullptr;
 
     // Initialize clipboard
-    if (!inner_process) prompt::clipboard::init();
+    if (!inner_process) {
+        prompt::clipboard::init();
+    }
 
     // The process-wide environment: built once, never written again.
     prompt::environment env = prompt::make_environment();
@@ -569,17 +635,17 @@ Notes:
         chain.invocations.push_back(prompt::prompt_invocation{.name = "auto", .args = {}, .body = {}});
     }
 
-    std::size_t const count = chain.invocations.size();
+    std::size_t const    count = chain.invocations.size();
     std::vector<segment> segments(count);
 
     // The dispatcher owns the common sink flags: parse them once, before any
     // batch runs, and hand the sink only the remaining arguments. This also
     // makes --show-context known before the first segment is emitted.
     std::vector<std::optional<prompt::sink_args>> sink_args(count);
-    bool has_sink = false;
-    bool show_context = false;
+    bool                                          has_sink     = false;
+    bool                                          show_context = false;
     for (std::size_t i = 0; i < count; ++i) {
-        auto const& inv = chain.invocations[i];
+        auto const& inv  = chain.invocations[i];
         auto const* desc = prompt::find_prompt(inv.name);
         if (desc == nullptr) {
             std::println(std::cerr, "prompt: prompt '{}' not found", inv.name);
@@ -590,16 +656,18 @@ Notes:
         segments[i].args = inv.args;
         segments[i].body = inv.body;
 
-        if (desc->role != prompt::chain_role::sink) continue;
-        has_sink = true;
+        if (desc->role != prompt::chain_role::sink) {
+            continue;
+        }
+        has_sink    = true;
         auto parsed = prompt::parse_sink_args(inv.args);
         if (!parsed.error.empty()) {
             std::print(std::cerr, "prompt {}: {}", inv.name, parsed.error);
             return 2;
         }
-        show_context = show_context || parsed.options.show_context;
+        show_context     = show_context || parsed.options.show_context;
         segments[i].args = parsed.rest;
-        sink_args[i] = std::move(parsed);
+        sink_args[i]     = std::move(parsed);
     }
 
     auto const plan = prompt::plan_chain(chain, prompt::get_all_prompts());
@@ -614,7 +682,9 @@ Notes:
         if (segments[i].desc->role == prompt::chain_role::sink && invocation_wants_help(chain.invocations[i])) {
             auto outcome = render_help_result(*segments[i].desc);
             std::print(std::cout, "{}", outcome.out);
-            if (!inner_process && !outcome.out.empty()) prompt::clipboard::copy(outcome.out);
+            if (!inner_process && !outcome.out.empty()) {
+                prompt::clipboard::copy(outcome.out);
+            }
             return 0;
         }
     }
@@ -623,44 +693,55 @@ Notes:
     // dormant until the first recordable segment, so help requests and the
     // `.history*` family never create a run of their own. Every write is best
     // effort: an unwritable store can never fail a prompt run.
-    prompt::history::recorder history{prompt::history::recorder::info{
-        .argv = argv_strings(argv_span),
-        .cwd = current_directory(),
-        .git_root = env.git_root,
-        .terminal = prompt::terminal::current(),
-        .tty = ::isatty(STDOUT_FILENO) != 0,
-        .inner = inner_process,
-        .parent =
-            [] {
-                char const* raw = std::getenv("PROMPT_HISTORY_PARENT");
-                return raw == nullptr ? std::string{} : std::string(raw);
-            }(),
-    }};
+    prompt::history::recorder history{
+      prompt::history::recorder::info{
+                                      .argv     = argv_strings(argv_span),
+                                      .cwd      = current_directory(),
+                                      .git_root = env.git_root,
+                                      .terminal = prompt::terminal::current(),
+                                      .tty      = ::isatty(STDOUT_FILENO) != 0,
+                                      .inner    = inner_process,
+                                      .parent =
+          [] {
+              char const* raw = std::getenv("PROMPT_HISTORY_PARENT");
+              return raw == nullptr ? std::string{} : std::string(raw);
+          }(),
+                                      }
+    };
 
     // `.history.purge` protects the run that is being written right now.
-    if (history.enabled() && !history.id().empty()) ::setenv("PROMPT_HISTORY_CURRENT", history.id().c_str(), 1);
+    if (history.enabled() && !history.id().empty()) {
+        ::setenv("PROMPT_HISTORY_CURRENT", history.id().c_str(), 1);
+    }
 
-    auto record_segment = [&](std::size_t i, prompt::segment_outcome const& outcome, std::string_view merge,
-                              std::string_view status, bool emitted, std::string_view input = {}) {
-        if (!segments[i].desc->record) return;
-        auto const& inv = chain.invocations[i];
-        history.segment(
+    auto record_segment =
+      [&](std::size_t                    i,
+          prompt::segment_outcome const& outcome,
+          std::string_view               merge,
+          std::string_view               status,
+          bool                           emitted,
+          std::string_view               input = {}) {
+          if (!segments[i].desc->record) {
+              return;
+          }
+          auto const& inv = chain.invocations[i];
+          history.segment(
             prompt::history::stored_segment{
-                .index = i + 1,
-                .name = std::string(inv.name),
-                .role = segments[i].desc->role == prompt::chain_role::sink ? "sink" : "prompt",
-                .args = std::vector<std::string>(inv.args.begin(), inv.args.end()),
-                .body = std::vector<std::string>(inv.body.begin(), inv.body.end()),
-                .merge = std::string(merge),
-                .status = std::string(status),
-                .text = outcome.out,
-                .input = {},
-                .emitted = emitted,
-                .redacted = outcome.redacted,
-                .original_bytes = 0,
+              .index          = i + 1,
+              .name           = std::string(inv.name),
+              .role           = segments[i].desc->role == prompt::chain_role::sink ? "sink" : "prompt",
+              .args           = std::vector<std::string>(inv.args.begin(), inv.args.end()),
+              .body           = std::vector<std::string>(inv.body.begin(), inv.body.end()),
+              .merge          = std::string(merge),
+              .status         = std::string(status),
+              .text           = outcome.out,
+              .input          = {},
+              .emitted        = emitted,
+              .redacted       = outcome.redacted,
+              .original_bytes = 0,
             },
             input);
-    };
+      };
 
     // Cheap declarations run in this (parent) process before any batch forks,
     // so parallel siblings can agree on argv-derived identity. A failing
@@ -668,14 +749,16 @@ Notes:
     // arguments at execute time.
     prompt::facts declared;
     for (std::size_t i = 0; i < count; ++i) {
-        if (segments[i].desc->declare == nullptr || invocation_wants_help(chain.invocations[i])) continue;
+        if (segments[i].desc->declare == nullptr || invocation_wants_help(chain.invocations[i])) {
+            continue;
+        }
         prompt::facts local;
         try {
             prompt::declaration declaration{
-                .args = segments[i].args,
-                .env = env,
-                .prior = declared,
-                .declared = local,
+              .args     = segments[i].args,
+              .env      = env,
+              .prior    = declared,
+              .declared = local,
             };
             segments[i].desc->declare(declaration);
         } catch (prompt::prompt_error const&) { // NOLINT(bugprone-empty-catch) — best effort
@@ -688,20 +771,24 @@ Notes:
         prior.merge(declared, false);
         return prior;
     };
-    auto prior_for_batch = [&] { return merge_prior({}); };
+    auto prior_for_batch = [&] {
+        return merge_prior({});
+    };
 
     // One helper builds the read-only view, so preflights, parallel children and
     // sequential segments all see exactly the same shape.
-    auto make_view = [&](std::string_view name, std::span<std::string_view const> args,
-                         std::span<std::string_view const> body, prompt::facts const& prior) {
+    auto make_view = [&](std::string_view                  name,
+                         std::span<std::string_view const> args,
+                         std::span<std::string_view const> body,
+                         prompt::facts const&              prior) {
         return prompt::view{
-            .name = name,
-            .args = args,
-            .text = {},
-            .body = body,
-            .prior = prior,
-            .env = env,
-            .in = stdin,
+          .name  = name,
+          .args  = args,
+          .text  = {},
+          .body  = body,
+          .prior = prior,
+          .env   = env,
+          .in    = stdin,
         };
     };
 
@@ -709,14 +796,18 @@ Notes:
     // executes. A sink such as `.save` uses this to create and check its
     // destination directory without doing the expensive work first.
     for (std::size_t i = 0; i < count; ++i) {
-        if (segments[i].desc->preflight == nullptr || invocation_wants_help(chain.invocations[i])) continue;
+        if (segments[i].desc->preflight == nullptr || invocation_wants_help(chain.invocations[i])) {
+            continue;
+        }
 
         auto prior = prior_for_batch();
         try {
             segments[i].desc->preflight(
-                make_view(chain.invocations[i].name, segments[i].args, segments[i].body, prior));
+              make_view(chain.invocations[i].name, segments[i].args, segments[i].body, prior));
         } catch (prompt::prompt_error const& err) {
-            if (!err.partial_output().empty()) std::print(std::cout, "{}", err.partial_output());
+            if (!err.partial_output().empty()) {
+                std::print(std::cout, "{}", err.partial_output());
+            }
             std::print(std::cerr, "{}", err.what());
             return err.exit_code();
         }
@@ -731,8 +822,9 @@ Notes:
         bool const parallel = count > 1 && !stdin.available() && !any_sequential(segments);
         if (parallel) {
             auto declarations = prior_for_batch();
-            outcomes = run_parallel(
-                segments, [&](segment const& seg) { return make_view(seg.name, seg.args, seg.body, declarations); });
+            outcomes          = run_parallel(segments, [&](segment const& seg) {
+                return make_view(seg.name, seg.args, seg.body, declarations);
+            });
         } else {
             // Sequential: each segment sees the facts the finished ones
             // published (last writer wins), exactly like the sink path. Filter
@@ -746,26 +838,35 @@ Notes:
                 }
                 auto prior = merge_prior(artifacts);
                 outcomes[i] =
-                    run_prompt(make_view(inv.name, segments[i].args, segments[i].body, prior), *segments[i].desc);
-                if (!outcomes[i].failed) artifacts.merge(outcomes[i].published, true);
-                if (outcomes[i].stdin_consumed) stdin.spend();
+                  run_prompt(make_view(inv.name, segments[i].args, segments[i].body, prior), *segments[i].desc);
+                if (!outcomes[i].failed) {
+                    artifacts.merge(outcomes[i].published, true);
+                }
+                if (outcomes[i].stdin_consumed) {
+                    stdin.spend();
+                }
             }
         }
 
         // Accumulate in command-line order regardless of which parallel
         // segment finished first.
         output_accumulator accumulator;
-        int exit_code = 0;
-        bool redacted = false;
+        int                exit_code = 0;
+        bool               redacted  = false;
         for (std::size_t i = 0; i < outcomes.size(); ++i) {
             auto const& outcome = outcomes[i];
-            redacted = redacted || outcome.redacted;
+            redacted            = redacted || outcome.redacted;
             accumulator.add(outcome.out, outcome.no_clipboard);
             record_segment(i, outcome, "append", outcome.failed ? "failed" : "ok", true);
-            if (!outcome.err.empty()) std::print(std::cerr, "{}", outcome.err);
-            if (!outcome.stderr_streamed && !outcome.stderr_buffer.empty())
+            if (!outcome.err.empty()) {
+                std::print(std::cerr, "{}", outcome.err);
+            }
+            if (!outcome.stderr_streamed && !outcome.stderr_buffer.empty()) {
                 std::print(std::cerr, "{}", outcome.stderr_buffer);
-            if (outcome.failed && exit_code == 0) exit_code = outcome.exit_code;
+            }
+            if (outcome.failed && exit_code == 0) {
+                exit_code = outcome.exit_code;
+            }
         }
 
         std::string final_output = std::move(accumulator.text);
@@ -778,7 +879,9 @@ Notes:
         if (redacted && !clip.empty() && !inner_process) {
             clip = std::string(prompt::sanitize::kRedactionLegend) + "\n" + clip;
         }
-        if (!inner_process && !clip.empty()) prompt::clipboard::copy(clip);
+        if (!inner_process && !clip.empty()) {
+            prompt::clipboard::copy(clip);
+        }
 
         history.finish(exit_code, false);
         return exit_code;
@@ -787,29 +890,32 @@ Notes:
     // Sink chain: ordinary prompts run in batches; a sink is a barrier whose
     // answer becomes the context later prompts and sinks see.
     prompt::chain_state state;
-    bool stdin_pending = stdin.piped();
-    int exit_code = 0;
-    output_emitter emitter;
+    bool                stdin_pending = stdin.piped();
+    int                 exit_code     = 0;
+    output_emitter      emitter;
 
     auto report_result = [&](prompt::segment_outcome const& outcome) {
-        if (!outcome.err.empty()) std::print(std::cerr, "{}", outcome.err);
-        if (!outcome.stderr_streamed && !outcome.stderr_buffer.empty())
+        if (!outcome.err.empty()) {
+            std::print(std::cerr, "{}", outcome.err);
+        }
+        if (!outcome.stderr_streamed && !outcome.stderr_buffer.empty()) {
             std::print(std::cerr, "{}", outcome.stderr_buffer);
+        }
     };
 
-    auto batch_view = [&](segment const& seg, std::string_view text, prompt::facts const& prior,
-                          prompt::stream_config stream) {
-        return prompt::view{
-            .name = seg.name,
-            .args = seg.args,
-            .text = text,
-            .body = seg.body,
-            .prior = prior,
-            .env = env,
-            .in = stdin,
+    auto batch_view =
+      [&](segment const& seg, std::string_view text, prompt::facts const& prior, prompt::stream_config stream) {
+          return prompt::view{
+            .name   = seg.name,
+            .args   = seg.args,
+            .text   = text,
+            .body   = seg.body,
+            .prior  = prior,
+            .env    = env,
+            .in     = stdin,
             .stream = stream,
-        };
-    };
+          };
+      };
 
     auto run_normal_batch = [&](std::size_t run_index, prompt::chain_run const& run) {
         std::string batch_context = state.text;
@@ -818,13 +924,14 @@ Notes:
         }
         auto declarations = merge_prior(state.known);
 
-        std::size_t const size = run.end - run.begin;
+        std::size_t const                    size = run.end - run.begin;
         std::vector<prompt::segment_outcome> batch(size);
-        auto const run_segments = std::span<segment const>(segments).subspan(run.begin, size);
-        bool const parallel = size > 1 && !stdin.available() && !any_sequential(run_segments);
+        auto const                           run_segments = std::span<segment const>(segments).subspan(run.begin, size);
+        bool const                           parallel = size > 1 && !stdin.available() && !any_sequential(run_segments);
         if (parallel) {
-            batch = run_parallel(run_segments,
-                                 [&](segment const& seg) { return batch_view(seg, batch_context, declarations, {}); });
+            batch = run_parallel(run_segments, [&](segment const& seg) {
+                return batch_view(seg, batch_context, declarations, {});
+            });
         } else {
             // Sequential segments see the facts the finished ones published (last
             // writer wins), so a file prompt can skip what an earlier one emitted.
@@ -834,18 +941,21 @@ Notes:
             // first so they apply to the whole batch.
             prompt::facts artifacts = state.known;
             for (std::size_t const k : batch_execution_order(
-                     run_segments,
-                     std::span<prompt::prompt_invocation const>(chain.invocations).subspan(run.begin, size))) {
-                std::size_t const i = run.begin + k;
-                auto const& inv = chain.invocations[i];
+                   run_segments,
+                   std::span<prompt::prompt_invocation const>(chain.invocations).subspan(run.begin, size)))
+            {
+                std::size_t const i   = run.begin + k;
+                auto const&       inv = chain.invocations[i];
                 if (invocation_wants_help(inv)) {
                     batch[k] = render_help_result(*segments[i].desc);
                     continue;
                 }
                 prompt::facts effective = merge_prior(artifacts);
-                auto in = batch_view(segments[i], batch_context, effective, {});
-                batch[k] = run_prompt(in, *segments[i].desc);
-                if (!batch[k].failed) artifacts.merge(batch[k].published, true);
+                auto          in        = batch_view(segments[i], batch_context, effective, {});
+                batch[k]                = run_prompt(in, *segments[i].desc);
+                if (!batch[k].failed) {
+                    artifacts.merge(batch[k].published, true);
+                }
                 if (batch[k].stdin_consumed) {
                     stdin_pending = false;
                     stdin.spend();
@@ -855,20 +965,26 @@ Notes:
 
         bool const emit_sources = show_context || run_index + 1 == plan.runs.size();
         for (std::size_t k = 0; k < batch.size(); ++k) {
-            std::size_t const i = run.begin + k;
-            auto& outcome = batch[k];
+            std::size_t const i       = run.begin + k;
+            auto&             outcome = batch[k];
             report_result(outcome);
-            if (!outcome.failed) state.known.merge(outcome.published, true);
+            if (!outcome.failed) {
+                state.known.merge(outcome.published, true);
+            }
             if (outcome.failed) {
                 state.incomplete = true;
-                if (exit_code == 0) exit_code = outcome.exit_code;
+                if (exit_code == 0) {
+                    exit_code = outcome.exit_code;
+                }
             }
             if (outcome.stdin_consumed) {
                 stdin_pending = false;
                 stdin.spend();
             }
             state.append(outcome.out, outcome.redacted);
-            if (emit_sources) emitter.emit(outcome.out, outcome.no_clipboard, outcome.redacted);
+            if (emit_sources) {
+                emitter.emit(outcome.out, outcome.no_clipboard, outcome.redacted);
+            }
             record_segment(i, outcome, "append", outcome.failed ? "failed" : "ok", emit_sources);
         }
     };
@@ -882,46 +998,55 @@ Notes:
             // A silent sink is a passthrough tap: it must not spend the pipe.
             // Keep the stdin in the accumulated context so a later sink still
             // receives it (the sink sees its own --head/legend-trimmed copy).
-            if (!segments[i].desc->stream_output) state.text = with_stdin;
-            input = std::move(with_stdin);
+            if (!segments[i].desc->stream_output) {
+                state.text = with_stdin;
+            }
+            input         = std::move(with_stdin);
             stdin_pending = false;
             stdin.spend();
         }
         auto const& opts = sink_args[i]->options;
-        if (opts.head_lines) input = std::string(prompt::trim_context_lines(input, *opts.head_lines));
+        if (opts.head_lines) {
+            input = std::string(prompt::trim_context_lines(input, *opts.head_lines));
+        }
         if (state.redacted && !input.empty() && !inner_process) {
-            std::string with_legend = std::string(prompt::sanitize::kRedactionLegend);
-            with_legend += "\n\n";
-            with_legend += input;
-            input = std::move(with_legend);
+            std::string with_legend  = std::string(prompt::sanitize::kRedactionLegend);
+            with_legend             += "\n\n";
+            with_legend             += input;
+            input                    = std::move(with_legend);
         }
         return input;
     };
 
     auto run_sink = [&](std::size_t i, std::string_view input, bool stream) {
         auto declarations = merge_prior(state.known);
-        auto in = batch_view(segments[i], input, declarations,
-                             prompt::stream_config{
-                                 .stdout_writer =
-                                     [](std::string_view chunk) {
-                                         std::cout.write(chunk.data(), static_cast<std::streamsize>(chunk.size()));
-                                         std::cout.flush();
-                                     },
-                                 .stderr_writer =
-                                     [](std::string_view chunk) {
-                                         std::cerr.write(chunk.data(), static_cast<std::streamsize>(chunk.size()));
-                                         std::cerr.flush();
-                                     },
-                                 .stream_stdout = stream,
-                                 .stream_stderr = stream,
-                             });
+        auto in           = batch_view(
+          segments[i],
+          input,
+          declarations,
+          prompt::stream_config{
+            .stdout_writer =
+              [](std::string_view chunk) {
+                  std::cout.write(chunk.data(), static_cast<std::streamsize>(chunk.size()));
+                  std::cout.flush();
+              },
+            .stderr_writer =
+              [](std::string_view chunk) {
+                  std::cerr.write(chunk.data(), static_cast<std::streamsize>(chunk.size()));
+                  std::cerr.flush();
+              },
+            .stream_stdout = stream,
+            .stream_stderr = stream,
+          });
         in.chain = &state;
-        in.head = sink_args[i]->options.head_lines;
+        in.head  = sink_args[i]->options.head_lines;
         return run_prompt(in, *segments[i].desc);
     };
 
     auto emit_sink = [&](prompt::segment_outcome const& outcome) {
-        if (outcome.silent) return;
+        if (outcome.silent) {
+            return;
+        }
         if (outcome.stdout_streamed) {
             emitter.streamed(outcome.out, outcome.no_clipboard, outcome.redacted);
         } else {
@@ -930,21 +1055,27 @@ Notes:
     };
 
     auto update_from_sink = [&](std::size_t i, prompt::segment_outcome const& outcome, std::string_view& merge) {
-        auto const& opts = sink_args[i]->options;
-        bool const has_output = !prompt::text::strip_newlines(outcome.out).empty();
+        auto const& opts       = sink_args[i]->options;
+        bool const  has_output = !prompt::text::strip_newlines(outcome.out).empty();
         if (outcome.failed) {
             merge = "abort";
-            if (opts.failure == prompt::sink_failure::abort) return true;
+            if (opts.failure == prompt::sink_failure::abort) {
+                return true;
+            }
             merge = "skip";
-            if (opts.failure == prompt::sink_failure::skip) return false;
+            if (opts.failure == prompt::sink_failure::skip) {
+                return false;
+            }
             if (has_output) {
                 if (opts.with_context) {
                     merge = "append";
                     state.append(outcome.out, outcome.redacted);
                 } else {
-                    merge = "replace";
+                    merge      = "replace";
                     state.text = std::string(prompt::text::strip_newlines(outcome.out));
-                    if (!state.text.empty()) state.text += '\n';
+                    if (!state.text.empty()) {
+                        state.text += '\n';
+                    }
                     state.redacted = outcome.redacted;
                 }
             } else {
@@ -984,7 +1115,9 @@ Notes:
             state.append(outcome.out, outcome.redacted);
         } else {
             state.text = std::string(prompt::text::strip_newlines(outcome.out));
-            if (!state.text.empty()) state.text += '\n';
+            if (!state.text.empty()) {
+                state.text += '\n';
+            }
             state.redacted = outcome.redacted;
         }
         state.incomplete = false;
@@ -1031,17 +1164,26 @@ Notes:
                     continue;
                 }
             }
-            std::string const input = current_input(i);
-            bool const stream = segments[i].desc->stream_output;
-            if (stream) emitter.begin_stream();
+            std::string const input  = current_input(i);
+            bool const        stream = segments[i].desc->stream_output;
+            if (stream) {
+                emitter.begin_stream();
+            }
             auto outcome = run_sink(i, input, stream);
             report_result(outcome);
             emit_sink(outcome);
-            if (outcome.failed && exit_code == 0) exit_code = outcome.exit_code;
+            if (outcome.failed && exit_code == 0) {
+                exit_code = outcome.exit_code;
+            }
             std::string_view merge = "replace";
-            bool const abort = update_from_sink(i, outcome, merge);
-            record_segment(i, outcome, merge, outcome.failed ? "failed" : "ok",
-                           !outcome.silent && !prompt::text::strip_newlines(outcome.out).empty(), input);
+            bool const       abort = update_from_sink(i, outcome, merge);
+            record_segment(
+              i,
+              outcome,
+              merge,
+              outcome.failed ? "failed" : "ok",
+              !outcome.silent && !prompt::text::strip_newlines(outcome.out).empty(),
+              input);
             if (abort) {
                 chain_aborted = true;
                 break;
@@ -1050,7 +1192,9 @@ Notes:
     }
 
     auto clip = emitter.clipboard();
-    if (!inner_process && !clip.empty()) prompt::clipboard::copy(clip);
+    if (!inner_process && !clip.empty()) {
+        prompt::clipboard::copy(clip);
+    }
     history.finish(exit_code, state.incomplete);
     return exit_code;
 }

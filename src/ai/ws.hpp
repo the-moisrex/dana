@@ -17,56 +17,63 @@
 
 namespace prompt::ai {
 
-class ws_error : public std::runtime_error {
-  public:
-    using std::runtime_error::runtime_error;
-};
+    class ws_error : public std::runtime_error {
+      public:
+        using std::runtime_error::runtime_error;
+    };
 
-struct ws_message {
-    std::string data;
-    bool text = true;
-    bool close = false;
-};
+    struct ws_message {
+        std::string data;
+        bool        text  = true;
+        bool        close = false;
+    };
 
-class websocket {
-  public:
-    websocket() = default;
-    ~websocket();
+    class websocket {
+      public:
+        websocket() = default;
+        ~websocket();
 
-    websocket(websocket&& other) noexcept;
-    websocket& operator=(websocket&& other) noexcept;
+        websocket(websocket&& other) noexcept;
+        websocket& operator=(websocket&& other) noexcept;
 
-    websocket(websocket const&) = delete;
-    websocket& operator=(websocket const&) = delete;
+        websocket(websocket const&)            = delete;
+        websocket& operator=(websocket const&) = delete;
 
-    // Open the socket: `url` must be ws:// or wss://.  `headers` reach the
-    // handshake verbatim (User-Agent, Cookie, …) and a non-empty `origin`
-    // becomes the Origin header.  Throws ws_error on any failure.
-    void connect(std::string const& url, std::vector<std::pair<std::string, std::string>> const& headers,
-                 std::string const& origin, long timeout_seconds);
+        // Open the socket: `url` must be ws:// or wss://.  `headers` reach the
+        // handshake verbatim (User-Agent, Cookie, …) and a non-empty `origin`
+        // becomes the Origin header.  Throws ws_error on any failure.
+        void connect(std::string const&                                      url,
+                     std::vector<std::pair<std::string, std::string>> const& headers,
+                     std::string const&                                      origin,
+                     long                                                    timeout_seconds);
 
-    void send_text(std::string_view data);
-    void send_ping();
+        void send_text(std::string_view data);
+        void send_ping();
 
-    // Wait up to `wait_ms` for one complete message (negative waits forever).
-    // Returns nullopt on timeout; a close frame comes back with `close` set.
-    std::optional<ws_message> receive(int wait_ms);
+        // Wait up to `wait_ms` for one complete message (negative waits forever).
+        // Returns nullopt on timeout; a close frame comes back with `close` set.
+        std::optional<ws_message> receive(int wait_ms);
 
-    void close();
+        void close();
 
-    [[nodiscard]] bool connected() const { return easy_ != nullptr; }
-    void set_debug(bool value) { debug_ = value; }
+        [[nodiscard]] bool connected() const {
+            return easy_ != nullptr;
+        }
 
-  private:
-    void* easy_ = nullptr;  // CURL*
-    void* multi_ = nullptr; // CURLM*
-    int socket_ = -1;       // the raw socket behind the websocket
-    std::string partial_;
-    bool partial_text_ = true;
-    bool debug_ = false;
-};
+        void set_debug(bool value) {
+            debug_ = value;
+        }
 
-// True when the linked libcurl was built with the ws/wss protocols.
-bool have_websocket();
+      private:
+        void*       easy_   = nullptr; // CURL*
+        void*       multi_  = nullptr; // CURLM*
+        int         socket_ = -1;      // the raw socket behind the websocket
+        std::string partial_;
+        bool        partial_text_ = true;
+        bool        debug_        = false;
+    };
+
+    // True when the linked libcurl was built with the ws/wss protocols.
+    bool have_websocket();
 
 } // namespace prompt::ai

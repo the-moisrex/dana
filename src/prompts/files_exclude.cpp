@@ -1,6 +1,7 @@
 #include "../sdk/errors.hpp"
 #include "../sdk/file_filter.hpp"
 #include "../sdk/prompt_registry.hpp"
+
 #include <algorithm>
 #include <format>
 #include <ostream>
@@ -10,60 +11,64 @@
 
 namespace prompt::prompts {
 
-namespace {
+    namespace {
 
-constexpr std::string_view kSummary =
-    "Exclude files from every file prompt in the same batch (fuzzy-picked when no pattern is given).";
+        constexpr std::string_view kSummary =
+          "Exclude files from every file prompt in the same batch (fuzzy-picked when no pattern is given).";
 
-void execute_files_exclude(view const& v, result& r) {
-    file_filter const filter = file_filter::from(v.prior, v.env);
+        void execute_files_exclude(view const& v, result& r) {
+            file_filter const filter = file_filter::from(v.prior, v.env);
 
-    bool clear = false;
-    bool list = false;
-    std::vector<std::string> patterns;
+            bool                     clear = false;
+            bool                     list  = false;
+            std::vector<std::string> patterns;
 
-    for (auto const arg : v.args) {
-        if (arg == "--clear") {
-            clear = true;
-        } else if (arg == "--list") {
-            list = true;
-        } else if (arg.size() > 1 && arg.front() == '-') {
-            throw usage_error{"files.exclude: unknown option " + std::string(arg)};
-        } else {
-            patterns.emplace_back(arg);
-        }
-    }
+            for (auto const arg : v.args) {
+                if (arg == "--clear") {
+                    clear = true;
+                } else if (arg == "--list") {
+                    list = true;
+                } else if (arg.size() > 1 && arg.front() == '-') {
+                    throw usage_error{"files.exclude: unknown option " + std::string(arg)};
+                } else {
+                    patterns.emplace_back(arg);
+                }
+            }
 
-    if (clear) {
-        patterns.clear();
-    } else if (patterns.empty() && !list) {
-        // No pattern names a file to exclude: pick them.
-        for (auto const& picked : select_files(v.env, filter)) {
-            patterns.push_back(display_path(v.env, picked));
-        }
-        if (patterns.empty()) {
-            r.err = "files.exclude: no files selected\n";
-            return;
-        }
-    }
+            if (clear) {
+                patterns.clear();
+            } else if (patterns.empty() && !list) {
+                // No pattern names a file to exclude: pick them.
+                for (auto const& picked : select_files(v.env, filter)) {
+                    patterns.push_back(display_path(v.env, picked));
+                }
+                if (patterns.empty()) {
+                    r.err = "files.exclude: no files selected\n";
+                    return;
+                }
+            }
 
-    auto const fact = clear ? std::string{} : filter.exclude_fact(patterns);
-    r.published.set(keys::excluded_files, fact);
+            auto const fact = clear ? std::string{} : filter.exclude_fact(patterns);
+            r.published.set(keys::excluded_files, fact);
 
-    if (list || clear) {
-        std::string report = clear ? "files.exclude: cleared\n" : "files.exclude:\n";
-        if (!clear) {
-            for (auto const& pattern : patterns) report += "  " + pattern + "\n";
-            for (auto const& pattern : filter.exclude()) {
-                if (std::ranges::find(patterns, pattern) == patterns.end()) report += "  " + pattern + "\n";
+            if (list || clear) {
+                std::string report = clear ? "files.exclude: cleared\n" : "files.exclude:\n";
+                if (!clear) {
+                    for (auto const& pattern : patterns) {
+                        report += "  " + pattern + "\n";
+                    }
+                    for (auto const& pattern : filter.exclude()) {
+                        if (std::ranges::find(patterns, pattern) == patterns.end()) {
+                            report += "  " + pattern + "\n";
+                        }
+                    }
+                }
+                r.err = std::move(report);
             }
         }
-        r.err = std::move(report);
-    }
-}
 
-void render_help_files_exclude(std::ostream& os) {
-    os << R"EOF(Usage: prompt .files.exclude [PATTERN...]
+        void render_help_files_exclude(std::ostream& os) {
+            os << R"EOF(Usage: prompt .files.exclude [PATTERN...]
        prompt .files.exclude --clear | --list
 
 Exclude files from every file prompt in the same batch: `.files`, `.read`,
@@ -91,11 +96,11 @@ Examples:
   prompt .files.exclude tests/ vendor/ .read.grep TODO
   prompt .files.exclude .files src            # pick the exclusions with fzf
 )EOF";
-}
+        }
 
-} // namespace
+    } // namespace
 
-bool const registered_files_exclude =
-    prompt::register_file_filter("files.exclude", kSummary, &execute_files_exclude, &render_help_files_exclude);
+    bool const registered_files_exclude =
+      prompt::register_file_filter("files.exclude", kSummary, &execute_files_exclude, &render_help_files_exclude);
 
 } // namespace prompt::prompts

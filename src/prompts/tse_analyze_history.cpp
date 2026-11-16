@@ -1,25 +1,27 @@
 #include "../sdk/prompt_registry.hpp"
+
 #include <ostream>
 #include <string>
 
 namespace prompt::prompts {
 
-static void render_help_tse_analyze_history(std::ostream& os);
+    static void render_help_tse_analyze_history(std::ostream& os);
 
-// The historical base-rate lens for the dataset collected by `tse`. Like
-// `tse.analyze` it is deliberately data-free: no arguments, no fetch, no
-// clipboard, so `prompt .tse <symbol> .tse.analyze.history` embeds the dataset
-// once and then these instructions.
-static void execute_tse_analyze_history(view const& v, result& r) {
-    if (!v.args.empty()) {
-        throw usage_error{"prompt tse.analyze.history: takes no arguments — it only prints the analysis "
-                          "instructions.\nChain it after the data prompt, e.g. "
-                          "`prompt .tse فولاد .tse.analyze.history`.\n" +
-                          help_text(render_help_tse_analyze_history)};
-    }
+    // The historical base-rate lens for the dataset collected by `tse`. Like
+    // `tse.analyze` it is deliberately data-free: no arguments, no fetch, no
+    // clipboard, so `prompt .tse <symbol> .tse.analyze.history` embeds the dataset
+    // once and then these instructions.
+    static void execute_tse_analyze_history(view const& v, result& r) {
+        if (!v.args.empty()) {
+            throw usage_error{
+              "prompt tse.analyze.history: takes no arguments — it only prints the analysis "
+              "instructions.\nChain it after the data prompt, e.g. "
+              "`prompt .tse فولاد .tse.analyze.history`.\n" +
+              help_text(render_help_tse_analyze_history)};
+        }
 
-    r.out =
-        R"EOF(You are a technical analyst of the Tehran Stock Exchange (TSE) specializing in pure price action, volume and institutional (legal / حقوقی) investor behaviour.
+        r.out =
+          R"EOF(You are a technical analyst of the Tehran Stock Exchange (TSE) specializing in pure price action, volume and institutional (legal / حقوقی) investor behaviour.
 
 ### Objective
 Determine whether institutional buying or selling during the **current** mid-trend correction or consolidation resembles the behaviour that preceded significant upward continuation moves in this same instrument's own history. Answer from the provided dataset only.
@@ -95,10 +97,10 @@ Answer directly:
 - If the data cannot answer a question, say so instead of estimating.
 - Verify every number against the provided dataset; the dataset is the only primary source.
 )EOF";
-}
+    }
 
-static void render_help_tse_analyze_history(std::ostream& os) {
-    os << R"EOF(Usage: prompt tse.analyze.history
+    static void render_help_tse_analyze_history(std::ostream& os) {
+        os << R"EOF(Usage: prompt tse.analyze.history
 
 Print the historical base-rate instructions for the TSETMC dataset collected by `tse`: define established uptrends, mid-trend corrections and sideways consolidations, enumerate every qualifying episode structurally (no outcome-based cherry-picking), compute identical per-episode metrics from adjusted closes and daily حقیقی/حقوقی flow, compare the current episode against them, and end with an evidence-based accumulation verdict and raw price triggers. Carries no data and takes no arguments: chain it after the data prompt.
 
@@ -113,17 +115,18 @@ Examples:
 Options:
   -h, --help   Show this help
 )EOF";
-}
+    }
 
-// This file is the prompt: it implements it and registers it at static-init time
-// (no central list — see sdk/prompt_registry.hpp).
-bool const registered_analyze_history = prompt::register_prompt(
-    "tse.analyze.history",
-    "Print the historical base-rate instructions for the TSETMC dataset collected by `tse` — established "
-    "uptrends, mid-trend corrections and sideways consolidations, every qualifying episode enumerated "
-    "structurally, identical per-episode metrics from adjusted closes and daily حقیقی/حقوقی flow, the current "
-    "episode compared against them, and an evidence-based accumulation verdict with raw price triggers. Carries "
-    "no data and takes no arguments: chain it after the data prompt (`prompt .tse فولاد .tse.analyze.history`).",
-    &execute_tse_analyze_history, &render_help_tse_analyze_history);
+    // This file is the prompt: it implements it and registers it at static-init time
+    // (no central list — see sdk/prompt_registry.hpp).
+    bool const registered_analyze_history = prompt::register_prompt(
+      "tse.analyze.history",
+      "Print the historical base-rate instructions for the TSETMC dataset collected by `tse` — established "
+      "uptrends, mid-trend corrections and sideways consolidations, every qualifying episode enumerated "
+      "structurally, identical per-episode metrics from adjusted closes and daily حقیقی/حقوقی flow, the current "
+      "episode compared against them, and an evidence-based accumulation verdict with raw price triggers. Carries "
+      "no data and takes no arguments: chain it after the data prompt (`prompt .tse فولاد .tse.analyze.history`).",
+      &execute_tse_analyze_history,
+      &render_help_tse_analyze_history);
 
 } // namespace prompt::prompts

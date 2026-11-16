@@ -7,6 +7,7 @@
 
 #include "cli.hpp"
 #include "providers/provider.hpp"
+
 #include <memory>
 #include <span>
 #include <string>
@@ -14,36 +15,36 @@
 
 namespace prompt::ai {
 
-// Parsed but not opened: cheap, no session or network access. `--print-prompt`,
-// `--list` and `--print-session` are answered from this alone.
-struct sink_setup {
-    std::string label; // the provider name as the user wrote it ("gap")
-    std::string canonical;
-    provider* instance = nullptr;
-    cli_options options;
-};
+    // Parsed but not opened: cheap, no session or network access. `--print-prompt`,
+    // `--list` and `--print-session` are answered from this alone.
+    struct sink_setup {
+        std::string label; // the provider name as the user wrote it ("gap")
+        std::string canonical;
+        provider*   instance = nullptr;
+        cli_options options;
+    };
 
-// Throws usage_error/soft_error exactly as the plain sink does.
-[[nodiscard]] sink_setup prepare_sink(std::string_view provider_name, std::span<std::string_view const> args);
+    // Throws usage_error/soft_error exactly as the plain sink does.
+    [[nodiscard]] sink_setup prepare_sink(std::string_view provider_name, std::span<std::string_view const> args);
 
-struct sink_session {
-    std::string label;
-    std::string canonical;
-    std::string scope;
-    provider* instance = nullptr;
-    std::unique_ptr<conversation> chat;
-    cli_options options;
-};
+    struct sink_session {
+        std::string                   label;
+        std::string                   canonical;
+        std::string                   scope;
+        provider*                     instance = nullptr;
+        std::unique_ptr<conversation> chat;
+        cli_options                   options;
+    };
 
-// Load the session, resolve the model and open the conversation.
-[[nodiscard]] sink_session open_sink_session(sink_setup setup);
+    // Load the session, resolve the model and open the conversation.
+    [[nodiscard]] sink_session open_sink_session(sink_setup setup);
 
-// The per-turn options: terminal rendering, thinking, prompt-file handling and
-// the first-turn attachments.
-[[nodiscard]] turn_options make_turn_options(cli_options const& options, conversation const& chat);
+    // The per-turn options: terminal rendering, thinking, prompt-file handling and
+    // the first-turn attachments.
+    [[nodiscard]] turn_options make_turn_options(cli_options const& options, conversation const& chat);
 
-// Persist the conversation under the provider's terminal scope, so `-c` and
-// `.ai.reply` continue it.
-void save_sink_state(sink_session const& session);
+    // Persist the conversation under the provider's terminal scope, so `-c` and
+    // `.ai.reply` continue it.
+    void save_sink_state(sink_session const& session);
 
 } // namespace prompt::ai

@@ -3,6 +3,7 @@
 #include "../sdk/facts.hpp"
 #include "../sdk/prompt_registry.hpp"
 #include "../sdk/stage.hpp"
+
 #include <filesystem>
 #include <ostream>
 #include <string>
@@ -10,50 +11,58 @@
 
 namespace prompt::prompts {
 
-namespace {
+    namespace {
 
-// `.paths.hide [PATH…]`: a silent transform sink. It rewrites the accumulated
-// context in place (so nothing is printed or copied) and publishes the mapping
-// for every later `.ai.*` sink.
-void execute_paths_hide(view const& v, result& r) {
-    alias::table table = alias::for_environment(v.env);
-    if (auto const prior = v.prior.get(keys::path_alias)) {
-        if (auto const decoded = alias::decode(*prior)) {
-            for (auto const& item : decoded->entries()) table.add(item.real, item.shown);
+        // `.paths.hide [PATH…]`: a silent transform sink. It rewrites the accumulated
+        // context in place (so nothing is printed or copied) and publishes the mapping
+        // for every later `.ai.*` sink.
+        void execute_paths_hide(view const& v, result& r) {
+            alias::table table = alias::for_environment(v.env);
+            if (auto const prior = v.prior.get(keys::path_alias)) {
+                if (auto const decoded = alias::decode(*prior)) {
+                    for (auto const& item : decoded->entries()) {
+                        table.add(item.real, item.shown);
+                    }
+                }
+            }
+
+            for (std::string_view const arg : v.args) {
+                if (!arg.empty() && arg.front() == '-') {
+                    throw usage_error{"prompt paths.hide: unknown option " + std::string(arg) + "\n"};
+                }
+                table.add_path(std::filesystem::path(arg));
+            }
+
+            r.out          = table.hide(v.text);
+            r.silent       = true;
+            r.no_clipboard = true;
+            r.published.set(keys::path_alias, alias::encode(table));
         }
-    }
 
-    for (std::string_view const arg : v.args) {
-        if (!arg.empty() && arg.front() == '-') {
-            throw usage_error{"prompt paths.hide: unknown option " + std::string(arg) + "\n"};
+        // `.paths.reveal`: the inverse transform, for the end of a chain or before a
+        // prompt that needs the real paths.
+        void execute_paths_reveal(view const& v, result& r) {
+            if (!v.args.empty()) {
+                throw usage_error{"prompt paths.reveal: does not take arguments\n"};
+            }
+
+            auto const fact = v.prior.get(keys::path_alias);
+            if (!fact) {
+                throw soft_error{"prompt paths.reveal: no .paths.hide earlier in the chain\n"};
+            }
+
+            auto const table = alias::decode(*fact);
+            if (!table) {
+                throw soft_error{"prompt paths.reveal: the path mapping is corrupt\n"};
+            }
+
+            r.out          = table->reveal(v.text);
+            r.silent       = true;
+            r.no_clipboard = true;
         }
-        table.add_path(std::filesystem::path(arg));
-    }
 
-    r.out = table.hide(v.text);
-    r.silent = true;
-    r.no_clipboard = true;
-    r.published.set(keys::path_alias, alias::encode(table));
-}
-
-// `.paths.reveal`: the inverse transform, for the end of a chain or before a
-// prompt that needs the real paths.
-void execute_paths_reveal(view const& v, result& r) {
-    if (!v.args.empty()) throw usage_error{"prompt paths.reveal: does not take arguments\n"};
-
-    auto const fact = v.prior.get(keys::path_alias);
-    if (!fact) throw soft_error{"prompt paths.reveal: no .paths.hide earlier in the chain\n"};
-
-    auto const table = alias::decode(*fact);
-    if (!table) throw soft_error{"prompt paths.reveal: the path mapping is corrupt\n"};
-
-    r.out = table->reveal(v.text);
-    r.silent = true;
-    r.no_clipboard = true;
-}
-
-void render_help_paths_hide(std::ostream& os) {
-    os << R"EOF(Usage: prompt <other prompts...> .paths.hide [PATH...]
+        void render_help_paths_hide(std::ostream& os) {
+            os << R"EOF(Usage: prompt <other prompts...> .paths.hide [PATH...]
 
 Replace the workspace's real absolute paths in the chain context with a stable,
 non-existent placeholder directory (`/prompt-ws-<hash>`), and publish the mapping
@@ -69,10 +78,10 @@ Examples:
   prompt .note "fix src/main.cpp" .paths.hide .ai.dseek
   prompt .files src/a.cpp .paths.hide .ai.gap .paths.reveal
 )EOF";
-}
+        }
 
-void render_help_paths_reveal(std::ostream& os) {
-    os << R"EOF(Usage: prompt <other prompts...> .paths.reveal
+        void render_help_paths_reveal(std::ostream& os) {
+            os << R"EOF(Usage: prompt <other prompts...> .paths.reveal
 
 Translate the placeholder workspace paths in the chain context back to the real
 ones, using the mapping a `.paths.hide` earlier in the chain published. Nothing
@@ -81,17 +90,25 @@ is printed or copied: the context is rewritten in place.
 Examples:
   prompt .note "review this" .paths.hide .ai.dseek .paths.reveal
 )EOF";
-}
+        }
 
-} // namespace
+    } // namespace
 
-// This file registers two silent sinks: `.paths.hide` and `.paths.reveal`.
-bool const registered_paths_hide = prompt::register_sink(
-    "paths.hide", "Replace real workspace paths in the chain context with a stable placeholder directory.",
-    &execute_paths_hide, &render_help_paths_hide, nullptr, false);
+    // This file registers two silent sinks: `.paths.hide` and `.paths.reveal`.
+    bool const registered_paths_hide = prompt::register_sink(
+      "paths.hide",
+      "Replace real workspace paths in the chain context with a stable placeholder directory.",
+      &execute_paths_hide,
+      &render_help_paths_hide,
+      nullptr,
+      false);
 
-bool const registered_paths_reveal = prompt::register_sink(
-    "paths.reveal", "Translate the placeholder workspace paths in the chain context back to real paths.",
-    &execute_paths_reveal, &render_help_paths_reveal, nullptr, false);
+    bool const registered_paths_reveal = prompt::register_sink(
+      "paths.reveal",
+      "Translate the placeholder workspace paths in the chain context back to real paths.",
+      &execute_paths_reveal,
+      &render_help_paths_reveal,
+      nullptr,
+      false);
 
 } // namespace prompt::prompts

@@ -20,33 +20,33 @@
 
 namespace prompt::ai::models {
 
-struct alias {
-    std::string_view from;
-    std::string_view to;
-};
+    struct alias {
+        std::string_view from;
+        std::string_view to;
+    };
 
-struct entry {
-    //: Canonical provider name (`dseek`, not `deepseek`).
-    std::string_view provider;
-    std::string_view default_model;
-    std::span<std::string_view const> models;
-    std::span<alias const> aliases;
-};
+    struct entry {
+        //: Canonical provider name (`dseek`, not `deepseek`).
+        std::string_view                  provider;
+        std::string_view                  default_model;
+        std::span<std::string_view const> models;
+        std::span<alias const>            aliases;
+    };
 
-//: Every provider, in catalog order.
-std::span<entry const> all();
+    //: Every provider, in catalog order.
+    std::span<entry const> all();
 
-//: The entry for a canonical (or alias) provider name, or nullptr.
-entry const* find(std::string_view provider);
+    //: The entry for a canonical (or alias) provider name, or nullptr.
+    entry const* find(std::string_view provider);
 
-//: The provider's models as a vector (empty for an unknown provider).
-std::vector<std::string> list(std::string_view provider);
+    //: The provider's models as a vector (empty for an unknown provider).
+    std::vector<std::string> list(std::string_view provider);
 
-//: The provider's default model (empty for an unknown provider).
-std::string_view default_model(std::string_view provider);
+    //: The provider's default model (empty for an unknown provider).
+    std::string_view default_model(std::string_view provider);
 
-//: The site id a friendly name maps to. `nullopt` means there is no alias
-//: entry; an empty value means the alias explicitly asks for the site default.
-std::optional<std::string_view> resolve_alias(std::string_view provider, std::string_view name);
+    //: The site id a friendly name maps to. `nullopt` means there is no alias
+    //: entry; an empty value means the alias explicitly asks for the site default.
+    std::optional<std::string_view> resolve_alias(std::string_view provider, std::string_view name);
 
 } // namespace prompt::ai::models

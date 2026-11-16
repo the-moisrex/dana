@@ -10,39 +10,53 @@
 
 namespace prompt::ai {
 
-class sse_decoder {
-  public:
-    // Feed one line (without its newline); returns the payloads completed by
-    // that line (usually none or one).
-    std::vector<std::string> feed(std::string_view line) {
-        if (!line.empty() && line.back() == '\r') line.remove_suffix(1);
-        if (line.empty()) return dispatch();
-        if (line.starts_with("data:")) {
-            std::string_view value = line.substr(5);
-            while (!value.empty() && (value.front() == ' ' || value.front() == '\t')) value.remove_prefix(1);
-            data_.emplace_back(value);
+    class sse_decoder {
+      public:
+        // Feed one line (without its newline); returns the payloads completed by
+        // that line (usually none or one).
+        std::vector<std::string> feed(std::string_view line) {
+            if (!line.empty() && line.back() == '\r') {
+                line.remove_suffix(1);
+            }
+            if (line.empty()) {
+                return dispatch();
+            }
+            if (line.starts_with("data:")) {
+                std::string_view value = line.substr(5);
+                while (!value.empty() && (value.front() == ' ' || value.front() == '\t')) {
+                    value.remove_prefix(1);
+                }
+                data_.emplace_back(value);
+            }
+            return {};
         }
-        return {};
-    }
 
-    // Flush a final event that was not terminated by a blank line.
-    std::vector<std::string> finish() { return dispatch(); }
-
-  private:
-    std::vector<std::string> dispatch() {
-        std::vector<std::string> out;
-        if (data_.empty()) return out;
-        std::string payload;
-        for (std::size_t i = 0; i < data_.size(); ++i) {
-            if (i != 0) payload += '\n';
-            payload += data_[i];
+        // Flush a final event that was not terminated by a blank line.
+        std::vector<std::string> finish() {
+            return dispatch();
         }
-        data_.clear();
-        if (payload != "[DONE]") out.push_back(std::move(payload));
-        return out;
-    }
 
-    std::vector<std::string> data_;
-};
+      private:
+        std::vector<std::string> dispatch() {
+            std::vector<std::string> out;
+            if (data_.empty()) {
+                return out;
+            }
+            std::string payload;
+            for (std::size_t i = 0; i < data_.size(); ++i) {
+                if (i != 0) {
+                    payload += '\n';
+                }
+                payload += data_[i];
+            }
+            data_.clear();
+            if (payload != "[DONE]") {
+                out.push_back(std::move(payload));
+            }
+            return out;
+        }
+
+        std::vector<std::string> data_;
+    };
 
 } // namespace prompt::ai

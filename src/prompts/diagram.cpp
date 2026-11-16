@@ -1,6 +1,7 @@
 #include "../sdk/args.hpp"
 #include "../sdk/embed.hpp"
 #include "../sdk/prompt_registry.hpp"
+
 #include <array>
 #include <filesystem>
 #include <string>
@@ -9,30 +10,30 @@
 
 namespace prompt::prompts {
 
-static void execute_diagram(view const& v, result& r) {
-    // diagram.sh runs init_prompt (which already validated --head) before its
-    // own --type loop, so --head errors win.
-    auto opts = file_options_or_throw(v);
+    static void execute_diagram(view const& v, result& r) {
+        // diagram.sh runs init_prompt (which already validated --head) before its
+        // own --type loop, so --head errors win.
+        auto opts = file_options_or_throw(v);
 
-    // diagram.sh's loop walks the ORIGINAL arguments, not the parsed ARGS.
-    std::string diagram_type = "mermaid";
-    for (std::size_t i = 0; i < v.args.size(); ++i) {
-        if (v.args[i] == "--type" || v.args[i] == "-t") {
-            if (i + 1 >= v.args.size()) {
-                throw usage_error{"Missing value for --type\n"};
+        // diagram.sh's loop walks the ORIGINAL arguments, not the parsed ARGS.
+        std::string diagram_type = "mermaid";
+        for (std::size_t i = 0; i < v.args.size(); ++i) {
+            if (v.args[i] == "--type" || v.args[i] == "-t") {
+                if (i + 1 >= v.args.size()) {
+                    throw usage_error{"Missing value for --type\n"};
+                }
+                diagram_type = std::string(v.args[i + 1]);
+                ++i;
             }
-            diagram_type = std::string(v.args[i + 1]);
-            ++i;
         }
-    }
 
-    std::string output;
-    output += R"PROMPT(You are a software architecture diagramming expert.
+        std::string output;
+        output += R"PROMPT(You are a software architecture diagramming expert.
 Generate a clear, accurate diagram from the provided code or description.
 
 )PROMPT";
-    output += std::format("Output format: {}\n", diagram_type);
-    output += R"PROMPT(
+        output += std::format("Output format: {}\n", diagram_type);
+        output += R"PROMPT(
 Guidelines:
 - Capture the essential relationships, not every detail
 - Use meaningful labels on all nodes and edges
@@ -44,49 +45,58 @@ Guidelines:
 
 If the code is complex, produce multiple focused diagrams rather than one overwhelming diagram.
 )PROMPT";
-    output += '\n';
+        output += '\n';
 
-    std::string error;
-    auto sources = collect_file_args(v);
-    for (auto const& file : sources.files) {
-        output += std::format("File: {}\n\n```{}\n", file.filename().string(), infer_lang(file));
-        output += number_lines(trim_context_nl(read_file(file), opts.head_lines), opts.numbered);
-        // diagram.sh leaves a blank line before the closing fence.
-        output += "\n```\n\n";
+        std::string error;
+        auto        sources = collect_file_args(v);
+        for (auto const& file : sources.files) {
+            output += std::format("File: {}\n\n```{}\n", file.filename().string(), infer_lang(file));
+            output += number_lines(trim_context_nl(read_file(file), opts.head_lines), opts.numbered);
+            // diagram.sh leaves a blank line before the closing fence.
+            output += "\n```\n\n";
+        }
+        for (auto arg : sources.missing) {
+            warn_missing_file(error, arg);
+        }
+
+        r.out = std::move(output);
+        r.err = std::move(error);
     }
-    for (auto arg : sources.missing) {
-        warn_missing_file(error, arg);
-    }
 
-    r.out = std::move(output);
-    r.err = std::move(error);
-}
-
-static void render_help_diagram(std::ostream& os) {
-    os << file_usage_help("diagram", "[--type TYPE] [FILE...]", "echo \"task description\"") << R"EOF(
+    static void render_help_diagram(std::ostream& os) {
+        os << file_usage_help("diagram", "[--type TYPE] [FILE...]", "echo \"task description\"") << R"EOF(
 Generates code diagrams (Mermaid, PlantUML, ASCII) from source code or descriptions.
 
 Options:
 )EOF" << file_options_help("the embedded context")
-       << R"EOF(  --type, -t     Diagram type: mermaid (default), plantuml, ascii, flowchart, sequence, class
+           << R"EOF(  --type, -t     Diagram type: mermaid (default), plantuml, ascii, flowchart, sequence, class
 )EOF";
-}
+    }
 
-// The diagram types diagram.sh accepts, from its own help text.
-static void complete_diagram(completion_request const& req, std::ostream& os) {
-    static constexpr std::array<std::string_view, 6> kTypes = {
-        "mermaid", "plantuml", "ascii", "flowchart", "sequence", "class",
-    };
-    if (prompt::completion::write_values_after_flag(os, req, "--type", kTypes)) return;
-    prompt::completion::write_values_after_flag(os, req, "-t", kTypes);
-}
+    // The diagram types diagram.sh accepts, from its own help text.
+    static void complete_diagram(completion_request const& req, std::ostream& os) {
+        static constexpr std::array<std::string_view, 6> kTypes = {
+          "mermaid",
+          "plantuml",
+          "ascii",
+          "flowchart",
+          "sequence",
+          "class",
+        };
+        if (prompt::completion::write_values_after_flag(os, req, "--type", kTypes)) {
+            return;
+        }
+        prompt::completion::write_values_after_flag(os, req, "-t", kTypes);
+    }
 
-// This file is the prompt: it implements it and registers it at static-init time
-// (no central list — see sdk/prompt_registry.hpp).
-bool const registered =
-    prompt::register_prompt("diagram",
-                            "Generates code diagrams (Mermaid, PlantUML, ASCII) from source code or "
-                            "descriptions.",
-                            &execute_diagram, &render_help_diagram, &complete_diagram);
+    // This file is the prompt: it implements it and registers it at static-init time
+    // (no central list — see sdk/prompt_registry.hpp).
+    bool const registered = prompt::register_prompt(
+      "diagram",
+      "Generates code diagrams (Mermaid, PlantUML, ASCII) from source code or "
+      "descriptions.",
+      &execute_diagram,
+      &render_help_diagram,
+      &complete_diagram);
 
 } // namespace prompt::prompts

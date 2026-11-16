@@ -3,6 +3,7 @@
 #include "../sdk/embed.hpp"
 #include "../sdk/file_filter.hpp"
 #include "../sdk/prompt_registry.hpp"
+
 #include <algorithm>
 #include <format>
 #include <optional>
@@ -13,52 +14,54 @@
 
 namespace prompt::prompts {
 
-namespace {
+    namespace {
 
-struct verify_options {
-    std::vector<std::string> exclude;
-    std::vector<std::string> only;
-    bool prompt_only = false;
-};
-
-struct parsed_verify_args {
-    verify_options opts;
-    std::vector<std::string> forward; // args still destined for git-dirty
-};
-
-parsed_verify_args parse_verify_args(std::vector<std::string> const& args) {
-    parsed_verify_args result;
-    for (std::size_t i = 0; i < args.size(); ++i) {
-        std::string_view a = args[i];
-        auto take_value = [&](std::string_view flag) -> std::optional<std::string_view> {
-            if (a == flag) {
-                if (i + 1 >= args.size())
-                    throw soft_error{std::format("prompt verify: option '{}' requires a value.\n", flag)};
-                return std::string_view{args[++i]};
-            }
-            if (a.size() > flag.size() && a.starts_with(flag) && a[flag.size()] == '=')
-                return a.substr(flag.size() + 1);
-            return std::nullopt;
+        struct verify_options {
+            std::vector<std::string> exclude;
+            std::vector<std::string> only;
+            bool                     prompt_only = false;
         };
-        if (auto x = take_value("--exclude")) {
-            result.opts.exclude.emplace_back(*x);
-            continue;
-        }
-        if (auto x = take_value("--only")) {
-            result.opts.only.emplace_back(*x);
-            continue;
-        }
-        if (a == "--prompt-only") {
-            result.opts.prompt_only = true;
-            continue;
-        }
-        result.forward.push_back(args[i]);
-    }
-    return result;
-}
 
-std::string_view verify_instructions() {
-    return R"PROMPT(You are verifying uncommitted changes in a Git repository.
+        struct parsed_verify_args {
+            verify_options           opts;
+            std::vector<std::string> forward; // args still destined for git-dirty
+        };
+
+        parsed_verify_args parse_verify_args(std::vector<std::string> const& args) {
+            parsed_verify_args result;
+            for (std::size_t i = 0; i < args.size(); ++i) {
+                std::string_view a          = args[i];
+                auto             take_value = [&](std::string_view flag) -> std::optional<std::string_view> {
+                    if (a == flag) {
+                        if (i + 1 >= args.size()) {
+                            throw soft_error{std::format("prompt verify: option '{}' requires a value.\n", flag)};
+                        }
+                        return std::string_view{args[++i]};
+                    }
+                    if (a.size() > flag.size() && a.starts_with(flag) && a[flag.size()] == '=') {
+                        return a.substr(flag.size() + 1);
+                    }
+                    return std::nullopt;
+                };
+                if (auto x = take_value("--exclude")) {
+                    result.opts.exclude.emplace_back(*x);
+                    continue;
+                }
+                if (auto x = take_value("--only")) {
+                    result.opts.only.emplace_back(*x);
+                    continue;
+                }
+                if (a == "--prompt-only") {
+                    result.opts.prompt_only = true;
+                    continue;
+                }
+                result.forward.push_back(args[i]);
+            }
+            return result;
+        }
+
+        std::string_view verify_instructions() {
+            return R"PROMPT(You are verifying uncommitted changes in a Git repository.
 Your job is to validate correctness: check that the changes do
 what they claim, handle edge cases, preserve invariants, and
 introduce no bugs or regressions.
@@ -90,86 +93,97 @@ source needed for an accurate patch, explain that limitation rather
 than inventing missing source or hunk coordinates.
 
 )PROMPT";
-}
+        }
 
-} // namespace
+    } // namespace
 
-static void execute_verify(view const& v, result& r) {
-    auto head_lines = head_lines_or_throw(v);
-    auto pos_args = positional_args(v);
-    // positional_args drops --no-dedup; verify forwards it to git-dirty so the
-    // escape hatch reaches the prompt that actually emits the files.
-    if (std::ranges::any_of(v.args, [](std::string_view arg) { return arg == kNoDedupFlag; })) {
-        pos_args.emplace_back(kNoDedupFlag);
-    }
-    auto parsed = parse_verify_args(pos_args);
-    auto const& opts = parsed.opts;
+    static void execute_verify(view const& v, result& r) {
+        auto head_lines = head_lines_or_throw(v);
+        auto pos_args   = positional_args(v);
+        // positional_args drops --no-dedup; verify forwards it to git-dirty so the
+        // escape hatch reaches the prompt that actually emits the files.
+        if (std::ranges::any_of(v.args,
+                                [](std::string_view arg) {
+                                    return arg == kNoDedupFlag;
+                                }))
+        {
+            pos_args.emplace_back(kNoDedupFlag);
+        }
+        auto        parsed = parse_verify_args(pos_args);
+        auto const& opts   = parsed.opts;
 
-    // The chain-wide filter: exclusions join --exclude, and a scope becomes an
-    // implicit --only prefix.
-    file_filter const filter = file_filter::from(v.prior, v.env);
-    for (auto const& pattern : filter.exclude()) parsed.opts.exclude.push_back(pattern);
-    if (filter.has_root() && !v.env.git_root.empty()) {
-        auto spec = filter.root().lexically_relative(v.env.git_root).generic_string();
-        if (!spec.empty() && spec != ".") parsed.opts.only.push_back(spec + "/*");
-    }
-
-    // Prompt-only: emit just the instructions, skip git/context entirely.
-    if (opts.prompt_only) {
-        std::string output{verify_instructions()};
-        r.out = std::move(output);
-        return;
-    }
-
-    // Piped stdin wins; otherwise run git-dirty with the forwarded arguments.
-    // Preserve context formatting: file rendering belongs to git-dirty, and
-    // unified diffs already carry line coordinates in their hunk headers.
-    std::string context;
-    if (v.in.piped()) {
-        context = v.in.text();
-    } else {
-        std::vector<std::string_view> args;
-        if (parsed.forward.empty()) {
-            args = {"--full-diff"};
-        } else {
-            args.reserve(parsed.forward.size());
-            for (auto const& arg : parsed.forward) {
-                args.emplace_back(arg);
+        // The chain-wide filter: exclusions join --exclude, and a scope becomes an
+        // implicit --only prefix.
+        file_filter const filter = file_filter::from(v.prior, v.env);
+        for (auto const& pattern : filter.exclude()) {
+            parsed.opts.exclude.push_back(pattern);
+        }
+        if (filter.has_root() && !v.env.git_root.empty()) {
+            auto spec = filter.root().lexically_relative(v.env.git_root).generic_string();
+            if (!spec.empty() && spec != ".") {
+                parsed.opts.only.push_back(spec + "/*");
             }
         }
 
-        auto sub = run_sub_prompt(v, "git-dirty", args);
-        r.published = std::move(sub.published);
-
-        // Remove trailing line endings without copying the entire context.
-        while (!sub.out.empty() && (sub.out.back() == '\n' || sub.out.back() == '\r')) {
-            sub.out.pop_back();
+        // Prompt-only: emit just the instructions, skip git/context entirely.
+        if (opts.prompt_only) {
+            std::string output{verify_instructions()};
+            r.out = std::move(output);
+            return;
         }
 
-        if (sub.out.empty()) {
-            throw soft_error{"No changes found in the repository. Nothing to verify.\n"};
+        // Piped stdin wins; otherwise run git-dirty with the forwarded arguments.
+        // Preserve context formatting: file rendering belongs to git-dirty, and
+        // unified diffs already carry line coordinates in their hunk headers.
+        std::string context;
+        if (v.in.piped()) {
+            context = v.in.text();
+        } else {
+            std::vector<std::string_view> args;
+            if (parsed.forward.empty()) {
+                args = {"--full-diff"};
+            } else {
+                args.reserve(parsed.forward.size());
+                for (auto const& arg : parsed.forward) {
+                    args.emplace_back(arg);
+                }
+            }
+
+            auto sub    = run_sub_prompt(v, "git-dirty", args);
+            r.published = std::move(sub.published);
+
+            // Remove trailing line endings without copying the entire context.
+            while (!sub.out.empty() && (sub.out.back() == '\n' || sub.out.back() == '\r')) {
+                sub.out.pop_back();
+            }
+
+            if (sub.out.empty()) {
+                throw soft_error{"No changes found in the repository. Nothing to verify.\n"};
+            }
+
+            context = std::move(sub.out);
         }
 
-        context = std::move(sub.out);
+        // Apply file selection to whatever context we have (git-dirty or piped).
+        if (!opts.exclude.empty() || !opts.only.empty()) {
+            context = prompt::git::filter_diff_by_path(context, opts.only, opts.exclude);
+            if (context.empty()) {
+                throw soft_error{"No changes left after applying --exclude/--only filters.\n"};
+            }
+        }
+
+        std::string output{verify_instructions()};
+        output += trim_context_nl(context, head_lines);
+        if (!output.ends_with('\n')) {
+            output.push_back('\n');
+        }
+
+        r.out = std::move(output);
     }
 
-    // Apply file selection to whatever context we have (git-dirty or piped).
-    if (!opts.exclude.empty() || !opts.only.empty()) {
-        context = prompt::git::filter_diff_by_path(context, opts.only, opts.exclude);
-        if (context.empty()) {
-            throw soft_error{"No changes left after applying --exclude/--only filters.\n"};
-        }
-    }
-
-    std::string output{verify_instructions()};
-    output += trim_context_nl(context, head_lines);
-    if (!output.ends_with('\n')) output.push_back('\n');
-
-    r.out = std::move(output);
-}
-
-static void render_help_verify(std::ostream& os) {
-    os << R"EOF(Usage: prompt verify [--head N] [--exclude GLOB]... [--only GLOB]... [--prompt-only] [GIT-DIRTY OPTIONS...]
+    static void render_help_verify(std::ostream& os) {
+        os
+          << R"EOF(Usage: prompt verify [--head N] [--exclude GLOB]... [--only GLOB]... [--prompt-only] [GIT-DIRTY OPTIONS...]
        some-command | prompt verify [--head N] [--exclude GLOB]... [--only GLOB]... [--prompt-only]
 
 Verify uncommitted changes in the current Git repository for correctness.
@@ -197,10 +211,12 @@ Options:
   --no-dedup     Re-emit a file an earlier prompt already embedded
   -h, --help     Show this help
 )EOF";
-}
+    }
 
-bool const registered =
-    prompt::register_file_prompt("verify", "Verify uncommitted changes in the current Git repository for correctness.",
-                                 &execute_verify, &render_help_verify);
+    bool const registered = prompt::register_file_prompt(
+      "verify",
+      "Verify uncommitted changes in the current Git repository for correctness.",
+      &execute_verify,
+      &render_help_verify);
 
 } // namespace prompt::prompts

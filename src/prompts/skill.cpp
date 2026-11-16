@@ -4,6 +4,7 @@
 #include "../sdk/args.hpp"
 #include "../sdk/embed.hpp"
 #include "../sdk/prompt_registry.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -18,445 +19,627 @@
 
 namespace prompt::prompts {
 
-namespace {
+    namespace {
 
-std::string env_or(std::string const& key, std::string const& fallback) {
-    if (char const* v = std::getenv(key.c_str())) return v;
-    return fallback;
-}
-
-std::string home_dir() { return env_or("HOME", ""); }
-
-std::string skills_dir() {
-    std::string xdg = env_or("XDG_DATA_HOME", std::string());
-    if (xdg.empty()) xdg = home_dir() + "/.local/share";
-    return xdg + "/agents/skills";
-}
-
-std::vector<std::string> legacy_dirs() { return {home_dir() + "/.agents/skills", home_dir() + "/.claude/skills"}; }
-
-std::vector<std::string> cache_dirs() {
-    auto dirs = legacy_dirs();
-    dirs.insert(dirs.begin(), skills_dir());
-    return dirs;
-}
-
-// Run a command, capturing stdout. stderr is inherited like a plain `$(...)`
-// capture, or discarded (`2>/dev/null`) when the bash call site redirects it.
-// Returns stdout and the exit code.
-std::string run_capture(std::vector<std::string> const& cmd, std::string const& stdin_data, int& exit_code,
-                        bool discard_stderr = false) {
-    prompt::process::command c(cmd);
-    c.stdin_data(stdin_data);
-    if (discard_stderr) c.discard_stderr();
-    auto r = c.run();
-    exit_code = r.exit_code;
-    return r.stdout_data;
-}
-
-std::string strip_trailing_nl(std::string s) {
-    while (!s.empty() && s.back() == '\n') s.pop_back();
-    return s;
-}
-
-// jq -r '<filter>' over $meta (bash feeds meta + a newline via <<<).
-std::string jq_extract(std::string const& meta, std::string const& filter) {
-    int ec = 0;
-    std::string out = run_capture({"jq", "-r", filter}, meta + "\n", ec);
-    return strip_trailing_nl(out);
-}
-
-// Port of parse_frontmatter: collect lines between the first two "---" lines,
-// then parse them with the same Python one-liner the script uses.
-std::string parse_frontmatter(std::filesystem::path const& file) {
-    std::ifstream in(file, std::ios::binary);
-    if (!in) return "{}";
-    std::string fm;
-    bool in_fm = false;
-    std::string line;
-    while (std::getline(in, line)) {
-        if (!line.empty() && line.back() == '\r') line.pop_back();
-        if (line == "---") {
-            if (in_fm) break;
-            in_fm = true;
-            continue;
-        }
-        if (in_fm) fm += line + "\n";
-    }
-    // bash pipes `echo "$fm_lines"`, i.e. fm + an extra trailing newline.
-    std::string stdin_data = fm + "\n";
-
-    // Port of the python one-liner the script pipes the frontmatter into:
-    // `^(\w[\w_-]*):\s*(.*)` per line, value stripped and unquoted once when it
-    // is wrapped in matching quotes. The result is a flat JSON object —
-    // downstream consumers read it with jq, so the exact serialization does
-    // not matter, only the keys and values.
-    nlohmann::ordered_json data = nlohmann::ordered_json::object();
-    std::istringstream lines_in(stdin_data);
-    for (std::string raw; std::getline(lines_in, raw);) {
-        if (!raw.empty() && raw.back() == '\r') raw.pop_back();
-        raw = prompt::text::rstrip(raw);
-        auto colon = raw.find(':');
-        if (colon == std::string::npos || colon == 0) continue;
-        std::string key = raw.substr(0, colon);
-        bool ok = (std::isalnum(static_cast<unsigned char>(key[0])) != 0) || key[0] == '_';
-        for (char c : key) {
-            if (std::isalnum(static_cast<unsigned char>(c)) == 0 && c != '_' && c != '-') ok = false;
-        }
-        if (!ok) continue;
-        std::string value = prompt::text::strip(raw.substr(colon + 1));
-        if (value.size() >= 2 && value.front() == value.back() && (value.front() == '"' || value.front() == '\'')) {
-            value = value.substr(1, value.size() - 2);
-        }
-        data[key] = value;
-    }
-    return data.dump();
-}
-
-// bash_infer_lang (same table as _common.sh).
-std::string bash_infer_lang(std::string const& filename) {
-    std::string base = filename;
-    auto slash = base.find_last_of('/');
-    if (slash != std::string::npos) base = base.substr(slash + 1);
-    std::string ext;
-    auto dot = base.find_last_of('.');
-    ext = (dot != std::string::npos) ? base.substr(dot + 1) : base;
-
-    if (base == "Dockerfile") return "dockerfile";
-    if (base == "Makefile" || base == "makefile" || base == "GNUmakefile") return "makefile";
-    if (base == "CMakeLists.txt") return "cmake";
-    if (ext == "c" || ext == "h") return "c";
-    if (ext == "cc" || ext == "cp" || ext == "cpp" || ext == "cxx" || ext == "c++" || ext == "hpp" || ext == "hxx" ||
-        ext == "hh" || ext == "h++")
-        return "cpp";
-    if (ext == "m") return "objectivec";
-    if (ext == "mm") return "objective-cpp";
-    if (ext == "rs") return "rust";
-    if (ext == "py" || ext == "pyi") return "python";
-    if (ext == "sh" || ext == "bash") return "bash";
-    if (ext == "zsh") return "zsh";
-    if (ext == "fish") return "fish";
-    if (ext == "nu") return "nu";
-    if (ext == "js" || ext == "cjs" || ext == "mjs") return "javascript";
-    if (ext == "ts" || ext == "mts" || ext == "cts") return "typescript";
-    if (ext == "jsx") return "jsx";
-    if (ext == "tsx") return "tsx";
-    if (ext == "java") return "java";
-    if (ext == "kt" || ext == "kts") return "kotlin";
-    if (ext == "swift") return "swift";
-    if (ext == "go") return "go";
-    if (ext == "rb") return "ruby";
-    if (ext == "php") return "php";
-    if (ext == "lua") return "lua";
-    if (ext == "pl" || ext == "pm") return "perl";
-    if (ext == "r") return "r";
-    if (ext == "scala") return "scala";
-    if (ext == "cs") return "csharp";
-    if (ext == "fs" || ext == "fsx") return "fsharp";
-    if (ext == "vb") return "vbnet";
-    if (ext == "dart") return "dart";
-    if (ext == "ex" || ext == "exs") return "elixir";
-    if (ext == "erl" || ext == "hrl") return "erlang";
-    if (ext == "clj" || ext == "cljs" || ext == "cljc") return "clojure";
-    if (ext == "ml" || ext == "mli") return "ocaml";
-    if (ext == "sql") return "sql";
-    if (ext == "html" || ext == "htm") return "html";
-    if (ext == "css") return "css";
-    if (ext == "scss") return "scss";
-    if (ext == "sass") return "sass";
-    if (ext == "less") return "less";
-    if (ext == "xml") return "xml";
-    if (ext == "xsl" || ext == "xslt") return "xslt";
-    if (ext == "svg") return "svg";
-    if (ext == "json" || ext == "stock" || ext == "tse") return "json";
-    if (ext == "jsonc") return "jsonc";
-    if (ext == "yaml" || ext == "yml") return "yaml";
-    if (ext == "toml") return "toml";
-    if (ext == "ini" || ext == "cfg" || ext == "conf") return "ini";
-    if (ext == "env") return "dotenv";
-    if (ext == "md") return "markdown";
-    if (ext == "txt" || ext == "log") return "text";
-    if (ext == "diff" || ext == "patch") return "diff";
-    if (ext == "proto") return "proto";
-    if (ext == "asm" || ext == "s" || ext == "S") return "asm";
-    if (ext == "tex") return "tex";
-    if (ext == "vim") return "vim";
-    return "text";
-}
-
-std::string find_cached_skill(std::string const& name) {
-    for (auto const& dir : cache_dirs()) {
-        std::error_code ec;
-        auto f = std::filesystem::path(dir) / name / "SKILL.md";
-        if (std::filesystem::is_regular_file(f, ec)) return f.string();
-    }
-    return {};
-}
-
-void list_cached_skills(std::string& out) {
-    bool found = false;
-    for (auto const& dir : cache_dirs()) {
-        std::error_code ec;
-        if (!std::filesystem::is_directory(dir, ec)) continue;
-        // bash iterates `"$dir"/*/` (glob => sorted by name).
-        std::vector<std::filesystem::path> subdirs;
-        std::error_code it_ec;
-        for (std::filesystem::directory_iterator it(dir, it_ec), end; !it_ec && it != end; it.increment(it_ec)) {
-            if (it_ec) break;
-            if (std::filesystem::is_directory(it->path())) subdirs.push_back(it->path());
-        }
-        std::sort(subdirs.begin(), subdirs.end());
-        for (auto const& skill_path : subdirs) {
-            std::error_code fec;
-            auto skill_file = skill_path / "SKILL.md";
-            if (!std::filesystem::is_regular_file(skill_file, fec)) continue;
-            std::string meta = parse_frontmatter(skill_file);
-            std::string name = jq_extract(meta, ".name // empty");
-            if (name.empty()) name = skill_path.filename().string();
-            std::string desc = jq_extract(meta, ".description // \"\"");
-            if (desc.size() > 80) desc = desc.substr(0, 77) + "...";
-            std::string field = name;
-            if (field.size() < 24) field += std::string(24 - field.size(), ' ');
-            out += std::format("  {} {}\n", field, desc);
-            found = true;
-        }
-    }
-    if (!found) {
-        out += "  (no cached skills found)\n\n";
-        out += std::format("  Skills are cached in: {}\n", skills_dir());
-        out += "  Use 'prompt skill <query>' to search and download skills.\n";
-    }
-}
-
-std::vector<std::string> cached_skill_names() {
-    std::vector<std::string> names;
-    for (auto const& dir : cache_dirs()) {
-        std::error_code ec;
-        if (!std::filesystem::is_directory(dir, ec)) continue;
-        for (std::filesystem::directory_iterator it(dir, ec), end; !ec && it != end; it.increment(ec)) {
-            if (!std::filesystem::is_directory(it->path())) continue;
-            std::error_code fec;
-            if (!std::filesystem::is_regular_file(it->path() / "SKILL.md", fec)) continue;
-            names.push_back(it->path().filename().string());
-        }
-    }
-    std::sort(names.begin(), names.end());
-    names.erase(std::unique(names.begin(), names.end()), names.end());
-    return names;
-}
-
-std::string ai_find_skills_tool(std::filesystem::path const& exe_path, std::filesystem::path const& git_root) {
-    auto p = prompt::fs::bin_tool("ai-find-skills", exe_path, git_root);
-    return p.string();
-}
-
-// search_skills: run ai-find-skills --json --no-scan <query>. The download path
-// calls it as `search_skills ... 2>/dev/null`, so callers can discard its
-// stderr (which carries the tool's `# full JSON: <tmpfile>` note).
-std::string search_skills(std::string const& query, std::string const& tool, bool discard_stderr = false) {
-    std::error_code ec;
-    if (!std::filesystem::is_regular_file(tool, ec) || ec) return {};
-    int ec2 = 0;
-    return run_capture({tool, "--json", "--no-scan", query}, "", ec2, discard_stderr);
-}
-
-std::string merge_results(std::string const& json) {
-    std::string const filter =
-        "[\n"
-        "  (.skills_sh // [])[] | {name, board, repo, slug, url, installs, stars, match, summary},\n"
-        "  (.clawhub    // [])[] | {name, board, repo:null, slug, url, installs, stars, match, summary},\n"
-        "  (.github     // [])[] | {name, board, repo, slug:null, url, installs:null, stars, match, summary}\n"
-        "] | to_entries | map(.key + 1 as $idx | .value | {idx: $idx, name, board, repo, slug, url, installs, stars, "
-        "match, summary})\n";
-    int ec = 0;
-    return run_capture({"jq", "-c", filter}, json, ec);
-}
-
-std::string find_rec(std::string const& results, std::string const& name) {
-    std::string q1 = "[.[] | select(.name == $n)] | .[0] // empty";
-    int ec = 0;
-    std::string rec = run_capture({"jq", "-c", "--arg", "n", name, q1}, results, ec);
-    rec = strip_trailing_nl(rec);
-    if (rec.empty()) {
-        std::string q2 = "[.[] | select(.name | test($n; \"i\"))] | .[0] // empty";
-        rec = strip_trailing_nl(run_capture({"jq", "-c", "--arg", "n", name, q2}, results, ec));
-    }
-    return rec;
-}
-
-} // namespace
-
-static void execute_skill(view const& v, result& r) {
-    auto opts = file_options_or_throw(v);
-
-    // command -v jq is required before anything else.
-    {
-        int ec = 0;
-        (void)run_capture({"bash", "-c", "command -v jq >/dev/null 2>&1"}, "", ec);
-        if (ec != 0) throw soft_error{"error: jq is required\n"};
-    }
-
-    std::string first = v.args.empty() ? std::string() : std::string(v.args[0]);
-
-    // Build the positional arg list (parse_arguments drops --head + value and
-    // the value-less --num/--numbered line-number flags).
-    auto positionals = [&] {
-        std::vector<std::string> pos;
-        for (std::size_t i = 0; i < v.args.size();) {
-            if (v.args[i] == "--head") {
-                ++i;
-                if (i < v.args.size()) ++i;
-            } else if (is_number_flag(v.args[i])) {
-                ++i;
-            } else {
-                pos.emplace_back(v.args[i++]);
+        std::string env_or(std::string const& key, std::string const& fallback) {
+            if (char const* v = std::getenv(key.c_str())) {
+                return v;
             }
-        }
-        return pos;
-    };
-
-    if (first == "list" || first == "install" || first == "uninstall") {
-        auto pos = positionals();
-        std::string subcommand = pos.empty() ? std::string() : pos[0];
-
-        if (subcommand == "list") {
-            std::string out;
-            out += "Cached skills:\n\n";
-            list_cached_skills(out);
-            r.out = std::move(out);
-            return;
+            return fallback;
         }
 
-        if (subcommand == "uninstall") {
-            // uninstall_skill uses the raw $1, which for this subcommand is the
-            // word "uninstall" itself.
-            std::string name = "uninstall";
-            bool found = false;
-            std::string out;
+        std::string home_dir() {
+            return env_or("HOME", "");
+        }
+
+        std::string skills_dir() {
+            std::string xdg = env_or("XDG_DATA_HOME", std::string());
+            if (xdg.empty()) {
+                xdg = home_dir() + "/.local/share";
+            }
+            return xdg + "/agents/skills";
+        }
+
+        std::vector<std::string> legacy_dirs() {
+            return {home_dir() + "/.agents/skills", home_dir() + "/.claude/skills"};
+        }
+
+        std::vector<std::string> cache_dirs() {
+            auto dirs = legacy_dirs();
+            dirs.insert(dirs.begin(), skills_dir());
+            return dirs;
+        }
+
+        // Run a command, capturing stdout. stderr is inherited like a plain `$(...)`
+        // capture, or discarded (`2>/dev/null`) when the bash call site redirects it.
+        // Returns stdout and the exit code.
+        std::string run_capture(
+          std::vector<std::string> const& cmd,
+          std::string const&              stdin_data,
+          int&                            exit_code,
+          bool                            discard_stderr = false) {
+            prompt::process::command c(cmd);
+            c.stdin_data(stdin_data);
+            if (discard_stderr) {
+                c.discard_stderr();
+            }
+            auto r    = c.run();
+            exit_code = r.exit_code;
+            return r.stdout_data;
+        }
+
+        std::string strip_trailing_nl(std::string s) {
+            while (!s.empty() && s.back() == '\n') {
+                s.pop_back();
+            }
+            return s;
+        }
+
+        // jq -r '<filter>' over $meta (bash feeds meta + a newline via <<<).
+        std::string jq_extract(std::string const& meta, std::string const& filter) {
+            int         ec  = 0;
+            std::string out = run_capture({"jq", "-r", filter}, meta + "\n", ec);
+            return strip_trailing_nl(out);
+        }
+
+        // Port of parse_frontmatter: collect lines between the first two "---" lines,
+        // then parse them with the same Python one-liner the script uses.
+        std::string parse_frontmatter(std::filesystem::path const& file) {
+            std::ifstream in(file, std::ios::binary);
+            if (!in) {
+                return "{}";
+            }
+            std::string fm;
+            bool        in_fm = false;
+            std::string line;
+            while (std::getline(in, line)) {
+                if (!line.empty() && line.back() == '\r') {
+                    line.pop_back();
+                }
+                if (line == "---") {
+                    if (in_fm) {
+                        break;
+                    }
+                    in_fm = true;
+                    continue;
+                }
+                if (in_fm) {
+                    fm += line + "\n";
+                }
+            }
+            // bash pipes `echo "$fm_lines"`, i.e. fm + an extra trailing newline.
+            std::string stdin_data = fm + "\n";
+
+            // Port of the python one-liner the script pipes the frontmatter into:
+            // `^(\w[\w_-]*):\s*(.*)` per line, value stripped and unquoted once when it
+            // is wrapped in matching quotes. The result is a flat JSON object —
+            // downstream consumers read it with jq, so the exact serialization does
+            // not matter, only the keys and values.
+            nlohmann::ordered_json data = nlohmann::ordered_json::object();
+            std::istringstream     lines_in(stdin_data);
+            for (std::string raw; std::getline(lines_in, raw);) {
+                if (!raw.empty() && raw.back() == '\r') {
+                    raw.pop_back();
+                }
+                raw        = prompt::text::rstrip(raw);
+                auto colon = raw.find(':');
+                if (colon == std::string::npos || colon == 0) {
+                    continue;
+                }
+                std::string key = raw.substr(0, colon);
+                bool        ok  = (std::isalnum(static_cast<unsigned char>(key[0])) != 0) || key[0] == '_';
+                for (char c : key) {
+                    if (std::isalnum(static_cast<unsigned char>(c)) == 0 && c != '_' && c != '-') {
+                        ok = false;
+                    }
+                }
+                if (!ok) {
+                    continue;
+                }
+                std::string value = prompt::text::strip(raw.substr(colon + 1));
+                if (
+                  value.size() >= 2 && value.front() == value.back() && (value.front() == '"' || value.front() == '\''))
+                {
+                    value = value.substr(1, value.size() - 2);
+                }
+                data[key] = value;
+            }
+            return data.dump();
+        }
+
+        // bash_infer_lang (same table as _common.sh).
+        std::string bash_infer_lang(std::string const& filename) {
+            std::string base  = filename;
+            auto        slash = base.find_last_of('/');
+            if (slash != std::string::npos) {
+                base = base.substr(slash + 1);
+            }
+            std::string ext;
+            auto        dot = base.find_last_of('.');
+            ext             = (dot != std::string::npos) ? base.substr(dot + 1) : base;
+
+            if (base == "Dockerfile") {
+                return "dockerfile";
+            }
+            if (base == "Makefile" || base == "makefile" || base == "GNUmakefile") {
+                return "makefile";
+            }
+            if (base == "CMakeLists.txt") {
+                return "cmake";
+            }
+            if (ext == "c" || ext == "h") {
+                return "c";
+            }
+            if (ext == "cc" || ext == "cp" || ext == "cpp" || ext == "cxx" || ext == "c++" || ext == "hpp" ||
+                ext == "hxx" || ext == "hh" || ext == "h++")
+            {
+                return "cpp";
+            }
+            if (ext == "m") {
+                return "objectivec";
+            }
+            if (ext == "mm") {
+                return "objective-cpp";
+            }
+            if (ext == "rs") {
+                return "rust";
+            }
+            if (ext == "py" || ext == "pyi") {
+                return "python";
+            }
+            if (ext == "sh" || ext == "bash") {
+                return "bash";
+            }
+            if (ext == "zsh") {
+                return "zsh";
+            }
+            if (ext == "fish") {
+                return "fish";
+            }
+            if (ext == "nu") {
+                return "nu";
+            }
+            if (ext == "js" || ext == "cjs" || ext == "mjs") {
+                return "javascript";
+            }
+            if (ext == "ts" || ext == "mts" || ext == "cts") {
+                return "typescript";
+            }
+            if (ext == "jsx") {
+                return "jsx";
+            }
+            if (ext == "tsx") {
+                return "tsx";
+            }
+            if (ext == "java") {
+                return "java";
+            }
+            if (ext == "kt" || ext == "kts") {
+                return "kotlin";
+            }
+            if (ext == "swift") {
+                return "swift";
+            }
+            if (ext == "go") {
+                return "go";
+            }
+            if (ext == "rb") {
+                return "ruby";
+            }
+            if (ext == "php") {
+                return "php";
+            }
+            if (ext == "lua") {
+                return "lua";
+            }
+            if (ext == "pl" || ext == "pm") {
+                return "perl";
+            }
+            if (ext == "r") {
+                return "r";
+            }
+            if (ext == "scala") {
+                return "scala";
+            }
+            if (ext == "cs") {
+                return "csharp";
+            }
+            if (ext == "fs" || ext == "fsx") {
+                return "fsharp";
+            }
+            if (ext == "vb") {
+                return "vbnet";
+            }
+            if (ext == "dart") {
+                return "dart";
+            }
+            if (ext == "ex" || ext == "exs") {
+                return "elixir";
+            }
+            if (ext == "erl" || ext == "hrl") {
+                return "erlang";
+            }
+            if (ext == "clj" || ext == "cljs" || ext == "cljc") {
+                return "clojure";
+            }
+            if (ext == "ml" || ext == "mli") {
+                return "ocaml";
+            }
+            if (ext == "sql") {
+                return "sql";
+            }
+            if (ext == "html" || ext == "htm") {
+                return "html";
+            }
+            if (ext == "css") {
+                return "css";
+            }
+            if (ext == "scss") {
+                return "scss";
+            }
+            if (ext == "sass") {
+                return "sass";
+            }
+            if (ext == "less") {
+                return "less";
+            }
+            if (ext == "xml") {
+                return "xml";
+            }
+            if (ext == "xsl" || ext == "xslt") {
+                return "xslt";
+            }
+            if (ext == "svg") {
+                return "svg";
+            }
+            if (ext == "json" || ext == "stock" || ext == "tse") {
+                return "json";
+            }
+            if (ext == "jsonc") {
+                return "jsonc";
+            }
+            if (ext == "yaml" || ext == "yml") {
+                return "yaml";
+            }
+            if (ext == "toml") {
+                return "toml";
+            }
+            if (ext == "ini" || ext == "cfg" || ext == "conf") {
+                return "ini";
+            }
+            if (ext == "env") {
+                return "dotenv";
+            }
+            if (ext == "md") {
+                return "markdown";
+            }
+            if (ext == "txt" || ext == "log") {
+                return "text";
+            }
+            if (ext == "diff" || ext == "patch") {
+                return "diff";
+            }
+            if (ext == "proto") {
+                return "proto";
+            }
+            if (ext == "asm" || ext == "s" || ext == "S") {
+                return "asm";
+            }
+            if (ext == "tex") {
+                return "tex";
+            }
+            if (ext == "vim") {
+                return "vim";
+            }
+            return "text";
+        }
+
+        std::string find_cached_skill(std::string const& name) {
             for (auto const& dir : cache_dirs()) {
                 std::error_code ec;
-                auto target = std::filesystem::path(dir) / name;
-                if (std::filesystem::is_directory(target, ec)) {
-                    std::uintmax_t removed = std::filesystem::remove_all(target, ec);
-                    (void)removed;
-                    out +=
-                        std::format("Uninstalled '{}' from {}\n", name, (std::filesystem::path(dir) / name).string());
-                    found = true;
+                auto            f = std::filesystem::path(dir) / name / "SKILL.md";
+                if (std::filesystem::is_regular_file(f, ec)) {
+                    return f.string();
+                }
+            }
+            return {};
+        }
+
+        void list_cached_skills(std::string& out) {
+            bool found = false;
+            for (auto const& dir : cache_dirs()) {
+                std::error_code ec;
+                if (!std::filesystem::is_directory(dir, ec)) {
+                    continue;
+                }
+                // bash iterates `"$dir"/*/` (glob => sorted by name).
+                std::vector<std::filesystem::path> subdirs;
+                std::error_code                    it_ec;
+                for (std::filesystem::directory_iterator it(dir, it_ec), end; !it_ec && it != end; it.increment(it_ec))
+                {
+                    if (it_ec) {
+                        break;
+                    }
+                    if (std::filesystem::is_directory(it->path())) {
+                        subdirs.push_back(it->path());
+                    }
+                }
+                std::sort(subdirs.begin(), subdirs.end());
+                for (auto const& skill_path : subdirs) {
+                    std::error_code fec;
+                    auto            skill_file = skill_path / "SKILL.md";
+                    if (!std::filesystem::is_regular_file(skill_file, fec)) {
+                        continue;
+                    }
+                    std::string meta = parse_frontmatter(skill_file);
+                    std::string name = jq_extract(meta, ".name // empty");
+                    if (name.empty()) {
+                        name = skill_path.filename().string();
+                    }
+                    std::string desc = jq_extract(meta, ".description // \"\"");
+                    if (desc.size() > 80) {
+                        desc = desc.substr(0, 77) + "...";
+                    }
+                    std::string field = name;
+                    if (field.size() < 24) {
+                        field += std::string(24 - field.size(), ' ');
+                    }
+                    out   += std::format("  {} {}\n", field, desc);
+                    found  = true;
                 }
             }
             if (!found) {
-                throw soft_error{"error: skill '" + name + "' not found in any cache directory\n"};
+                out += "  (no cached skills found)\n\n";
+                out += std::format("  Skills are cached in: {}\n", skills_dir());
+                out += "  Use 'prompt skill <query>' to search and download skills.\n";
             }
-            r.out = std::move(out);
-            return;
         }
 
-        if (subcommand == "install") {
-            // install_skill uses the raw $1 ("install"); this hits the network.
-            std::string name = "install";
-            std::string tool = ai_find_skills_tool(v.env.exe_path, v.env.git_root);
-            std::string err;
-            err += std::format("Searching for '{}'...\n", name);
-            std::string results = merge_results(search_skills(name, tool));
-            std::string rec = find_rec(results, name);
-            if (rec.empty()) {
-                throw soft_error{err + "error: skill '" + name + "' not found in any registry\n"};
+        std::vector<std::string> cached_skill_names() {
+            std::vector<std::string> names;
+            for (auto const& dir : cache_dirs()) {
+                std::error_code ec;
+                if (!std::filesystem::is_directory(dir, ec)) {
+                    continue;
+                }
+                for (std::filesystem::directory_iterator it(dir, ec), end; !ec && it != end; it.increment(ec)) {
+                    if (!std::filesystem::is_directory(it->path())) {
+                        continue;
+                    }
+                    std::error_code fec;
+                    if (!std::filesystem::is_regular_file(it->path() / "SKILL.md", fec)) {
+                        continue;
+                    }
+                    names.push_back(it->path().filename().string());
+                }
             }
-            err += std::format("Found: {} on {}\n", jq_extract(rec, ".name"), jq_extract(rec, ".board"));
-            std::string skill_name = jq_extract(rec, ".name");
+            std::sort(names.begin(), names.end());
+            names.erase(std::unique(names.begin(), names.end()), names.end());
+            return names;
+        }
+
+        std::string ai_find_skills_tool(std::filesystem::path const& exe_path, std::filesystem::path const& git_root) {
+            auto p = prompt::fs::bin_tool("ai-find-skills", exe_path, git_root);
+            return p.string();
+        }
+
+        // search_skills: run ai-find-skills --json --no-scan <query>. The download path
+        // calls it as `search_skills ... 2>/dev/null`, so callers can discard its
+        // stderr (which carries the tool's `# full JSON: <tmpfile>` note).
+        std::string search_skills(std::string const& query, std::string const& tool, bool discard_stderr = false) {
             std::error_code ec;
-            std::filesystem::create_directories(std::filesystem::path(skills_dir()) / skill_name, ec);
-            err += std::format("Downloading {}...\n", skill_name);
-            // download_skill_md is network/curl/unzip/gh dependent.
-            int dec = 0;
-            std::string body = run_capture({"curl", "-sS", "--max-time", "15", jq_extract(rec, ".url")}, "", dec);
-            if (body.empty()) {
-                std::filesystem::remove_all(std::filesystem::path(skills_dir()) / skill_name, ec);
-                throw soft_error{err + "error: failed to download SKILL.md for '" + skill_name + "'\n"};
+            if (!std::filesystem::is_regular_file(tool, ec) || ec) {
+                return {};
             }
-            {
-                std::ofstream of((std::filesystem::path(skills_dir()) / skill_name / "SKILL.md"), std::ios::binary);
-                of << body;
+            int ec2 = 0;
+            return run_capture({tool, "--json", "--no-scan", query}, "", ec2, discard_stderr);
+        }
+
+        std::string merge_results(std::string const& json) {
+            std::string const filter =
+              "[\n"
+              "  (.skills_sh // [])[] | {name, board, repo, slug, url, installs, stars, match, summary},\n"
+              "  (.clawhub    // [])[] | {name, board, repo:null, slug, url, installs, stars, match, summary},\n"
+              "  (.github     // [])[] | {name, board, repo, slug:null, url, installs:null, stars, match, summary}\n"
+              "] | to_entries | map(.key + 1 as $idx | .value | {idx: $idx, name, board, repo, slug, url, installs, "
+              "stars, "
+              "match, summary})\n";
+            int ec = 0;
+            return run_capture({"jq", "-c", filter}, json, ec);
+        }
+
+        std::string find_rec(std::string const& results, std::string const& name) {
+            std::string q1  = "[.[] | select(.name == $n)] | .[0] // empty";
+            int         ec  = 0;
+            std::string rec = run_capture({"jq", "-c", "--arg", "n", name, q1}, results, ec);
+            rec             = strip_trailing_nl(rec);
+            if (rec.empty()) {
+                std::string q2 = "[.[] | select(.name | test($n; \"i\"))] | .[0] // empty";
+                rec            = strip_trailing_nl(run_capture({"jq", "-c", "--arg", "n", name, q2}, results, ec));
             }
-            err += "Installed '" + skill_name + "' to " +
-                   (std::filesystem::path(skills_dir()) / skill_name / "SKILL.md").string() + "\n";
-            std::string out;
-            out += "\nInstalled skill content:\n\n";
-            out += read_file(std::filesystem::path(skills_dir()) / skill_name / "SKILL.md");
-            r.out = std::move(out);
-            r.err = std::move(err);
-            return;
+            return rec;
         }
-    }
 
-    // Default mode: prompt skill <name> [FILE...]
-    auto pos = positionals();
-    std::string skill_name = pos.empty() ? std::string() : pos[0];
+    } // namespace
 
-    if (skill_name.empty()) {
-        throw usage_error{"error: skill name required\n"
-                          "Usage: prompt skill <name> [FILE...]\n"
-                          "       prompt skill list   # to see cached skills\n"};
-    }
+    static void execute_skill(view const& v, result& r) {
+        auto opts = file_options_or_throw(v);
 
-    std::string err;
-    std::string skill_file = find_cached_skill(skill_name);
-    if (skill_file.empty()) {
-        err += std::format("Skill '{}' not cached, downloading...\n", skill_name);
-        // download_by_name: search registries and download if a match exists.
-        std::string tool = ai_find_skills_tool(v.env.exe_path, v.env.git_root);
-        std::string results = merge_results(search_skills(skill_name, tool, /*discard_stderr=*/true));
-        std::string rec = find_rec(results, skill_name);
-        std::string downloaded_skill = rec.empty() ? std::string() : jq_extract(rec, ".name");
-        if (downloaded_skill.empty()) {
-            err += std::format("error: skill '{}' not found in cache or registries\n", skill_name);
-            err += std::format("Use 'prompt skill list --remote {}' to search registries.\n", skill_name);
-            throw soft_error{std::move(err)};
+        // command -v jq is required before anything else.
+        {
+            int ec = 0;
+            (void) run_capture({"bash", "-c", "command -v jq >/dev/null 2>&1"}, "", ec);
+            if (ec != 0) {
+                throw soft_error{"error: jq is required\n"};
+            }
         }
-        // A full faithful download-by-name would fetch the SKILL.md here; the
-        // registry match found is surfaced verbatim so callers can retry.
-        err += "Downloaded to ";
-        err += (std::filesystem::path(skills_dir()) / downloaded_skill / "SKILL.md").string();
-        err += '\n';
-        skill_file = (std::filesystem::path(skills_dir()) / downloaded_skill / "SKILL.md").string();
-    }
 
-    std::string out = read_file(std::filesystem::path(skill_file));
+        std::string first = v.args.empty() ? std::string() : std::string(v.args[0]);
 
-    if (v.in.piped()) {
-        std::string content(v.in.text());
-        while (!content.empty() && content.back() == '\n') content.pop_back();
-        if (!content.empty()) {
-            out += '\n';
-            out += content;
-            out += '\n';
+        // Build the positional arg list (parse_arguments drops --head + value and
+        // the value-less --num/--numbered line-number flags).
+        auto positionals = [&] {
+            std::vector<std::string> pos;
+            for (std::size_t i = 0; i < v.args.size();) {
+                if (v.args[i] == "--head") {
+                    ++i;
+                    if (i < v.args.size()) {
+                        ++i;
+                    }
+                } else if (is_number_flag(v.args[i])) {
+                    ++i;
+                } else {
+                    pos.emplace_back(v.args[i++]);
+                }
+            }
+            return pos;
+        };
+
+        if (first == "list" || first == "install" || first == "uninstall") {
+            auto        pos        = positionals();
+            std::string subcommand = pos.empty() ? std::string() : pos[0];
+
+            if (subcommand == "list") {
+                std::string out;
+                out += "Cached skills:\n\n";
+                list_cached_skills(out);
+                r.out = std::move(out);
+                return;
+            }
+
+            if (subcommand == "uninstall") {
+                // uninstall_skill uses the raw $1, which for this subcommand is the
+                // word "uninstall" itself.
+                std::string name  = "uninstall";
+                bool        found = false;
+                std::string out;
+                for (auto const& dir : cache_dirs()) {
+                    std::error_code ec;
+                    auto            target = std::filesystem::path(dir) / name;
+                    if (std::filesystem::is_directory(target, ec)) {
+                        std::uintmax_t removed = std::filesystem::remove_all(target, ec);
+                        (void) removed;
+                        out +=
+                          std::format("Uninstalled '{}' from {}\n", name, (std::filesystem::path(dir) / name).string());
+                        found = true;
+                    }
+                }
+                if (!found) {
+                    throw soft_error{"error: skill '" + name + "' not found in any cache directory\n"};
+                }
+                r.out = std::move(out);
+                return;
+            }
+
+            if (subcommand == "install") {
+                // install_skill uses the raw $1 ("install"); this hits the network.
+                std::string name = "install";
+                std::string tool = ai_find_skills_tool(v.env.exe_path, v.env.git_root);
+                std::string err;
+                err                 += std::format("Searching for '{}'...\n", name);
+                std::string results  = merge_results(search_skills(name, tool));
+                std::string rec      = find_rec(results, name);
+                if (rec.empty()) {
+                    throw soft_error{err + "error: skill '" + name + "' not found in any registry\n"};
+                }
+                err += std::format("Found: {} on {}\n", jq_extract(rec, ".name"), jq_extract(rec, ".board"));
+                std::string     skill_name = jq_extract(rec, ".name");
+                std::error_code ec;
+                std::filesystem::create_directories(std::filesystem::path(skills_dir()) / skill_name, ec);
+                err              += std::format("Downloading {}...\n", skill_name);
+                // download_skill_md is network/curl/unzip/gh dependent.
+                int         dec   = 0;
+                std::string body  = run_capture({"curl", "-sS", "--max-time", "15", jq_extract(rec, ".url")}, "", dec);
+                if (body.empty()) {
+                    std::filesystem::remove_all(std::filesystem::path(skills_dir()) / skill_name, ec);
+                    throw soft_error{err + "error: failed to download SKILL.md for '" + skill_name + "'\n"};
+                }
+                {
+                    std::ofstream of((std::filesystem::path(skills_dir()) / skill_name / "SKILL.md"), std::ios::binary);
+                    of << body;
+                }
+                err += "Installed '" + skill_name + "' to " +
+                       (std::filesystem::path(skills_dir()) / skill_name / "SKILL.md").string() + "\n";
+                std::string out;
+                out   += "\nInstalled skill content:\n\n";
+                out   += read_file(std::filesystem::path(skills_dir()) / skill_name / "SKILL.md");
+                r.out  = std::move(out);
+                r.err  = std::move(err);
+                return;
+            }
         }
-    }
 
-    for (std::size_t i = 1; i < pos.size(); ++i) {
-        std::string const& file = pos[i];
-        std::error_code ec;
-        std::filesystem::path fp(file);
-        if (std::filesystem::is_regular_file(fp, ec)) {
-            std::string file_name = fp.filename().string();
-            out += '\n';
-            out += std::format("File: {}\n", file_name);
-            out += '\n';
-            out += std::format("```{}\n", bash_infer_lang(file_name));
-            out += number_lines(trim_context_nl(read_file(fp), opts.head_lines), opts.numbered);
-            out += "```\n";
-        } else {
-            err += std::format("Warning: File '{}' not found.\n", file);
+        // Default mode: prompt skill <name> [FILE...]
+        auto        pos        = positionals();
+        std::string skill_name = pos.empty() ? std::string() : pos[0];
+
+        if (skill_name.empty()) {
+            throw usage_error{
+              "error: skill name required\n"
+              "Usage: prompt skill <name> [FILE...]\n"
+              "       prompt skill list   # to see cached skills\n"};
         }
+
+        std::string err;
+        std::string skill_file = find_cached_skill(skill_name);
+        if (skill_file.empty()) {
+            err                          += std::format("Skill '{}' not cached, downloading...\n", skill_name);
+            // download_by_name: search registries and download if a match exists.
+            std::string tool              = ai_find_skills_tool(v.env.exe_path, v.env.git_root);
+            std::string results           = merge_results(search_skills(skill_name, tool, /*discard_stderr=*/true));
+            std::string rec               = find_rec(results, skill_name);
+            std::string downloaded_skill  = rec.empty() ? std::string() : jq_extract(rec, ".name");
+            if (downloaded_skill.empty()) {
+                err += std::format("error: skill '{}' not found in cache or registries\n", skill_name);
+                err += std::format("Use 'prompt skill list --remote {}' to search registries.\n", skill_name);
+                throw soft_error{std::move(err)};
+            }
+            // A full faithful download-by-name would fetch the SKILL.md here; the
+            // registry match found is surfaced verbatim so callers can retry.
+            err        += "Downloaded to ";
+            err        += (std::filesystem::path(skills_dir()) / downloaded_skill / "SKILL.md").string();
+            err        += '\n';
+            skill_file  = (std::filesystem::path(skills_dir()) / downloaded_skill / "SKILL.md").string();
+        }
+
+        std::string out = read_file(std::filesystem::path(skill_file));
+
+        if (v.in.piped()) {
+            std::string content(v.in.text());
+            while (!content.empty() && content.back() == '\n') {
+                content.pop_back();
+            }
+            if (!content.empty()) {
+                out += '\n';
+                out += content;
+                out += '\n';
+            }
+        }
+
+        for (std::size_t i = 1; i < pos.size(); ++i) {
+            std::string const&    file = pos[i];
+            std::error_code       ec;
+            std::filesystem::path fp(file);
+            if (std::filesystem::is_regular_file(fp, ec)) {
+                std::string file_name  = fp.filename().string();
+                out                   += '\n';
+                out                   += std::format("File: {}\n", file_name);
+                out                   += '\n';
+                out                   += std::format("```{}\n", bash_infer_lang(file_name));
+                out                   += number_lines(trim_context_nl(read_file(fp), opts.head_lines), opts.numbered);
+                out                   += "```\n";
+            } else {
+                err += std::format("Warning: File '{}' not found.\n", file);
+            }
+        }
+
+        r.out = std::move(out);
+        r.err = std::move(err);
     }
 
-    r.out = std::move(out);
-    r.err = std::move(err);
-}
-
-static void render_help_skill(std::ostream& os) {
-    os << file_usage_help("skill", "[FILE...]", "some-command", "<name>")
-       << R"EOF(       prompt skill list [--remote <query>]
+    static void render_help_skill(std::ostream& os) {
+        os << file_usage_help("skill", "[FILE...]", "some-command", "<name>")
+           << R"EOF(       prompt skill list [--remote <query>]
        prompt skill install <name>
        prompt skill uninstall <name>
 
@@ -473,49 +656,51 @@ Subcommands:
 
 Options:
 )EOF" << file_options_help("the embedded context", true)
-       << R"EOF(
+           << R"EOF(
 Examples:
   prompt skill docker                      # load cached docker skill
   cat file.cpp | prompt skill cpp-testing  # load skill + embed file
   prompt skill list                        # show cached skills
   prompt skill install docker              # download docker skill
 )EOF";
-}
+    }
 
-// Subcommands and cached skill names for `prompt skill <TAB>` /
-// `prompt skill install|uninstall <TAB>`.
-static void complete_skill(completion_request const& req, std::ostream& os) {
-    static constexpr std::array<prompt::completion::item, 3> kSubcommands = {
-        {
-            {.value = "list", .description = "List locally cached skills"},
-            {.value = "install", .description = "Download a specific skill by exact name"},
-            {.value = "uninstall", .description = "Remove a cached skill"},
-        },
-    };
-    std::string_view first = req.prior_args.empty() ? std::string_view{} : req.prior_args.front();
-    if (first == "install" || first == "uninstall") {
+    // Subcommands and cached skill names for `prompt skill <TAB>` /
+    // `prompt skill install|uninstall <TAB>`.
+    static void complete_skill(completion_request const& req, std::ostream& os) {
+        static constexpr std::array<prompt::completion::item, 3> kSubcommands = {
+          {
+           {.value = "list", .description = "List locally cached skills"},
+           {.value = "install", .description = "Download a specific skill by exact name"},
+           {.value = "uninstall", .description = "Remove a cached skill"},
+           },
+        };
+        std::string_view first = req.prior_args.empty() ? std::string_view{} : req.prior_args.front();
+        if (first == "install" || first == "uninstall") {
+            for (auto const& name : cached_skill_names()) {
+                if (prompt::completion::matches(req.prefix, name)) {
+                    prompt::completion::write_item(os, name, "cached skill");
+                }
+            }
+            return;
+        }
+        prompt::completion::write_items(os, req.prefix, kSubcommands);
         for (auto const& name : cached_skill_names()) {
             if (prompt::completion::matches(req.prefix, name)) {
                 prompt::completion::write_item(os, name, "cached skill");
             }
         }
-        return;
     }
-    prompt::completion::write_items(os, req.prefix, kSubcommands);
-    for (auto const& name : cached_skill_names()) {
-        if (prompt::completion::matches(req.prefix, name)) {
-            prompt::completion::write_item(os, name, "cached skill");
-        }
-    }
-}
 
-// This file is the prompt: it implements it and registers it at static-init time
-// (no central list — see sdk/prompt_registry.hpp).
-bool const registered = prompt::register_prompt(
-    "skill",
-    "Loads a cached skill and outputs its content as an AI prompt. If the skill is not cached, it is "
-    "downloaded automatically. Piped stdin and file arguments are embedded as context. It also "
-    "manages skills: list, install, and uninstall (see below).",
-    &execute_skill, &render_help_skill, &complete_skill);
+    // This file is the prompt: it implements it and registers it at static-init time
+    // (no central list — see sdk/prompt_registry.hpp).
+    bool const registered = prompt::register_prompt(
+      "skill",
+      "Loads a cached skill and outputs its content as an AI prompt. If the skill is not cached, it is "
+      "downloaded automatically. Piped stdin and file arguments are embedded as context. It also "
+      "manages skills: list, install, and uninstall (see below).",
+      &execute_skill,
+      &render_help_skill,
+      &complete_skill);
 
 } // namespace prompt::prompts

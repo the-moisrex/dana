@@ -1,35 +1,37 @@
 #include "../sdk/prompt_registry.hpp"
 #include "tse_data.hpp"
+
 #include <ostream>
 #include <string>
 
 namespace prompt::prompts {
 
-static void render_help_tse(std::ostream& os);
+    static void render_help_tse(std::ostream& os);
 
-// Raw TSETMC data for one instrument, without analysis instructions — so it
-// can be piped or chained into any workflow (`prompt tse فولاد .note "compare
-// with فخوز"`). The analysis prompt is a separate, data-free lens:
-// `prompt .tse فولاد .tse.analyze`.
-static void execute_tse(view const& v, result& r) {
-    auto config = tse_data::parse_args(v, "tse", &render_help_tse);
-    if (config.failed) {
-        throw prompt_error{config.exit_code, std::move(config.error), ""};
+    // Raw TSETMC data for one instrument, without analysis instructions — so it
+    // can be piped or chained into any workflow (`prompt tse فولاد .note "compare
+    // with فخوز"`). The analysis prompt is a separate, data-free lens:
+    // `prompt .tse فولاد .tse.analyze`.
+    static void execute_tse(view const& v, result& r) {
+        auto config = tse_data::parse_args(v, "tse", &render_help_tse);
+        if (config.failed) {
+            throw prompt_error{config.exit_code, std::move(config.error), ""};
+        }
+
+        std::string errors;
+        std::string output = tse_data::collect(v, config, errors);
+
+        if (!errors.empty()) {
+            r.err = std::move(errors);
+        }
+        r.published.set(keys::save_stem, tse_data::save_stem(config));
+        tse_data::publish_identity(r, config.symbol);
+        r.out = std::move(output);
     }
 
-    std::string errors;
-    std::string output = tse_data::collect(v, config, errors);
-
-    if (!errors.empty()) {
-        r.err = std::move(errors);
-    }
-    r.published.set(keys::save_stem, tse_data::save_stem(config));
-    tse_data::publish_identity(r, config.symbol);
-    r.out = std::move(output);
-}
-
-static void render_help_tse(std::ostream& os) {
-    os << R"EOF(Usage: prompt tse [<symbol|finglish|ISIN|insCode|URL>] [--days N | --full] [--without NAME] [--unadjusted] [--head N]
+    static void render_help_tse(std::ostream& os) {
+        os
+          << R"EOF(Usage: prompt tse [<symbol|finglish|ISIN|insCode|URL>] [--days N | --full] [--without NAME] [--unadjusted] [--head N]
        prompt tse <FILE.stock>... [--head N]
 
 Fetch the raw TSETMC dataset for an Iranian بورس instrument — market data, fundamentals (price ranges, average volume, fund NAV), technicals (returns, volatility, ATR, moving averages, RSI, drawdown), historical corrections (structural mid-trend correction and consolidation episodes with their حقیقی/حقوقی flow and measured outcomes), market benchmarks, market context (free-market USD/IRR, Iran CPI inflation and GDP growth, whole-market breadth over the last sessions) and the last completed session's opening-auction and close order books — as Markdown, with no analysis instructions attached. Codal filings are not fetched by this prompt: chain `.tse.codal` when they are needed (it borrows this prompt's symbol unless given its own), then `.tse.analyze` for the institutional analysis, or `.tse.intraday`/`.tse.intraday.analysis` for a same-day verdict. Accepts a Persian symbol, a finglish name (`foolad`, `khodro`), a fuzzy/company-name fragment, an ISIN (e.g. IRT1DARA0001), a TSETMC insCode, an easytrader/tsetmc/codal URL, or a composite `فولاد-IRO1FOLD0001` token — all resolved through `tse.resolve`; with no argument the other `.tse*` data prompts in the chain are searched, then the clipboard. One or more `.stock` snapshot files (written by tse.snapshot) are rendered from cache instead, warning when a snapshot is older than 24 hours.
@@ -59,29 +61,34 @@ Snapshot files are used as-is: --days/--full/--without/--unadjusted apply to liv
 fetches only and are rejected together with FILE arguments. Old snapshots that
 already contain a Codal block still render it; new ones contain market data only.
 )EOF";
-}
+    }
 
-// This file is the prompt: it implements it and registers it at static-init time
-// (no central list — see sdk/prompt_registry.hpp).
-bool const registered = prompt::register_prompt(
-    "tse",
-    "Fetch the raw TSETMC dataset for an Iranian بورس instrument — market data, fundamentals (price ranges, "
-    "average volume, fund NAV), technicals (returns, volatility, ATR, moving averages, RSI, drawdown), "
-    "historical corrections (structural mid-trend correction and consolidation episodes with their حقیقی/حقوقی "
-    "flow and measured outcomes), market benchmarks, market context (free-market USD/IRR, Iran CPI inflation and GDP "
-    "growth, whole-market breadth over "
-    "the last sessions) and the last completed session's opening-auction and close order books — as Markdown, with "
-    "no analysis instructions attached. Codal filings are opt-in: chain `.tse.codal` (it borrows this prompt's "
-    "symbol), then `.tse.analyze` for the analytical prompt, or use `.tse.intraday` + "
-    "`.tse.intraday.analysis` for a same-day "
-    "verdict. "
-    "Accepts a Persian symbol, a finglish name (`foolad`, `khodro`), a fuzzy/company-name fragment, an ISIN "
-    "(e.g. IRT1DARA0001), a TSETMC insCode, an easytrader/tsetmc/codal URL, or a composite "
-    "`فولاد-IRO1FOLD0001` token — all resolved through `tse.resolve`; with "
-    "no argument the other `.tse*` data prompts in the chain are searched, then the clipboard. One or more "
-    "`.stock` snapshot files (written by tse.snapshot) "
-    "are rendered from cache instead, warning when a snapshot is older than 24 hours.",
-    &execute_tse, &render_help_tse, &tse_data::complete_instrument, chain_role::normal, true, nullptr,
-    &tse_data::declare_identifier);
+    // This file is the prompt: it implements it and registers it at static-init time
+    // (no central list — see sdk/prompt_registry.hpp).
+    bool const registered = prompt::register_prompt(
+      "tse",
+      "Fetch the raw TSETMC dataset for an Iranian بورس instrument — market data, fundamentals (price ranges, "
+      "average volume, fund NAV), technicals (returns, volatility, ATR, moving averages, RSI, drawdown), "
+      "historical corrections (structural mid-trend correction and consolidation episodes with their حقیقی/حقوقی "
+      "flow and measured outcomes), market benchmarks, market context (free-market USD/IRR, Iran CPI inflation and GDP "
+      "growth, whole-market breadth over "
+      "the last sessions) and the last completed session's opening-auction and close order books — as Markdown, with "
+      "no analysis instructions attached. Codal filings are opt-in: chain `.tse.codal` (it borrows this prompt's "
+      "symbol), then `.tse.analyze` for the analytical prompt, or use `.tse.intraday` + "
+      "`.tse.intraday.analysis` for a same-day "
+      "verdict. "
+      "Accepts a Persian symbol, a finglish name (`foolad`, `khodro`), a fuzzy/company-name fragment, an ISIN "
+      "(e.g. IRT1DARA0001), a TSETMC insCode, an easytrader/tsetmc/codal URL, or a composite "
+      "`فولاد-IRO1FOLD0001` token — all resolved through `tse.resolve`; with "
+      "no argument the other `.tse*` data prompts in the chain are searched, then the clipboard. One or more "
+      "`.stock` snapshot files (written by tse.snapshot) "
+      "are rendered from cache instead, warning when a snapshot is older than 24 hours.",
+      &execute_tse,
+      &render_help_tse,
+      &tse_data::complete_instrument,
+      chain_role::normal,
+      true,
+      nullptr,
+      &tse_data::declare_identifier);
 
 } // namespace prompt::prompts

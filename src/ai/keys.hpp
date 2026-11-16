@@ -17,18 +17,20 @@
 
 namespace prompt::ai::keys {
 
-struct resolved {
-    std::string key;
-    std::string source;
-};
+    struct resolved {
+        std::string key;
+        std::string source;
+    };
 
-// A redacted preview (never the whole secret).
-std::string mask(std::string_view value);
+    // A redacted preview (never the whole secret).
+    std::string mask(std::string_view value);
 
-resolved resolve(std::string_view provider, std::span<std::string const> env_names = {},
-                 std::optional<std::string> explicit_key = std::nullopt);
+    resolved resolve(std::string_view             provider,
+                     std::span<std::string const> env_names    = {},
+                     std::optional<std::string>   explicit_key = std::nullopt);
 
-// (source, masked key) for a diagnostic listing.
-std::pair<std::string, std::string> describe(std::string_view provider, std::span<std::string const> env_names = {});
+    // (source, masked key) for a diagnostic listing.
+    std::pair<std::string, std::string> describe(std::string_view             provider,
+                                                 std::span<std::string const> env_names = {});
 
 } // namespace prompt::ai::keys

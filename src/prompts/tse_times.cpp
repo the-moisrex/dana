@@ -1,14 +1,15 @@
 #include "../sdk/prompt_registry.hpp"
+
 #include <ostream>
 #include <string>
 
 namespace prompt::prompts {
 
-// The TSE/IFB session schedule. Reference data with no instructions of its own,
-// so it is useful standalone or chained onto a data prompt
-// (`prompt tse فولاد .tse.times`).
-static void execute_tse_times([[maybe_unused]] view const& v, result& r) {
-    r.out = R"EOF(**Tehran Stock Exchange (TSE) / Iran Fara Bourse (IFB) trading hours** (IRST, UTC+03:30):
+    // The TSE/IFB session schedule. Reference data with no instructions of its own,
+    // so it is useful standalone or chained onto a data prompt
+    // (`prompt tse فولاد .tse.times`).
+    static void execute_tse_times([[maybe_unused]] view const& v, result& r) {
+        r.out = R"EOF(**Tehran Stock Exchange (TSE) / Iran Fara Bourse (IFB) trading hours** (IRST, UTC+03:30):
 
 | category | pre_open | trading |
 |---|---|---|
@@ -30,10 +31,10 @@ static void execute_tse_times([[maybe_unused]] view const& v, result& r) {
 
 *Trading days for all categories: Sat–Wed (IRST).*
 )EOF";
-}
+    }
 
-static void render_help_tse_times(std::ostream& os) {
-    os << R"EOF(Usage: prompt tse.times
+    static void render_help_tse_times(std::ostream& os) {
+        os << R"EOF(Usage: prompt tse.times
 
 The pre-open and continuous-trading session times for every Tehran Stock Exchange (TSE) and Iran Fara Bourse (IFB) instrument category, plus the Sat–Wed trading week. Reference data for reasoning about trading hours; works standalone or chained onto a data prompt.
 
@@ -41,15 +42,16 @@ Examples:
   prompt tse.times
   prompt tse فولاد .tse.times
 )EOF";
-}
+    }
 
-// This file is the prompt: it implements it and registers it at static-init time
-// (no central list — see sdk/prompt_registry.hpp).
-bool const registered = prompt::register_prompt(
-    "tse.times",
-    "The pre-open and continuous-trading session times for every Tehran Stock Exchange (TSE) and Iran Fara Bourse "
-    "(IFB) instrument category, plus the Sat–Wed trading week. Reference data for reasoning about trading hours; "
-    "works standalone or chained onto a data prompt.",
-    &execute_tse_times, &render_help_tse_times);
+    // This file is the prompt: it implements it and registers it at static-init time
+    // (no central list — see sdk/prompt_registry.hpp).
+    bool const registered = prompt::register_prompt(
+      "tse.times",
+      "The pre-open and continuous-trading session times for every Tehran Stock Exchange (TSE) and Iran Fara Bourse "
+      "(IFB) instrument category, plus the Sat–Wed trading week. Reference data for reasoning about trading hours; "
+      "works standalone or chained onto a data prompt.",
+      &execute_tse_times,
+      &render_help_tse_times);
 
 } // namespace prompt::prompts
