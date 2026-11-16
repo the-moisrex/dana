@@ -1,8 +1,8 @@
 #include "../sdk/prompt_registry.hpp"
 
 #include <string>
-using dana::prompts::result;
-using dana::prompts::view;
+using dana::result;
+using dana::view;
 
 static void execute_english([[maybe_unused]] view const &inp, result &res) {
     res.out =

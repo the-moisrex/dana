@@ -11,7 +11,7 @@
 #include <string_view>
 #include <vector>
 
-namespace dana::history {
+namespace dana {
 
     // The per-user record of `prompt` invocations. One run is one append-only
     // Markdown file under <root>/runs, with HTML-comment markers framing every
@@ -21,7 +21,7 @@ namespace dana::history {
     // $HOME/.local/state/prompt (XDG state, not cache: the history is meant to
     // survive a cache cleanup and is bounded by the retention caps instead).
 
-    struct stored_segment {
+    struct [[nodiscard]] stored_segment {
         std::size_t              index = 0;              // 1-based chain position
         std::string              name;                   // prompt name ("ai.dseek")
         std::string              role;                   // "prompt" | "sink"
@@ -36,7 +36,7 @@ namespace dana::history {
         std::size_t              original_bytes = 0;     // > text.size() when the middle was elided
     };
 
-    struct stored_run {
+    struct [[nodiscard]] stored_run {
         std::filesystem::path       path;
         std::string                 id;
         long long                   ts = 0;
@@ -119,8 +119,7 @@ namespace dana::history {
 
     // Write a run file for one invocation. Every operation is best-effort: a
     // disabled or unwritable store is simply inactive.
-    class recorder {
-      public:
+    struct [[nodiscard]] recorder {
         struct info {
             std::vector<std::string> argv;
             std::filesystem::path    cwd;
@@ -175,4 +174,4 @@ namespace dana::history {
     std::string format_time(long long epoch_seconds);
     std::string human_bytes(std::uintmax_t bytes);
 
-} // namespace dana::history
+} // namespace dana

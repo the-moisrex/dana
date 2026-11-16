@@ -21,7 +21,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-namespace dana::history {
+namespace dana {
 
     namespace {
 
@@ -417,7 +417,7 @@ namespace dana::history {
         }
         for (auto const& file : run_files()) {
             auto const marker = read_marker(file);
-            if (!marker || !in_terminal(*marker, who)) {
+            if (!marker || !dana::in_terminal(*marker, who)) {
                 continue;
             }
             return load(file);
@@ -432,7 +432,7 @@ namespace dana::history {
         std::size_t seen = 0;
         for (auto const& file : run_files()) {
             auto const marker = read_marker(file);
-            if (!marker || !in_terminal(*marker, who)) {
+            if (!marker || !dana::in_terminal(*marker, who)) {
                 continue;
             }
             if (++seen < rank) {
@@ -627,11 +627,11 @@ namespace dana::history {
     recorder::recorder(info const& run_info) : info_(run_info) {
         // Qualified: the unqualified `enabled()` inside a member would resolve to
         // the member function of the same name.
-        active_ = history::enabled();
-        if (active_ && run_info.inner && !history::record_inner()) {
+        active_ = enabled();
+        if (active_ && run_info.inner && !record_inner()) {
             active_ = false;
         }
-        if (active_ && history::runs_dir().empty()) {
+        if (active_ && runs_dir().empty()) {
             active_ = false;
         }
         if (!active_) {
@@ -842,4 +842,4 @@ namespace dana::history {
         return std::format("{:.1f}{}", value, units[unit]);
     }
 
-} // namespace dana::history
+} // namespace dana

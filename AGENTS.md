@@ -711,7 +711,7 @@ plus the `compress` ctest.
 The dispatcher records **every invocation** under
 `${PROMPT_HISTORY_DIR:-${XDG_STATE_HOME:-~/.local/state}/prompt/runs/}`, so an
 answer (e.g. from `prompt .verify .ai.dseek`) can be retrieved later. `main.cpp`
-owns the lifecycle: it builds a `history::recorder` (with the effective argv,
+owns the lifecycle: it builds a `recorder` (with the effective argv,
 cwd, git root, tty flag and the terminal identity from `terminal::current()`),
 sets `PROMPT_HISTORY_CURRENT` to the run id, calls
 `record_segment(...)` for each segment (in the no-sink accumulator loop and in
@@ -732,10 +732,10 @@ a write failure is swallowed and can never fail a prompt run.
   (`text`), not the growing chain; `merge` records how it folded
   (`append`/`replace`/`skip`/`clear`/`abort`/`failed`). A sink additionally stores
   `input` only when the context it received differs from the one replayed from
-  the recorded merges — `history::barrier_input(run, index)` returns the stored
+  the recorded merges — `barrier_input(run, index)` returns the stored
   input when present, otherwise replays the merges exactly as
   `chain_state::append` does.
-- **Replay.** `history::final_output(run)` reproduces what the dispatcher printed:
+- **Replay.** `final_output(run)` reproduces what the dispatcher printed:
   the emitted segments joined by the one text-fold rule (`text::append_block`, the
   same rule `chain_state::append`, `output_accumulator` and the clipboard use) —
   trim both sides, one blank line between blocks, one trailing newline — with the
@@ -1212,7 +1212,7 @@ are deliberate and worth keeping in mind:
   separator), consecutive blocks are separated by exactly one blank line, and the
   buffer ends with exactly one newline. The chain context (`chain_state::append`),
   the stdout accumulator, the clipboard builder (`output_emitter`) and the history
-  replay (`history::final_output`) all share it, so stdout, the clipboard and the
+  replay (`final_output`) all share it, so stdout, the clipboard and the
   context a sink receives have the same shape. Prompts therefore never trim their
   own output for presentation — except `.c.p`, which normalizes before its own
   `--head N` so the cap counts real content lines.

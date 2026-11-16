@@ -693,8 +693,8 @@ Notes:
     // dormant until the first recordable segment, so help requests and the
     // `.history*` family never create a run of their own. Every write is best
     // effort: an unwritable store can never fail a prompt run.
-    dana::history::recorder history{
-      dana::history::recorder::info{
+    dana::recorder history{
+      dana::recorder::info{
                                     .argv     = argv_strings(argv_span),
                                     .cwd      = current_directory(),
                                     .git_root = env.git_root,
@@ -726,7 +726,7 @@ Notes:
           }
           auto const& inv = chain.invocations[i];
           history.segment(
-            dana::history::stored_segment{
+            dana::stored_segment{
               .index          = i + 1,
               .name           = std::string(inv.name),
               .role           = segments[i].desc->role == dana::chain_role::sink ? "sink" : "prompt",

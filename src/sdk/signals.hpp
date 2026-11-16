@@ -12,14 +12,14 @@ namespace dana::signals {
     // `.run` and overridable with `.compress --for`; a compressor reads it to pick
     // between, say, "keep the failed test bodies" and "keep a representative
     // sample".
-    enum class intent : std::uint8_t {
+    enum struct [[nodiscard]] intent : std::uint8_t {
         general,
         fix,
         debug,
-        review
+        review,
     };
 
-    [[nodiscard]] intent           intent_from(std::string_view name);
+    intent                         intent_from(std::string_view name);
     [[nodiscard]] std::string_view to_string(intent value);
 
     // The failed Google Test names in captured output (`[  FAILED  ] Suite.Test`),

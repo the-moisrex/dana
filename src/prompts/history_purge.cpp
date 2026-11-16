@@ -52,7 +52,7 @@ namespace dana::prompts {
                     }
                     std::string_view const value = v.args[++i];
                     if (arg == "--older-than") {
-                        opts.older_than = history::parse_duration(value);
+                        opts.older_than = parse_duration(value);
                         if (!opts.older_than) {
                             throw usage_error{
                               std::format("prompt history.purge: bad duration '{}' (use 7d, 12h, 30m)\n", value)};
@@ -64,7 +64,7 @@ namespace dana::prompts {
                             throw usage_error{"prompt history.purge: --keep needs a count\n"};
                         }
                     } else {
-                        opts.max_size = history::parse_size(value);
+                        opts.max_size = parse_size(value);
                         if (!opts.max_size) {
                             throw usage_error{
                               std::format("prompt history.purge: bad size '{}' (use 256M, 1G, 512K)\n", value)};
@@ -83,7 +83,7 @@ namespace dana::prompts {
         void execute_purge(view const& v, result& r) {
             purge_options const opts = parse_purge(v);
 
-            auto const files = history::run_files(); // newest first
+            auto const files = run_files(); // newest first
             if (files.empty()) {
                 throw soft_error{"prompt history.purge: nothing recorded yet\n"};
             }
@@ -93,7 +93,7 @@ namespace dana::prompts {
             std::size_t const     protect_count = opts.keep.value_or(0);
             std::filesystem::path current;
             if (char const* id = std::getenv("PROMPT_HISTORY_CURRENT"); id != nullptr && *id != '\0') {
-                current = history::runs_dir() / (std::string(id) + ".md");
+                current = runs_dir() / (std::string(id) + ".md");
             }
 
             std::vector<std::uintmax_t> sizes(files.size(), 0);
@@ -110,8 +110,8 @@ namespace dana::prompts {
             // No selector means "apply the configured retention", exactly what the
             // automatic prune after a run does.
             bool const           defaults     = !opts.older_than && !opts.max_size && !opts.all;
-            std::size_t const    default_keep = defaults ? history::keep_runs() : 0;
-            std::uintmax_t const default_size = defaults ? history::keep_bytes() : 0;
+            std::size_t const    default_keep = defaults ? keep_runs() : 0;
+            std::uintmax_t const default_size = defaults ? keep_bytes() : 0;
 
             std::vector<std::size_t> victims;
             for (std::size_t rank = 0; rank < files.size(); ++rank) {
@@ -150,7 +150,7 @@ namespace dana::prompts {
             if (victims.empty()) {
                 r.out          = std::format("prompt history.purge: nothing to remove ({} runs, {})\n",
                                              files.size(),
-                                             history::human_bytes(total));
+                                             human_bytes(total));
                 r.no_clipboard = true;
                 return;
             }
@@ -166,7 +166,7 @@ namespace dana::prompts {
             if (opts.dry_run) {
                 out += std::format("prompt history.purge: would remove {} runs ({})\n",
                                    victims.size(),
-                                   history::human_bytes(victim_total));
+                                   human_bytes(victim_total));
             } else {
                 for (auto const rank : victims) {
                     std::error_code ec;
@@ -177,12 +177,12 @@ namespace dana::prompts {
                 }
                 out += std::format("prompt history.purge: removed {} runs ({})\n",
                                    removed,
-                                   history::human_bytes(removed_bytes));
+                                   human_bytes(removed_bytes));
             }
             for (auto const rank : victims) {
                 out += std::format("  {}\n", files[rank].filename().string());
             }
-            out   += std::format("kept {} runs ({})\n", files.size() - victims.size(), history::human_bytes(total));
+            out   += std::format("kept {} runs ({})\n", files.size() - victims.size(), human_bytes(total));
             out    = trim_context(out, opts.head);
             r.out  = std::move(out);
             r.no_clipboard = true;

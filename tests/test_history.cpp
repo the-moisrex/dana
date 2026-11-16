@@ -61,7 +61,7 @@ namespace {
 
     // One full aggregate, so no designated initializer leaves a field out (GCC
     // warns on the missing members otherwise).
-    history::stored_segment segment(
+    stored_segment segment(
       std::size_t index,
       std::string name,
       std::string role,
@@ -69,7 +69,7 @@ namespace {
       std::string text,
       bool        emitted,
       std::string status = "ok") {
-        history::stored_segment s;
+        stored_segment s;
         s.index   = index;
         s.name    = std::move(name);
         s.role    = std::move(role);
@@ -80,21 +80,21 @@ namespace {
         return s;
     }
 
-    history::recorder make_recorder(std::vector<std::string> argv  = {"prompt", ".note", "hi"},
+    recorder make_recorder(std::vector<std::string> argv  = {"prompt", ".note", "hi"},
                                     terminal::id             where = {}) {
-        history::recorder::info info;
+        recorder::info info;
         info.argv     = std::move(argv);
         info.cwd      = "/tmp/work";
         info.git_root = "/tmp/work";
         info.terminal = std::move(where);
         info.tty      = false;
         info.inner    = false;
-        return history::recorder{info};
+        return recorder{info};
     }
 
     void test_parsers() {
-        using history::parse_duration;
-        using history::parse_size;
+        using parse_duration;
+        using parse_size;
 
         check(parse_duration("7d") == std::chrono::seconds{7 * 86'400}, "duration: days");
         check(parse_duration("12h") == std::chrono::seconds{12 * 3600}, "duration: hours");
@@ -111,29 +111,29 @@ namespace {
         check(parse_size("3mb") == 3ULL * 1024 * 1024, "size: mb is M");
         check(!parse_size("") && !parse_size("M"), "size: bad spellings");
 
-        check_eq(history::human_bytes(512), "512B", "human_bytes: bytes");
-        check_eq(history::human_bytes(2048), "2.0K", "human_bytes: kilobytes");
+        check_eq(human_bytes(512), "512B", "human_bytes: bytes");
+        check_eq(human_bytes(2048), "2.0K", "human_bytes: kilobytes");
     }
 
     void test_enabled_flags() {
         ::setenv("PROMPT_HISTORY", "0", 1);
-        check(!history::enabled(), "PROMPT_HISTORY=0 disables recording");
+        check(!enabled(), "PROMPT_HISTORY=0 disables recording");
         ::setenv("PROMPT_HISTORY", "off", 1);
-        check(!history::enabled(), "PROMPT_HISTORY=off disables recording");
+        check(!enabled(), "PROMPT_HISTORY=off disables recording");
         ::setenv("PROMPT_HISTORY", "yes", 1);
-        check(history::enabled(), "PROMPT_HISTORY=yes keeps recording");
+        check(enabled(), "PROMPT_HISTORY=yes keeps recording");
         ::unsetenv("PROMPT_HISTORY");
-        check(history::enabled(), "an unset PROMPT_HISTORY records");
+        check(enabled(), "an unset PROMPT_HISTORY records");
 
         ::setenv("PROMPT_HISTORY_INNER", "0", 1);
-        check(!history::record_inner(), "PROMPT_HISTORY_INNER=0 silences inner runs");
+        check(!record_inner(), "PROMPT_HISTORY_INNER=0 silences inner runs");
         ::unsetenv("PROMPT_HISTORY_INNER");
-        check(history::record_inner(), "inner runs record by default");
+        check(record_inner(), "inner runs record by default");
 
         ::setenv("PROMPT_HISTORY_PRUNE", "0", 1);
-        check(!history::auto_prune(), "PROMPT_HISTORY_PRUNE=0 disables the automatic pass");
+        check(!auto_prune(), "PROMPT_HISTORY_PRUNE=0 disables the automatic pass");
         ::unsetenv("PROMPT_HISTORY_PRUNE");
-        check(history::auto_prune(), "the automatic pass is on by default");
+        check(auto_prune(), "the automatic pass is on by default");
     }
 
     void test_roundtrip() {
@@ -149,9 +149,9 @@ namespace {
             check(!rec.id().empty(), "the recorder has an id");
         }
 
-        auto const files = history::run_files();
+        auto const files = run_files();
         check(files.size() == 1, "one run file was written");
-        auto run = history::load(files.front());
+        auto run = load(files.front());
         check(run.has_value(), "the run loads");
         if (!run) {
             return;
@@ -181,12 +181,12 @@ namespace {
         check_eq(second.text, "an answer\n", "sink text is byte-exact");
         check_eq(second.input, "hello\n\nand more from stdin\n", "a differing barrier input is stored");
 
-        check_eq(history::final_output(*run), "an answer\n", "the final output is the emitted segment");
-        check_eq(history::barrier_input(*run, 2),
+        check_eq(final_output(*run), "an answer\n", "the final output is the emitted segment");
+        check_eq(barrier_input(*run, 2),
                  "hello\n\nand more from stdin\n",
                  "the stored barrier input is returned");
         // A segment with no stored input replays the recorded merges.
-        check_eq(history::barrier_input(*run, 1), "", "the first segment sees an empty context");
+        check_eq(barrier_input(*run, 1), "", "the first segment sees an empty context");
 
         std::error_code ec;
         std::filesystem::remove_all(dir, ec);
@@ -206,14 +206,14 @@ namespace {
             rec.finish(0, false);
         }
 
-        auto run = history::find_by_id("");
+        auto run = find_by_id("");
         check(run.has_value(), "the replay run loads");
         if (!run) {
             return;
         }
         check(run->segments.size() == 4, "all four segments load");
-        check_eq(history::barrier_input(*run, 3), "one\n\ntwo\n", "the replay reconstructs the barrier input");
-        check_eq(history::barrier_input(*run, 5), "", "a clear resets the replayed context");
+        check_eq(barrier_input(*run, 3), "one\n\ntwo\n", "the replay reconstructs the barrier input");
+        check_eq(barrier_input(*run, 5), "", "a clear resets the replayed context");
 
         std::error_code ec;
         std::filesystem::remove_all(dir, ec);
@@ -229,7 +229,7 @@ namespace {
             rec.finish(0, false);
         }
 
-        auto run = history::find_by_id("");
+        auto run = find_by_id("");
         check(run.has_value(), "a run with a fake marker loads");
         if (!run) {
             return;
@@ -238,7 +238,7 @@ namespace {
         check(run->finished, "the real end marker still terminates the run");
         check(run->exit_code == 0, "the fake exit code in the body is ignored");
         check_eq(run->segments[0].text, sneaky, "the body survives byte-exact");
-        check_eq(history::final_output(*run), sneaky, "the fake marker reaches the final output");
+        check_eq(final_output(*run), sneaky, "the fake marker reaches the final output");
 
         std::error_code ec;
         std::filesystem::remove_all(dir, ec);
@@ -254,7 +254,7 @@ namespace {
             rec.finish(0, false);
         }
 
-        auto const files = history::run_files();
+        auto const files = run_files();
         check(files.size() == 1, "one run to truncate");
         if (files.empty()) {
             return;
@@ -265,7 +265,7 @@ namespace {
         // is intact and mark the run incomplete instead of failing.
         auto const size = std::filesystem::file_size(path);
         std::filesystem::resize_file(path, size / 2);
-        auto run = history::load(path);
+        auto run = load(path);
         check(run.has_value(), "a truncated run still loads");
         if (!run) {
             return;
@@ -289,23 +289,23 @@ namespace {
             std::this_thread::sleep_for(std::chrono::milliseconds(2));
         }
 
-        auto const ids = history::run_ids();
+        auto const ids = run_ids();
         check(ids.size() == 3, "three runs are listed");
         check(std::is_sorted(ids.rbegin(), ids.rend()), "run ids sort chronologically");
-        auto const newest = history::find_by_rank(1);
-        auto const oldest = history::find_by_rank(3);
+        auto const newest = find_by_rank(1);
+        auto const oldest = find_by_rank(3);
         check(newest.has_value(), "rank 1 exists");
         check(oldest.has_value(), "rank 3 exists");
         if (newest) {
-            check_eq(history::final_output(*newest), "body 2\n", "rank 1 is the newest run");
+            check_eq(final_output(*newest), "body 2\n", "rank 1 is the newest run");
         }
         if (oldest) {
-            check_eq(history::final_output(*oldest), "body 0\n", "rank 3 is the oldest run");
+            check_eq(final_output(*oldest), "body 0\n", "rank 3 is the oldest run");
         }
-        check(!history::find_by_rank(4).has_value(), "an out-of-range rank is nullopt");
-        check(!history::find_by_id("no-such-id").has_value(), "an unknown id is nullopt");
+        check(!find_by_rank(4).has_value(), "an out-of-range rank is nullopt");
+        check(!find_by_id("no-such-id").has_value(), "an unknown id is nullopt");
         // A date prefix selects the newest run whose id starts with it.
-        check(history::find_by_id(ids.front().substr(0, 8)).has_value(), "a date prefix resolves");
+        check(find_by_id(ids.front().substr(0, 8)).has_value(), "a date prefix resolves");
 
         std::error_code ec;
         std::filesystem::remove_all(dir, ec);
@@ -374,28 +374,28 @@ namespace {
         write("B1", b);
         write("A2", a);
 
-        auto const last_a = history::find_last_in(a);
-        auto const last_b = history::find_last_in(b);
+        auto const last_a = find_last_in(a);
+        auto const last_b = find_last_in(b);
         check(last_a.has_value(), "terminal a has a run");
         check(last_b.has_value(), "terminal b has a run");
         if (last_a) {
-            check_eq(history::final_output(*last_a), "A2\n", "find_last_in picks the terminal's newest run");
+            check_eq(final_output(*last_a), "A2\n", "find_last_in picks the terminal's newest run");
             check(last_a->terminal.sid == 100 && last_a->terminal.tty == "/dev/pts/1", "the terminal round-trips");
-            check(history::in_terminal(*last_a, a), "in_terminal matches the recorded terminal");
-            check(!history::in_terminal(*last_a, b), "in_terminal rejects another terminal");
+            check(in_terminal(*last_a, a), "in_terminal matches the recorded terminal");
+            check(!in_terminal(*last_a, b), "in_terminal rejects another terminal");
         }
         if (last_b) {
-            check_eq(history::final_output(*last_b), "B1\n", "the other terminal keeps its own newest run");
+            check_eq(final_output(*last_b), "B1\n", "the other terminal keeps its own newest run");
         }
 
-        auto const rank2 = history::find_rank_in(a, 2);
+        auto const rank2 = find_rank_in(a, 2);
         if (rank2) {
-            check_eq(history::final_output(*rank2), "A1\n", "find_rank_in counts within the terminal");
+            check_eq(final_output(*rank2), "A1\n", "find_rank_in counts within the terminal");
         }
-        check(!history::find_rank_in(a, 3).has_value(), "an out-of-range terminal rank is nullopt");
-        check(!history::find_last_in(terminal::id{.sid = 999, .tty = "/dev/pts/9", .key = {}}).has_value(),
+        check(!find_rank_in(a, 3).has_value(), "an out-of-range terminal rank is nullopt");
+        check(!find_last_in(terminal::id{.sid = 999, .tty = "/dev/pts/9", .key = {}}).has_value(),
               "an unknown terminal has no runs");
-        check(!history::find_last_in(terminal::id{}).has_value(), "an empty identity matches nothing");
+        check(!find_last_in(terminal::id{}).has_value(), "an empty identity matches nothing");
 
         std::error_code ec;
         std::filesystem::remove_all(dir, ec);
@@ -411,23 +411,23 @@ namespace {
             rec.finish(0, false);
             std::this_thread::sleep_for(std::chrono::milliseconds(2));
         }
-        auto const before = history::run_files();
+        auto const before = run_files();
         check(before.size() == 4, "four runs before pruning");
 
-        // `history::prune` honours the automatic-pass switch, so re-enable it (and
+        // `prune` honours the automatic-pass switch, so re-enable it (and
         // protect the newest run by hand) before pruning explicitly.
         ::unsetenv("PROMPT_HISTORY_PRUNE");
         ::setenv("PROMPT_HISTORY_KEEP", "2", 1);
-        history::prune(before.front()); // protect the newest
-        auto const after = history::run_files();
+        prune(before.front()); // protect the newest
+        auto const after = run_files();
         check(after.size() == 2, "the count cap removes the oldest runs");
         check(std::ranges::find(after, before.front()) != after.end(), "the protected run survives");
 
         // A size cap smaller than one run leaves the protected run alone.
         ::unsetenv("PROMPT_HISTORY_KEEP");
         ::setenv("PROMPT_HISTORY_SIZE", "1", 1);
-        history::prune(before.front());
-        auto const sized = history::run_files();
+        prune(before.front());
+        auto const sized = run_files();
         check(std::ranges::find(sized, before.front()) != sized.end(), "the protected run survives the size cap");
 
         ::unsetenv("PROMPT_HISTORY_SIZE");

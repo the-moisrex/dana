@@ -8,7 +8,7 @@
 #include <sstream>
 #include <string>
 
-namespace dana::ai::history {
+namespace dana::ai {
 
     namespace {
 
@@ -106,4 +106,4 @@ namespace dana::ai::history {
         return static_cast<double>(::timegm(&broken));
     }
 
-} // namespace dana::ai::history
+} // namespace dana::ai

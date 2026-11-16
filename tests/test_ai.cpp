@@ -90,7 +90,7 @@ namespace {
     }
 
     void test_history() {
-        using namespace dana::ai::history;
+        using namespace dana::ai;
         check_equal(iso_from_epoch(0), "", "epoch zero");
         check_equal(iso_from_epoch(0), "", "epoch zero again");
         check_equal(iso_from_epoch(1'700'000'000), "2023-11-14T22:13:20Z", "iso seconds");

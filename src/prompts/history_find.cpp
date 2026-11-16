@@ -73,7 +73,7 @@ namespace dana::prompts {
                     if (arg == "--name") {
                         opts.segment_name = std::string(value);
                     } else if (arg == "--since") {
-                        opts.since = history::parse_duration(value);
+                        opts.since = parse_duration(value);
                         if (!opts.since) {
                             throw usage_error{
                               std::format("prompt history.find: bad duration '{}' (use 7d, 12h, 30m)\n", value)};
@@ -182,11 +182,11 @@ namespace dana::prompts {
             std::vector<hit>   hits;
             auto const         now = std::chrono::system_clock::now();
             terminal::id const who = terminal::current();
-            for (auto const& run : history::load_all()) {
+            for (auto const& run : load_all()) {
                 if (hits.size() >= opts.limit) {
                     break;
                 }
-                if (opts.here && !history::in_terminal(run, who)) {
+                if (opts.here && !in_terminal(run, who)) {
                     continue;
                 }
                 if (opts.since) {
@@ -212,7 +212,7 @@ namespace dana::prompts {
                     }
                     hits.push_back(hit{
                       .id       = run.id,
-                      .path     = history::display_path(run.path),
+                      .path     = display_path(run.path),
                       .name     = "argv",
                       .index    = 0,
                       .line     = 0,
@@ -237,7 +237,7 @@ namespace dana::prompts {
                         }
                         hit entry{
                           .id       = run.id,
-                          .path     = history::display_path(run.path),
+                          .path     = display_path(run.path),
                           .name     = segment.name,
                           .index    = segment.index,
                           .line     = i + 1,
