@@ -11,7 +11,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void render_help_overengineering(std::ostream& os);
 
@@ -149,7 +149,7 @@ namespace prompt::prompts {
             storage.emplace_back();           // $0
             storage.emplace_back(spec);       // $1
             storage.push_back(file.string()); // $2
-            return prompt::process::run_command(storage).stdout_data;
+            return dana::process::run_command(storage).stdout_data;
         }
 
     } // namespace
@@ -252,23 +252,23 @@ Options:
         if (!req.prior_args.empty()) {
             return;
         }
-        if (prompt::completion::matches(req.prefix, "list")) {
-            prompt::completion::write_item(os, "list", "List the available patterns");
+        if (dana::completion::matches(req.prefix, "list")) {
+            dana::completion::write_item(os, "list", "List the available patterns");
         }
         for (auto const& pattern : kPatterns) {
-            if (prompt::completion::matches(req.prefix, pattern.name)) {
-                prompt::completion::write_item(os, pattern.name, {});
+            if (dana::completion::matches(req.prefix, pattern.name)) {
+                dana::completion::write_item(os, pattern.name, {});
             }
         }
     }
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "overengineering",
       "Critique code for over-engineering patterns.",
       &execute_overengineering,
       &render_help_overengineering,
       &complete_overengineering);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

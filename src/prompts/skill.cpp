@@ -17,7 +17,7 @@
 #include <system_error>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -58,7 +58,7 @@ namespace prompt::prompts {
           std::string const&              stdin_data,
           int&                            exit_code,
           bool                            discard_stderr = false) {
-            prompt::process::command c(cmd);
+            dana::process::command c(cmd);
             c.stdin_data(stdin_data);
             if (discard_stderr) {
                 c.discard_stderr();
@@ -121,7 +121,7 @@ namespace prompt::prompts {
                 if (!raw.empty() && raw.back() == '\r') {
                     raw.pop_back();
                 }
-                raw        = prompt::text::rstrip(raw);
+                raw        = dana::text::rstrip(raw);
                 auto colon = raw.find(':');
                 if (colon == std::string::npos || colon == 0) {
                     continue;
@@ -136,7 +136,7 @@ namespace prompt::prompts {
                 if (!ok) {
                     continue;
                 }
-                std::string value = prompt::text::strip(raw.substr(colon + 1));
+                std::string value = dana::text::strip(raw.substr(colon + 1));
                 if (
                   value.size() >= 2 && value.front() == value.back() && (value.front() == '"' || value.front() == '\''))
                 {
@@ -419,7 +419,7 @@ namespace prompt::prompts {
         }
 
         std::string ai_find_skills_tool(std::filesystem::path const& exe_path, std::filesystem::path const& git_root) {
-            auto p = prompt::fs::bin_tool("ai-find-skills", exe_path, git_root);
+            auto p = dana::fs::bin_tool("ai-find-skills", exe_path, git_root);
             return p.string();
         }
 
@@ -668,7 +668,7 @@ Examples:
     // Subcommands and cached skill names for `prompt skill <TAB>` /
     // `prompt skill install|uninstall <TAB>`.
     static void complete_skill(completion_request const& req, std::ostream& os) {
-        static constexpr std::array<prompt::completion::item, 3> kSubcommands = {
+        static constexpr std::array<dana::completion::item, 3> kSubcommands = {
           {
            {.value = "list", .description = "List locally cached skills"},
            {.value = "install", .description = "Download a specific skill by exact name"},
@@ -678,23 +678,23 @@ Examples:
         std::string_view first = req.prior_args.empty() ? std::string_view{} : req.prior_args.front();
         if (first == "install" || first == "uninstall") {
             for (auto const& name : cached_skill_names()) {
-                if (prompt::completion::matches(req.prefix, name)) {
-                    prompt::completion::write_item(os, name, "cached skill");
+                if (dana::completion::matches(req.prefix, name)) {
+                    dana::completion::write_item(os, name, "cached skill");
                 }
             }
             return;
         }
-        prompt::completion::write_items(os, req.prefix, kSubcommands);
+        dana::completion::write_items(os, req.prefix, kSubcommands);
         for (auto const& name : cached_skill_names()) {
-            if (prompt::completion::matches(req.prefix, name)) {
-                prompt::completion::write_item(os, name, "cached skill");
+            if (dana::completion::matches(req.prefix, name)) {
+                dana::completion::write_item(os, name, "cached skill");
             }
         }
     }
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "skill",
       "Loads a cached skill and outputs its content as an AI prompt. If the skill is not cached, it is "
       "downloaded automatically. Piped stdin and file arguments are embedded as context. It also "
@@ -703,4 +703,4 @@ Examples:
       &render_help_skill,
       &complete_skill);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

@@ -6,7 +6,7 @@
 #include <string>
 #include <string_view>
 
-namespace prompt::clipboard {
+namespace dana::clipboard {
 
     enum class backend : std::uint8_t {
         wayland,
@@ -31,4 +31,4 @@ namespace prompt::clipboard {
 
     void init(std::chrono::seconds timeout = std::chrono::seconds(3));
 
-} // namespace prompt::clipboard
+} // namespace dana::clipboard

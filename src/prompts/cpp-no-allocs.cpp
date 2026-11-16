@@ -3,7 +3,7 @@
 
 #include <string>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void execute_cpp_no_allocations([[maybe_unused]] view const& v, result& r) {
         r.out = R"PROMPT(Rewrite this code so it performs no heap allocations at all. Every container,
@@ -32,10 +32,10 @@ Options:
 )EOF" << file_options_help("the embedded context");
     }
 
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "cpp.no-allocations",
       "Ask the AI to rewrite this code so it performs no heap allocations.",
       &execute_cpp_no_allocations,
       &render_help_cpp_no_allocations);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

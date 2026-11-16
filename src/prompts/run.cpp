@@ -13,7 +13,7 @@
 #include <unordered_set>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -87,7 +87,7 @@ namespace prompt::prompts {
         std::string description;
 
         if (!run_args.empty()) {
-            auto                     run_path = prompt::fs::bin_tool("run", v.env.exe_path, v.env.git_root).string();
+            auto                     run_path = dana::fs::bin_tool("run", v.env.exe_path, v.env.git_root).string();
             std::vector<std::string> cmd;
             cmd.push_back(run_path);
             for (auto const& arg : run_args) {
@@ -103,11 +103,11 @@ namespace prompt::prompts {
             bool const        had_stdin = v.in.available();
             std::string const piped(v.in.text());
 
-            auto result = prompt::process::run_command(storage, piped);
+            auto result = dana::process::run_command(storage, piped);
             if (had_stdin) {
                 v.in.spend();
             }
-            run_output = prompt::sanitize::strip_osc(result.stdout_data);
+            run_output = dana::sanitize::strip_osc(result.stdout_data);
             while (!run_output.empty() && run_output.back() == '\n') {
                 run_output.pop_back();
             }
@@ -134,9 +134,9 @@ namespace prompt::prompts {
 
         // The failed tests and error sites are the chain's focus: `.compress` keeps
         // those regions whole. Published as an artifact because it needs the output.
-        auto const focus = prompt::signals::extract_focus(search_output);
+        auto const focus = dana::signals::extract_focus(search_output);
         if (!focus.empty()) {
-            r.published.set(keys::focus, prompt::signals::join_focus(focus));
+            r.published.set(keys::focus, dana::signals::join_focus(focus));
         }
 
         std::string output;
@@ -195,7 +195,7 @@ Options:
         if (req.prefix.starts_with('-')) {
             return;
         }
-        static constexpr std::array<prompt::completion::item, 5> kRunArgs = {
+        static constexpr std::array<dana::completion::item, 5> kRunArgs = {
           {
            {.value = "lldb", .description = "Debug in lldb"},
            {.value = "gdb", .description = "Debug in gdb"},
@@ -204,9 +204,9 @@ Options:
            {.value = "help", .description = "Print bin/run help"},
            },
         };
-        auto exe    = prompt::fs::self_path().value_or(std::filesystem::path{});
-        auto tool   = prompt::fs::bin_tool("run", exe, prompt::fs::find_git_root());
-        auto result = prompt::process::command{tool.string(), "print-targets"}.discard_stderr().run();
+        auto exe    = dana::fs::self_path().value_or(std::filesystem::path{});
+        auto tool   = dana::fs::bin_tool("run", exe, dana::fs::find_git_root());
+        auto result = dana::process::command{tool.string(), "print-targets"}.discard_stderr().run();
         if (result.exit_code == 0) {
             std::size_t start = 0;
             while (start < result.stdout_data.size()) {
@@ -214,12 +214,12 @@ Options:
                 std::size_t      stop = end == std::string::npos ? result.stdout_data.size() : end;
                 std::string_view line(result.stdout_data.data() + start, stop - start);
                 start = end == std::string::npos ? result.stdout_data.size() : end + 1;
-                if (!line.empty() && prompt::completion::matches(req.prefix, line)) {
-                    prompt::completion::write_item(os, line, {});
+                if (!line.empty() && dana::completion::matches(req.prefix, line)) {
+                    dana::completion::write_item(os, line, {});
                 }
             }
         }
-        prompt::completion::write_items(os, req.prefix, kRunArgs);
+        dana::completion::write_items(os, req.prefix, kRunArgs);
     }
 
     // The tool declaration: a descriptor keeps a pointer to it, so it is a static.
@@ -237,7 +237,7 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "run",
       "Runs `bin/run` with the provided arguments and builds a debugging prompt from its output. If "
       "stdin is piped in, it debugs the piped run output instead.",
@@ -252,4 +252,4 @@ Options:
       true,
       &k_run_tool);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

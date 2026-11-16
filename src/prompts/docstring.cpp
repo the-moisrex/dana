@@ -3,7 +3,7 @@
 #include <ostream>
 #include <string>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void render_help_docstring(std::ostream& os);
 
@@ -40,7 +40,7 @@ Asks the AI to add or improve docstrings for functions, classes, and methods in 
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "docstring",
       "Asks the AI to add or improve docstrings for functions, classes, and methods in "
       "the code in the prompt. This prompt carries no data and takes no arguments: chain "
@@ -48,4 +48,4 @@ Asks the AI to add or improve docstrings for functions, classes, and methods in 
       &execute_docstring,
       &render_help_docstring);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

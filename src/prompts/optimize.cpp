@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void execute_optimize_prompt(view const& v, result& r) {
         auto opts = file_options_or_throw(v);
@@ -50,10 +50,10 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "optimize-prompt",
       "Ask the AI to analyze and improve an input prompt.",
       &execute_optimize_prompt,
       &render_help_optimize_prompt);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

@@ -8,7 +8,7 @@
 #include <random>
 #include <string>
 
-namespace prompt::ai {
+namespace dana::ai {
 
     inline std::string uuid4() {
         static thread_local std::mt19937_64 rng{std::random_device{}()};
@@ -29,4 +29,4 @@ namespace prompt::ai {
         return std::string(buffer);
     }
 
-} // namespace prompt::ai
+} // namespace dana::ai

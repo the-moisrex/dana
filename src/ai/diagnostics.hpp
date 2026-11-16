@@ -2,7 +2,7 @@
 
 #include <string_view>
 
-namespace prompt::ai {
+namespace dana::ai {
 
     // Visible failure reporting.  Every operation either raises (a hard failure) or
     // reports through warn/note; a best-effort failure still shows up under
@@ -20,4 +20,4 @@ namespace prompt::ai {
     // An unrecoverable failure: report it and return the exit code.
     int failed(std::string_view message, std::string_view prefix = "ai", int code = 1);
 
-} // namespace prompt::ai
+} // namespace dana::ai

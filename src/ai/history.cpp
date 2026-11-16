@@ -8,7 +8,7 @@
 #include <sstream>
 #include <string>
 
-namespace prompt::ai::history {
+namespace dana::ai::history {
 
     namespace {
 
@@ -106,4 +106,4 @@ namespace prompt::ai::history {
         return static_cast<double>(::timegm(&broken));
     }
 
-} // namespace prompt::ai::history
+} // namespace dana::ai::history

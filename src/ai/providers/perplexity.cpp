@@ -20,7 +20,7 @@
 #include <utility>
 #include <vector>
 
-namespace prompt::ai {
+namespace dana::ai {
 
     namespace {
 
@@ -1131,4 +1131,4 @@ namespace prompt::ai {
     // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
     bool const perplexity_registered = register_provider(std::make_unique<perplexity_provider>());
 
-} // namespace prompt::ai
+} // namespace dana::ai

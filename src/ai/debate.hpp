@@ -18,7 +18,7 @@
 #include <utility>
 #include <vector>
 
-namespace prompt::ai {
+namespace dana::ai {
 
     //: The default verification request appended to every relay turn.
     inline constexpr std::string_view kDebateDefaultInstruction =
@@ -83,4 +83,4 @@ namespace prompt::ai {
       debate_writer const&                   writer,
       debate_turn_observer const&            on_turn);
 
-} // namespace prompt::ai
+} // namespace dana::ai

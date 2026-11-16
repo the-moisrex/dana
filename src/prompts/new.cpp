@@ -7,7 +7,7 @@
 #include <string>
 #include <string_view>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -87,7 +87,7 @@ Return:
 3. The <name> you chose and one or two example invocations.
 )NEWTEXT";
 
-        for (auto const& asset : prompt::prompt_assets::assets) {
+        for (auto const& asset : dana::prompt_assets::assets) {
             output += embed_text(asset.text, asset.lang, asset.label, opts.head_lines);
         }
 
@@ -126,11 +126,11 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "new",
       "Builds a prompt that asks an AI to write a new native (C++) prompt "
       "for the `prompts/` dispatcher following its conventions.",
       &execute_new,
       &render_help_new);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

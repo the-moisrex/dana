@@ -12,7 +12,7 @@
 #include <string>
 #include <string_view>
 
-namespace prompt::ai {
+namespace dana::ai {
 
     struct render_options {
         bool show_thinking = true;
@@ -78,4 +78,4 @@ namespace prompt::ai {
         bool           started_answer_     = false;
     };
 
-} // namespace prompt::ai
+} // namespace dana::ai

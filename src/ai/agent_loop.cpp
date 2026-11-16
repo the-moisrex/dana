@@ -6,7 +6,7 @@
 #include <string_view>
 #include <utility>
 
-namespace prompt::ai {
+namespace dana::ai {
 
     std::string truncate_tool_result(std::string_view text, std::size_t head_lines, std::size_t max_bytes) {
         std::string_view kept = text;
@@ -82,4 +82,4 @@ namespace prompt::ai {
         return result;
     }
 
-} // namespace prompt::ai
+} // namespace dana::ai

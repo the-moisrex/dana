@@ -12,7 +12,7 @@
 #include <utility>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -166,7 +166,7 @@ than inventing missing source or hunk coordinates.
 
         // Apply file selection to whatever context we have (git-dirty or piped).
         if (!opts.exclude.empty() || !opts.only.empty()) {
-            context = prompt::git::filter_diff_by_path(context, opts.only, opts.exclude);
+            context = dana::git::filter_diff_by_path(context, opts.only, opts.exclude);
             if (context.empty()) {
                 throw soft_error{"No changes left after applying --exclude/--only filters.\n"};
             }
@@ -213,10 +213,10 @@ Options:
 )EOF";
     }
 
-    bool const registered = prompt::register_file_prompt(
+    bool const registered = dana::register_file_prompt(
       "verify",
       "Verify uncommitted changes in the current Git repository for correctness.",
       &execute_verify,
       &render_help_verify);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

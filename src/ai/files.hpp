@@ -11,7 +11,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::ai {
+namespace dana::ai {
 
     //: Refuse anything larger than this up front (the sites' own caps are looser).
     inline constexpr std::size_t kMaxAttachmentSize = 100UL * 1024UL * 1024UL;
@@ -42,4 +42,4 @@ namespace prompt::ai {
 
     std::string base64_encode(std::string_view data);
 
-} // namespace prompt::ai
+} // namespace dana::ai

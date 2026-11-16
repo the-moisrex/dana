@@ -5,13 +5,13 @@
 #include <string>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
         bool tool_exists(std::string const& name) {
             std::string cmd = "command -v " + name + " >/dev/null 2>&1";
-            return prompt::process::run_command({"bash", "-c", cmd}).exit_code == 0;
+            return dana::process::run_command({"bash", "-c", cmd}).exit_code == 0;
         }
 
         std::string strip_trailing_newlines(std::string_view text) {
@@ -31,7 +31,7 @@ namespace prompt::prompts {
               field,
               query,
             };
-            return strip_trailing_newlines(prompt::process::run_command(storage).stdout_data);
+            return strip_trailing_newlines(dana::process::run_command(storage).stdout_data);
         }
 
     } // namespace
@@ -138,7 +138,7 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "gh.issue",
       "Fetch a GitHub issue and generate a prompt asking the AI to implement it. Uses `gh issue "
       "view` to retrieve issue details. If `gh` is unavailable, reads issue context from stdin "
@@ -146,4 +146,4 @@ Options:
       &execute_gh_issue,
       &render_help_gh_issue);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

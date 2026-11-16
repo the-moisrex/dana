@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void execute_spp(view const& v, result& r) {
         auto head_lines = head_lines_or_throw(v);
@@ -17,7 +17,7 @@ namespace prompt::prompts {
             throw usage_error{"Usage: prompt spp [--head N] <symbol> [symbol...]\n"};
         }
 
-        auto tool = prompt::fs::bin_tool("spp", v.env.exe_path, v.env.git_root);
+        auto tool = dana::fs::bin_tool("spp", v.env.exe_path, v.env.git_root);
 
         std::string output;
         output += "Additional C++ symbol context:\n\n";
@@ -30,7 +30,7 @@ namespace prompt::prompts {
 
             std::string              spp_path  = tool.string();
             std::vector<char const*> argv      = {spp_path.c_str(), symbol.c_str(), nullptr};
-            auto                     result    = prompt::process::run_command(argv, v.in.text());
+            auto                     result    = dana::process::run_command(argv, v.in.text());
             output                            += trim_context_nl(result.stdout_data, head_lines);
             output                            += "\n```\n\n";
             if (!result.stderr_data.empty()) {
@@ -55,10 +55,10 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "spp",
       "Builds a C++ debugging prompt and expands the given symbols through `spp`.",
       &execute_spp,
       &render_help_spp);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

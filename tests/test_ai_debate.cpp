@@ -43,7 +43,7 @@ namespace {
         std::vector<std::string>                 prompts;
         std::vector<nlohmann::json>              fields;
 
-        prompt::ai::debate_participant make() {
+        dana::ai::debate_participant make() {
             return {
               .name = name,
               .ask =
@@ -70,19 +70,19 @@ namespace {
         std::vector<std::string>                 answers;
     };
 
-    prompt::ai::debate_result run(
+    dana::ai::debate_result run(
       std::vector<fake_participant>& fakes,
       std::string const&             question,
       int                            rounds,
       bool                           until_agree,
       std::string const&             instruction,
       collected&                     writer) {
-        std::vector<prompt::ai::debate_participant> participants;
+        std::vector<dana::ai::debate_participant> participants;
         participants.reserve(fakes.size());
         for (auto& fake : fakes) {
             participants.push_back(fake.make());
         }
-        return prompt::ai::run_debate_panel(
+        return dana::ai::run_debate_panel(
           participants,
           question,
           rounds,
@@ -96,7 +96,7 @@ namespace {
     }
 
     void test_build_prompt() {
-        using prompt::ai::debate_build_prompt;
+        using dana::ai::debate_build_prompt;
         check_equal(debate_build_prompt("Q?", std::nullopt, true, ""), "Q?", "first turn is the question");
         check_equal(debate_build_prompt("Q?", std::nullopt, true, "I"),
                     "Q?",
@@ -115,7 +115,7 @@ namespace {
     }
 
     void test_verdict() {
-        using prompt::ai::debate_parse_verdict;
+        using dana::ai::debate_parse_verdict;
         check_equal(debate_parse_verdict("some text\nVERDICT: DISAGREE\nmore\nverdict: agree\n"),
                     "AGREE",
                     "last verdict wins");

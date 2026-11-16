@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void render_help_man(std::ostream& os);
 
@@ -36,7 +36,7 @@ namespace prompt::prompts {
             storage.push_back(p);
         }
 
-        auto result = prompt::process::run_command(storage);
+        auto result = dana::process::run_command(storage);
 
         std::string output;
         output += std::format("Manual page for `{}`:\n\n", man_pages);
@@ -70,11 +70,11 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "man",
       "Fetches the manual page for the given command(s) and appends it as a Markdown code "
       "block. This is essentially a shorthand for `prompt cli man -P cat <page>`.",
       &execute_man,
       &render_help_man);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

@@ -15,7 +15,7 @@
 #include <utility>
 #include <vector>
 
-namespace prompt::ai {
+namespace dana::ai {
 
     class ws_error : public std::runtime_error {
       public:
@@ -76,4 +76,4 @@ namespace prompt::ai {
     // True when the linked libcurl was built with the ws/wss protocols.
     bool have_websocket();
 
-} // namespace prompt::ai
+} // namespace dana::ai

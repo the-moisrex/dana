@@ -11,7 +11,7 @@
 #include <string>
 #include <thread>
 
-namespace prompt::ai {
+namespace dana::ai {
 
     namespace {
 
@@ -372,4 +372,4 @@ namespace prompt::ai {
         partial_.clear();
     }
 
-} // namespace prompt::ai
+} // namespace dana::ai

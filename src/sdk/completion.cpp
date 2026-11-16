@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-namespace prompt {
+namespace dana {
 
     namespace {
 
@@ -80,4 +80,4 @@ namespace prompt {
         write_step_names(out, prefix);
     }
 
-} // namespace prompt
+} // namespace dana

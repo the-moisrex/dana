@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -299,7 +299,7 @@ namespace prompt::prompts {
         // binary; avoid re-spawning `prompt` which would recurse. A stock target
         // runs the split pair: `tse` (dataset) followed by `tse.analyze`
         // (data-free instructions).
-        if (prompt::find_prompt(target_script) != nullptr) {
+        if (dana::find_prompt(target_script) != nullptr) {
             std::vector<std::string_view> targets{target_script};
             if (want_analysis) {
                 targets.emplace_back("tse.analyze");
@@ -310,7 +310,7 @@ namespace prompt::prompts {
             bool        first_segment = true;
             bool        no_clipboard  = false;
             for (std::size_t t = 0; t < targets.size(); ++t) {
-                auto const* target = prompt::find_prompt(targets[t]);
+                auto const* target = dana::find_prompt(targets[t]);
                 if (target == nullptr) {
                     throw prompt_error{3,
                                        "prompt auto: prompt '" + std::string(targets[t]) + "' not found\n",
@@ -396,7 +396,7 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "auto",
       "Automatically chooses and executes the most appropriate prompt script based on the input. For "
       "example, if it detects YouTube URLs, it delegates to the 'yt' prompt. If it detects C++ files, "
@@ -406,4 +406,4 @@ Options:
       &execute_auto,
       &render_help_auto);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

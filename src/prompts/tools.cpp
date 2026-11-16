@@ -14,7 +14,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -361,10 +361,10 @@ See also: `.list` (short descriptions), `.list-prompts` (full help),
 )EOF";
     }
 
-    bool const registered_tools = prompt::register_prompt(
+    bool const registered_tools = dana::register_prompt(
       "tools",
       "Describe the prompt catalog as tool schemas (markdown, JSON Schema or names).",
       &execute_tools,
       &render_help_tools);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

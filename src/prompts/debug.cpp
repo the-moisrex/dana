@@ -10,7 +10,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -88,7 +88,7 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "debug",
       "General-purpose multi-language debugging prompt. Analyzes error messages, "
       "stack traces, or suspicious code and identifies the root cause.",
@@ -100,4 +100,4 @@ Options:
       nullptr,
       &declare_debug);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

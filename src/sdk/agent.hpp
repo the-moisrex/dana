@@ -9,7 +9,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::agent {
+namespace dana::agent {
 
     // The selector token grammar shared by `.extract`, `.each` and `.exec`:
     // `kind[:qualifier][@N]` (a `/`-pipeline of stages), plus the bare
@@ -57,4 +57,4 @@ namespace prompt::agent {
     // Basename of a program token (`/usr/bin/git` -> `git`).
     [[nodiscard]] std::string program_name(std::string_view program);
 
-} // namespace prompt::agent
+} // namespace dana::agent

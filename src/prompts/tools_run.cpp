@@ -12,7 +12,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -142,7 +142,7 @@ See also: `.tools` (the catalog), `.exec` (run an argv command), `.extract`.
 )EOF";
     }
 
-    bool const registered = prompt::register_sink(
+    bool const registered = dana::register_sink(
       "tools.run",
       "Run the tool calls in the chain context (from an AI answer) and continue with their results.",
       &execute_tools_run,
@@ -154,4 +154,4 @@ See also: `.tools` (the catalog), `.exec` (run an argv command), `.extract`.
       false,
       true);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

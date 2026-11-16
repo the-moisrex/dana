@@ -2,7 +2,7 @@
 
 #include <charconv>
 
-namespace prompt::text {
+namespace dana::text {
 
     std::string rstrip_newlines(std::string_view s) {
         while (!s.empty() && (s.back() == '\n' || s.back() == '\r')) {
@@ -152,4 +152,4 @@ namespace prompt::text {
         return out;
     }
 
-} // namespace prompt::text
+} // namespace dana::text

@@ -12,7 +12,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -94,7 +94,7 @@ namespace prompt::prompts {
           std::chrono::milliseconds       timeout) {
             std::vector<std::string> cmd = {tool.string()};
             cmd.insert(cmd.end(), args.begin(), args.end());
-            auto result = prompt::process::run_command(cmd, stdin_data, {}, timeout);
+            auto result = dana::process::run_command(cmd, stdin_data, {}, timeout);
             return {.stdout_data = std::move(result.stdout_data),
                     .status      = result.exit_code,
                     .timed_out   = result.timed_out};
@@ -170,7 +170,7 @@ namespace prompt::prompts {
         std::vector<std::string> tools;
         tools.reserve(3);
         for (char const* name : {"yt.links", "subtitle", "srt2text"}) {
-            tools.push_back(prompt::fs::bin_tool(name, v.env.exe_path, v.env.git_root).string());
+            tools.push_back(dana::fs::bin_tool(name, v.env.exe_path, v.env.git_root).string());
         }
 
         // bash checks `[ -t 0 ]`: a piped stdin wins over the clipboard.
@@ -237,7 +237,7 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "yt",
       "Builds an article-writing prompt from stdin. If stdin is a single YouTube URL, it "
       "fetches the subtitles/text first and fails when that fetch fails (--fallback keeps "
@@ -245,4 +245,4 @@ Options:
       &execute_yt,
       &render_help_yt);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

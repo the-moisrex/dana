@@ -5,7 +5,7 @@
 #include <string>
 #include <string_view>
 
-namespace prompt::codec {
+namespace dana::codec {
 
     // The two primitives the length-prefixed wire blobs are built from: the fact
     // store's payload and the fork codec's segment_outcome share them, so the
@@ -27,4 +27,4 @@ namespace prompt::codec {
         return true;
     }
 
-} // namespace prompt::codec
+} // namespace dana::codec

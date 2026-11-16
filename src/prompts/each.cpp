@@ -31,7 +31,7 @@
 #include <unistd.h>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void render_help_each(std::ostream& os);
 
@@ -917,7 +917,7 @@ Examples:
 )EOF";
     }
 
-    bool const registered = prompt::register_sink(
+    bool const registered = dana::register_sink(
       "each",
       "Loop a chain body over the rows of a table, code block or section, running each item as a child prompt in "
       "parallel.",
@@ -929,4 +929,4 @@ Examples:
       nullptr,
       true);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

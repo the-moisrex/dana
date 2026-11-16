@@ -8,7 +8,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void execute_diagram(view const& v, result& r) {
         // diagram.sh runs init_prompt (which already validated --head) before its
@@ -83,15 +83,15 @@ Options:
           "sequence",
           "class",
         };
-        if (prompt::completion::write_values_after_flag(os, req, "--type", kTypes)) {
+        if (dana::completion::write_values_after_flag(os, req, "--type", kTypes)) {
             return;
         }
-        prompt::completion::write_values_after_flag(os, req, "-t", kTypes);
+        dana::completion::write_values_after_flag(os, req, "-t", kTypes);
     }
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "diagram",
       "Generates code diagrams (Mermaid, PlantUML, ASCII) from source code or "
       "descriptions.",
@@ -99,4 +99,4 @@ Options:
       &render_help_diagram,
       &complete_diagram);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

@@ -12,7 +12,7 @@
 #include <string>
 #include <vector>
 
-namespace prompt::ai {
+namespace dana::ai {
 
     struct cli_options {
         std::vector<std::string> prompt;
@@ -107,4 +107,4 @@ namespace prompt::ai {
     std::string list_models_text(provider& instance, cli_options const& options);
     std::string session_report_text(provider& instance, cli_options const& options);
 
-} // namespace prompt::ai
+} // namespace dana::ai

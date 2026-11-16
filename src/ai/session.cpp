@@ -7,7 +7,7 @@
 #include <nlohmann/json.hpp>
 #include <string>
 
-namespace prompt::ai::session {
+namespace dana::ai::session {
 
     namespace fs = std::filesystem;
     using nlohmann::json;
@@ -45,10 +45,8 @@ namespace prompt::ai::session {
     } // namespace
 
     std::optional<match> load(std::string_view target, options const& opts) {
-        auto const exe = prompt::fs::bin_tool(
-          "browser.session",
-          prompt::fs::self_path().value_or(fs::path{}),
-          prompt::fs::find_git_root());
+        auto const exe =
+          dana::fs::bin_tool("browser.session", dana::fs::self_path().value_or(fs::path{}), dana::fs::find_git_root());
         if (exe.empty()) {
             throw session_error("browser.session not found next to ai or on PATH");
         }
@@ -160,4 +158,4 @@ namespace prompt::ai::session {
         return std::nullopt;
     }
 
-} // namespace prompt::ai::session
+} // namespace dana::ai::session

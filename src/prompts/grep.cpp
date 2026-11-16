@@ -12,7 +12,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -204,7 +204,7 @@ Examples:
     // (no central list — see sdk/prompt_registry.hpp). The summary is a
     // static-storage string_view; `register_prompt` keeps the view, so never pass a
     // temporary std::string here.
-    bool const registered_grep = prompt::register_prompt(
+    bool const registered_grep = dana::register_prompt(
       "grep",
       kGrepSummary,
       &execute_grep,
@@ -218,4 +218,4 @@ Examples:
       true,
       &k_grep_tool);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

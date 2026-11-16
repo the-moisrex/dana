@@ -15,7 +15,7 @@
 #include <utility>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -414,7 +414,7 @@ namespace prompt::prompts {
         // argv token is split into words and lower-cased before matching.
         std::vector<std::string> tokens;
         for (std::string_view arg : v.args) {
-            for (auto& word : prompt::text::words(arg)) {
+            for (auto& word : dana::text::words(arg)) {
                 std::ranges::transform(word, word.begin(), [](unsigned char c) {
                     return static_cast<char>(std::tolower(c));
                 });
@@ -625,11 +625,11 @@ Examples:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "length",
       "Set the answer length (or shape) the AI should target, roughly or exactly.",
       &execute_length,
       &render_help_length,
       &complete_length);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

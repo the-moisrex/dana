@@ -21,7 +21,7 @@
 #include <system_error>
 #include <unistd.h>
 
-namespace prompt::stash {
+namespace dana::stash {
 
     namespace {
 
@@ -537,4 +537,4 @@ namespace prompt::stash {
         return to_json(value, true).dump(2, ' ', false, json::error_handler_t::replace);
     }
 
-} // namespace prompt::stash
+} // namespace dana::stash

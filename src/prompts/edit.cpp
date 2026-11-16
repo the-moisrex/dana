@@ -33,7 +33,7 @@
 #    include <windows.h>
 #endif
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -837,7 +837,7 @@ namespace prompt::prompts {
             auto const new_file = directory / "new";
             write_temp(old_file, before);
             write_temp(new_file, after);
-            auto result = prompt::process::run_script(
+            auto result = dana::process::run_script(
               R"(diff -u --label "a/$3" --label "b/$3" -- "$1" "$2")",
               {old_file.string(), new_file.string(), std::string{path}},
               {},
@@ -1271,14 +1271,14 @@ Options:
       },
       {schema::argument("path", "The file to edit.", true)});
 
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "edit",
       "Find exact text in a file and replace it; --old/--new or --old-file/--new-file, "
       "--all for every occurrence, --diff to show the change.",
       &execute_edit,
       &render_help_edit,
       nullptr,
-      prompt::chain_role::normal,
+      dana::chain_role::normal,
       true,
       nullptr,
       nullptr,
@@ -1286,4 +1286,4 @@ Options:
       true,
       &k_edit_tool);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

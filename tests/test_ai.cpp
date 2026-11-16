@@ -53,7 +53,7 @@ namespace {
     }
 
     void test_promptfile() {
-        using namespace prompt::ai;
+        using namespace dana::ai;
         check_equal(human_size(1), "1 byte", "human_size singular");
         check_equal(human_size(512), "512 bytes", "human_size bytes");
         check_equal(human_size(2048), "2.0 KiB", "human_size KiB");
@@ -90,7 +90,7 @@ namespace {
     }
 
     void test_history() {
-        using namespace prompt::ai::history;
+        using namespace dana::ai::history;
         check_equal(iso_from_epoch(0), "", "epoch zero");
         check_equal(iso_from_epoch(0), "", "epoch zero again");
         check_equal(iso_from_epoch(1'700'000'000), "2023-11-14T22:13:20Z", "iso seconds");
@@ -100,7 +100,7 @@ namespace {
     }
 
     void test_state() {
-        using namespace prompt::ai;
+        using namespace dana::ai;
         auto const dir = temp_dir("state");
         ::setenv("XDG_STATE_HOME", dir.string().c_str(), 1);
 
@@ -142,7 +142,7 @@ namespace {
     }
 
     void test_files() {
-        using namespace prompt::ai;
+        using namespace dana::ai;
         check_equal(base64_encode("hello"), "aGVsbG8=", "base64 hello");
         check_equal(base64_encode("a"), "YQ==", "base64 one");
         check_equal(base64_encode("ab"), "YWI=", "base64 two");
@@ -163,7 +163,7 @@ namespace {
     }
 
     void test_keys() {
-        using namespace prompt::ai;
+        using namespace dana::ai;
         check_equal(keys::mask(""), "", "mask empty");
         check_equal(keys::mask("short"), "*****", "mask short");
         check(keys::mask("sk-or-v1-abcdefghijklmnop").find("sk-or-") == 0, "mask prefix");
@@ -172,7 +172,7 @@ namespace {
     }
 
     void test_transport_helpers() {
-        using namespace prompt::ai;
+        using namespace dana::ai;
         check(normalise_base("localhost:1234") == "http://localhost:1234/v1", "normalise host");
         check(normalise_base("https://openrouter.ai/api/v1/") == "https://openrouter.ai/api/v1", "normalise v1");
         check(normalise_base("http://127.0.0.1:8080") == "http://127.0.0.1:8080/v1", "normalise port");
@@ -205,7 +205,7 @@ namespace {
     }
 
     void test_registry() {
-        using namespace prompt::ai;
+        using namespace dana::ai;
         check(find_provider("lms") != nullptr, "registry lms");
         check(find_provider("openai") != nullptr, "registry openai");
         check(find_provider("openrouter") != nullptr, "registry openrouter");
@@ -286,7 +286,7 @@ namespace {
     void test_http_retry();
 
     void test_http_stub() {
-        using namespace prompt::ai;
+        using namespace dana::ai;
         {
             stub_server  server("data: one\n\ndata: two\n\n");
             http_request request;
@@ -412,7 +412,7 @@ namespace {
     };
 
     void test_http_retry() {
-        using namespace prompt::ai;
+        using namespace dana::ai;
         {
             // A transient 503 is retried and the next attempt's body wins.
             sequence_server server({
@@ -522,7 +522,7 @@ namespace {
     }
 
     void test_render() {
-        using namespace prompt::ai;
+        using namespace dana::ai;
         {
             std::string    out;
             std::string    err;

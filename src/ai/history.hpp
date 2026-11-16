@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-namespace prompt::ai::history {
+namespace dana::ai::history {
 
     inline constexpr std::string_view kUser      = "user";
     inline constexpr std::string_view kAssistant = "assistant";
@@ -55,4 +55,4 @@ namespace prompt::ai::history {
     // Parse an ISO 8601 timestamp to seconds (0 when it cannot be parsed).
     double epoch_of(std::string_view value);
 
-} // namespace prompt::ai::history
+} // namespace dana::ai::history

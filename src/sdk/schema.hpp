@@ -24,7 +24,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::schema {
+namespace dana::schema {
 
     // The parameter types the CLI can express. Strings and value flags dominate;
     // booleans are value-less flags.
@@ -98,4 +98,4 @@ namespace prompt::schema {
     // values. A prompt's own `complete_fn` still adds positional candidates.
     void complete(tool const& value, completion_request const& req, std::ostream& os);
 
-} // namespace prompt::schema
+} // namespace dana::schema

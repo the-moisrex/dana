@@ -15,7 +15,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::agent {
+namespace dana::agent {
 
     namespace {
 
@@ -46,7 +46,7 @@ namespace prompt::agent {
         void walk_tokens(std::span<std::string const> tokens, std::vector<std::vector<std::string>>& commands);
 
         // NOLINTNEXTLINE(misc-no-recursion) — a body is a tree; the depth is bounded by the parse.
-        void walk_invocation(prompt::prompt_invocation const& inv, std::vector<std::vector<std::string>>& commands) {
+        void walk_invocation(dana::prompt_invocation const& inv, std::vector<std::vector<std::string>>& commands) {
             if (inv.name == "each" && !inv.body.empty()) {
                 std::vector<std::string> body;
                 body.reserve(inv.body.size());
@@ -69,7 +69,7 @@ namespace prompt::agent {
                     std::vector<std::string> inner(spec.command.begin() + 1, spec.command.end());
                     walk_tokens(inner, commands);
                 }
-            } catch (prompt::prompt_error const&) { // NOLINT(bugprone-empty-catch) — the child reports it.
+            } catch (dana::prompt_error const&) { // NOLINT(bugprone-empty-catch) — the child reports it.
             }
         }
 
@@ -81,7 +81,7 @@ namespace prompt::agent {
             for (auto const& token : tokens) {
                 argv.push_back(token.c_str());
             }
-            auto chain = prompt::parse_chain(argv, prompt::get_all_prompts());
+            auto chain = dana::parse_chain(argv, dana::get_all_prompts());
             if (!chain.error.empty()) {
                 return;
             }
@@ -98,7 +98,7 @@ namespace prompt::agent {
             for (auto const& token : tokens) {
                 argv.push_back(token.c_str());
             }
-            auto chain = prompt::parse_chain(argv, prompt::get_all_prompts());
+            auto chain = dana::parse_chain(argv, dana::get_all_prompts());
             if (!chain.error.empty()) {
                 throw usage_error{chain.error + "\n"};
             }
@@ -281,4 +281,4 @@ namespace prompt::agent {
         validate_tokens(chain_tokens);
     }
 
-} // namespace prompt::agent
+} // namespace dana::agent

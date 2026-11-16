@@ -8,7 +8,7 @@
 #include <string>
 #include <string_view>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
         inline constexpr std::string_view help_summary = "Find places where the code violates backward-compatibility.";
@@ -71,6 +71,6 @@ Options:
 )EOF" << file_options_help("the embedded context");
     }
 
-    bool const registered = prompt::register_prompt("compat", help_summary, &execute_compat, &render_help_compat);
+    bool const registered = dana::register_prompt("compat", help_summary, &execute_compat, &render_help_compat);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

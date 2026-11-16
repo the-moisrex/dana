@@ -9,7 +9,7 @@
 #include <string_view>
 #include <vector>
 
-using namespace prompt;
+using namespace dana;
 
 namespace {
 

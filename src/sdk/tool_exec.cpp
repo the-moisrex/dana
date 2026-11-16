@@ -9,7 +9,7 @@
 #include <utility>
 #include <vector>
 
-namespace prompt::tool_exec {
+namespace dana::tool_exec {
 
     namespace {
 
@@ -136,4 +136,4 @@ namespace prompt::tool_exec {
         return out;
     }
 
-} // namespace prompt::tool_exec
+} // namespace dana::tool_exec

@@ -18,7 +18,7 @@
 #include <string>
 #include <string_view>
 
-namespace prompt {
+namespace dana {
 
     struct completion_request {
         // The token being completed (may be empty).
@@ -165,4 +165,4 @@ namespace prompt {
     // help summary.
     void write_prompt_names(std::ostream& out, std::string_view prefix);
 
-} // namespace prompt
+} // namespace dana

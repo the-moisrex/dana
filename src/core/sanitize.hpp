@@ -3,7 +3,7 @@
 #include <string>
 #include <string_view>
 
-namespace prompt::sanitize {
+namespace dana::sanitize {
 
     std::string strip_osc(std::string_view input);
 
@@ -25,4 +25,4 @@ namespace prompt::sanitize {
       "[prompt] Note: personal data below was redacted by the prompt pipeline — HOME, USER, HOSTNAME, IP_ADDRESS, "
       "MAC_ADDRESS, EMAIL_ADDRESS, PHONE_NUMBER and SSN are placeholders, not the original text.";
 
-} // namespace prompt::sanitize
+} // namespace dana::sanitize

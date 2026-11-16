@@ -21,7 +21,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-namespace prompt::history {
+namespace dana::history {
 
     namespace {
 
@@ -98,7 +98,7 @@ namespace prompt::history {
                 if (!segment.emitted) {
                     continue;
                 }
-                if (prompt::text::append_block(body, segment.text)) {
+                if (dana::text::append_block(body, segment.text)) {
                     any_redacted = any_redacted || segment.redacted;
                 }
             }
@@ -109,13 +109,13 @@ namespace prompt::history {
         // separated block, `replace` discards it, and the rest leave it untouched.
         void apply_merge(std::string& text, bool& redacted, bool& legend_done, stored_segment const& segment) {
             if (segment.merge == "append") {
-                if (prompt::text::append_block(text, segment.text)) {
+                if (dana::text::append_block(text, segment.text)) {
                     redacted = redacted || segment.redacted;
                 }
                 return;
             }
             if (segment.merge == "replace") {
-                std::string_view const block = prompt::text::strip_newlines(segment.text);
+                std::string_view const block = dana::text::strip_newlines(segment.text);
                 text                         = std::string(block);
                 if (!text.empty()) {
                     text += '\n';
@@ -842,4 +842,4 @@ namespace prompt::history {
         return std::format("{:.1f}{}", value, units[unit]);
     }
 
-} // namespace prompt::history
+} // namespace dana::history

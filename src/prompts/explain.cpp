@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <string>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void execute_explain(view const& v, result& r) {
         auto opts = file_options_or_throw(v);
@@ -39,10 +39,7 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
-      "explain",
-      "Explain this clearly and concretely.",
-      &execute_explain,
-      &render_help_explain);
+    bool const registered =
+      dana::register_prompt("explain", "Explain this clearly and concretely.", &execute_explain, &render_help_explain);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

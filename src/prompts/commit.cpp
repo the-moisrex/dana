@@ -15,7 +15,7 @@
 #include <utility>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -98,23 +98,23 @@ Keep it specific and practical, not generic. Only return copyable commit message
             return;
         }
 
-        if (prompt::process::run_command(std::vector<std::string>{"git", "rev-parse", "--is-inside-work-tree"})
-              .exit_code != 0)
+        if (
+          dana::process::run_command(std::vector<std::string>{"git", "rev-parse", "--is-inside-work-tree"}).exit_code !=
+          0)
         {
             throw soft_error{"prompt commit: Error: Not inside a git repository.\n"};
         }
 
         std::string diff_type = "staged changes";
-        std::string diff      = prompt::git::run({"git", "diff", "--cached"});
+        std::string diff      = dana::git::run({"git", "diff", "--cached"});
 
         if (diff.empty()) {
             diff_type = "unstaged and untracked changes";
-            diff      = prompt::git::run({"git", "diff"});
+            diff      = dana::git::run({"git", "diff"});
 
             // Run both operations from the root so subdirectory invocations
             // include all untracked files and resolve their paths consistently.
-            auto root_result =
-              prompt::process::run_command(std::vector<std::string>{"git", "rev-parse", "--show-cdup"});
+            auto root_result = dana::process::run_command(std::vector<std::string>{"git", "rev-parse", "--show-cdup"});
             if (root_result.exit_code != 0) {
                 throw soft_error{"prompt commit: Error: Could not locate repository root.\n"};
             }
@@ -128,7 +128,7 @@ Keep it specific and practical, not generic. Only return copyable commit message
             }
 
             // NUL-delimited names preserve newlines and other special characters.
-            auto listing = prompt::process::run_command(
+            auto listing = dana::process::run_command(
               std::vector<std::string>{"git", "-C", root, "ls-files", "--others", "--exclude-standard", "-z"});
             if (listing.exit_code != 0) {
                 throw soft_error{"prompt commit: Error: Could not list untracked files.\n"};
@@ -153,7 +153,7 @@ Keep it specific and practical, not generic. Only return copyable commit message
                 }
 
                 // Let Git handle modes, symlinks, binary files, and newline markers.
-                auto file_diff = prompt::process::run_command(
+                auto file_diff = dana::process::run_command(
                   std::vector<std::string>{"git", "-C", root, "diff", "--no-index", "--", "/dev/null", "./" + path});
 
                 // --no-index returns 1 when it finds a difference.
@@ -169,7 +169,7 @@ Keep it specific and practical, not generic. Only return copyable commit message
         }
 
         if (!opts.exclude.empty() || !opts.only.empty()) {
-            diff = prompt::git::filter_diff_by_path(diff, opts.only, opts.exclude);
+            diff = dana::git::filter_diff_by_path(diff, opts.only, opts.exclude);
         }
 
         if (diff.empty()) {
@@ -177,7 +177,7 @@ Keep it specific and practical, not generic. Only return copyable commit message
         }
 
         std::string trimmed_diff  = trim_context_nl(diff, head_lines);
-        std::string numbered_diff = prompt::git::add_line_numbers_to_diff(trimmed_diff);
+        std::string numbered_diff = dana::git::add_line_numbers_to_diff(trimmed_diff);
 
         std::string output;
         output += std::format("Write a clear, descriptive Git commit message for the following {}.\n", diff_type);
@@ -207,11 +207,11 @@ Options:
 )EOF";
     }
 
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "commit",
       "Asks the AI to write a Git commit message based on current changes. It prioritizes staged "
       "changes (git diff --cached). If no changes are staged, it evaluates all unstaged and untracked changes.",
       &execute_commit,
       &render_help_commit);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

@@ -9,7 +9,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -101,6 +101,6 @@ Examples:
     } // namespace
 
     bool const registered_files_exclude =
-      prompt::register_file_filter("files.exclude", kSummary, &execute_files_exclude, &render_help_files_exclude);
+      dana::register_file_filter("files.exclude", kSummary, &execute_files_exclude, &render_help_files_exclude);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

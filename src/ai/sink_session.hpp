@@ -13,7 +13,7 @@
 #include <string>
 #include <string_view>
 
-namespace prompt::ai {
+namespace dana::ai {
 
     // Parsed but not opened: cheap, no session or network access. `--print-prompt`,
     // `--list` and `--print-session` are answered from this alone.
@@ -47,4 +47,4 @@ namespace prompt::ai {
     // `.ai.reply` continue it.
     void save_sink_state(sink_session const& session);
 
-} // namespace prompt::ai
+} // namespace dana::ai

@@ -9,7 +9,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::stash {
+namespace dana::stash {
 
     // A saved chain snapshot: the accumulated text, the effective facts, the
     // redaction/failure flags and the provenance needed to explain it later. The
@@ -92,4 +92,4 @@ namespace prompt::stash {
     std::string now_iso();
     long long   now_ts();
 
-} // namespace prompt::stash
+} // namespace dana::stash

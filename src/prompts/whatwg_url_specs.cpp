@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void execute_whatwg_url_specs(view const& v, result& r) {
         auto head_lines = head_lines_or_throw(v);
@@ -27,7 +27,7 @@ Ensure that any code, fixes, or analysis strictly adhere to these standard algor
         if (sections.empty()) {
             // No queries: the tool's --help is streamed verbatim inside a code
             // fence (no --head applied here), preceded by the stderr warning.
-            auto result  = prompt::process::run_command({tool, "--help"});
+            auto result  = dana::process::run_command({tool, "--help"});
             output      += "```text\n";
             output      += result.stdout_data;
             output      += "```\n\n";
@@ -51,7 +51,7 @@ Ensure that any code, fixes, or analysis strictly adhere to these standard algor
         for (auto const& s : sections) {
             storage.push_back(s);
         }
-        auto result  = prompt::process::run_command(storage);
+        auto result  = dana::process::run_command(storage);
         output      += trim_context_nl(result.stdout_data, head_lines);
         output      += "```\n\n";
 
@@ -74,11 +74,11 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "whatwg-url-specs",
       "Fetches relevant sections of the WHATWG URL specification using `whatwg-url-specs` and "
       "adds them to the prompt context.",
       &execute_whatwg_url_specs,
       &render_help_whatwg_url_specs);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

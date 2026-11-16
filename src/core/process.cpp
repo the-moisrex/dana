@@ -18,7 +18,7 @@
 #include <unistd.h>
 #include <vector>
 
-namespace prompt::process {
+namespace dana::process {
 
     namespace {
         // Feeds stdin_data to the child through a pipe in the parent (no temp files,
@@ -371,4 +371,4 @@ namespace prompt::process {
         return run_command(args, stdin_data, envs, timeout);
     }
 
-} // namespace prompt::process
+} // namespace dana::process

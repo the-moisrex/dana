@@ -23,7 +23,7 @@
 #include <utility>
 #include <vector>
 
-namespace prompt::ai {
+namespace dana::ai {
 
     namespace {
 
@@ -1197,4 +1197,4 @@ namespace prompt::ai {
         return status;
     }
 
-} // namespace prompt::ai
+} // namespace dana::ai

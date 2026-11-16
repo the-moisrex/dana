@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -91,11 +91,11 @@ Please review the build setup, dependencies, and target structures.
             storage.push_back(v.env.git_root.string());
             storage.emplace_back("*CMakeLists.txt");
             storage.emplace_back("*.cmake");
-            files      = split_lines(prompt::process::run_command(storage).stdout_data);
+            files      = split_lines(dana::process::run_command(storage).stdout_data);
             search_dir = v.env.git_root.string();
         } else {
             for (auto& f :
-                 split_lines(prompt::process::run_command(
+                 split_lines(dana::process::run_command(
                                {"bash", "-c", R"(find . -type f \( -name CMakeLists.txt -o -name "*.cmake" \))"})
                                .stdout_data))
             {
@@ -153,11 +153,11 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "cmake",
       "Gathers all CMakeLists.txt and *.cmake files in the current project to provide full "
       "context on the CMake build setup.",
       &execute_cmake,
       &render_help_cmake);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

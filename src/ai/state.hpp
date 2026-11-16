@@ -14,7 +14,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::ai::state {
+namespace dana::ai::state {
 
     //: How many transcript entries to keep alongside the id.
     inline constexpr std::size_t kMaxHistory = 20;
@@ -59,4 +59,4 @@ namespace prompt::ai::state {
                      std::string_view                                  scope = {});
     void clear_debate(std::vector<std::string> const& names, std::string_view scope = {});
 
-} // namespace prompt::ai::state
+} // namespace dana::ai::state

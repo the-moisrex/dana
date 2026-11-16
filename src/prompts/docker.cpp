@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void execute_docker(view const& v, result& r) {
         auto opts = file_options_or_throw(v);
@@ -55,11 +55,11 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "docker",
       "Docker and container review prompt. Analyzes Dockerfiles, docker-compose files, and "
       "container configurations for best practices.",
       &execute_docker,
       &render_help_docker);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

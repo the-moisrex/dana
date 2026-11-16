@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void execute_readme(view const& v, result& r) {
         auto opts = file_options_or_throw(v);
@@ -43,7 +43,7 @@ Guidelines:
             std::vector<std::string> storage  = {"bash", "-c", "ls -1 \"$1\" 2>/dev/null | head -30"};
             storage.push_back(root); // $0
             storage.push_back(root); // $1
-            output += prompt::process::run_command(storage).stdout_data;
+            output += dana::process::run_command(storage).stdout_data;
             output += "```\n\n";
         }
 
@@ -74,11 +74,11 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "readme",
       "Generates or improves a README.md for the provided code or project description. If code "
       "files are provided, analyzes them to generate accurate documentation.",
       &execute_readme,
       &render_help_readme);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

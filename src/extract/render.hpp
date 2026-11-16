@@ -12,7 +12,7 @@
 #include <span>
 #include <string>
 
-namespace prompt::extract {
+namespace dana::extract {
 
     struct render_options {
         bool with_heading = false;
@@ -50,4 +50,4 @@ namespace prompt::extract {
     // usage_error when fzf is not on PATH and soft_error when the user cancels.
     [[nodiscard]] std::vector<match> pick(std::vector<match> const& matches, bool guess);
 
-} // namespace prompt::extract
+} // namespace dana::extract

@@ -20,7 +20,7 @@
 #include <utility>
 #include <vector>
 
-namespace prompt::ai {
+namespace dana::ai {
 
     namespace {
 
@@ -352,7 +352,7 @@ namespace prompt::ai {
             }
 
             static stream_event text_event(std::string value) {
-                return prompt::ai::text(std::move(value));
+                return dana::ai::text(std::move(value));
             }
 
             std::vector<std::string>         fragments_;
@@ -759,4 +759,4 @@ namespace prompt::ai {
     // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
     bool const deepseek_registered = register_provider(std::make_unique<deepseek_provider>());
 
-} // namespace prompt::ai
+} // namespace dana::ai

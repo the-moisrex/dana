@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <optional>
 
-namespace prompt {
+namespace dana {
 
     // A chain segment is either an ordinary prompt or a sink. Sinks run at a
     // barrier: after every prompt before them, with the accumulated chain text as
@@ -32,4 +32,4 @@ namespace prompt {
         std::optional<std::size_t> head_lines;
     };
 
-} // namespace prompt
+} // namespace dana

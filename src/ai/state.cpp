@@ -10,7 +10,7 @@
 #include <nlohmann/json.hpp>
 #include <string>
 
-namespace prompt::ai::state {
+namespace dana::ai::state {
 
     namespace {
 
@@ -155,7 +155,7 @@ namespace prompt::ai::state {
     }
 
     std::string terminal_scope() {
-        return prompt::terminal::scope(prompt::terminal::current());
+        return dana::terminal::scope(dana::terminal::current());
     }
 
     std::optional<conversation_record> load(std::string_view provider, double max_age) {
@@ -245,4 +245,4 @@ namespace prompt::ai::state {
         }
     }
 
-} // namespace prompt::ai::state
+} // namespace dana::ai::state

@@ -10,7 +10,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::compress::include_map {
+namespace dana::compress::include_map {
 
     namespace {
 
@@ -290,4 +290,4 @@ namespace prompt::compress::include_map {
       .priority = 5,
     });
 
-} // namespace prompt::compress::include_map
+} // namespace dana::compress::include_map

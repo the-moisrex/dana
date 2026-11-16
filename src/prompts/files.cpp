@@ -12,7 +12,7 @@
 #include <unistd.h>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace fs_std = std::filesystem;
 
@@ -168,7 +168,7 @@ Options:
         schema::argument("FILE", "File or directory to embed", false, true),
       });
 
-    bool const registered = prompt::register_file_prompt(
+    bool const registered = dana::register_file_prompt(
       "files",
       "Appends the given fuzzily found files or directory contents as Markdown code blocks. "
       "If you're inside a Git repository, file headings are printed relative to the repository root. "
@@ -182,4 +182,4 @@ Options:
       true,
       &k_files_tool);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

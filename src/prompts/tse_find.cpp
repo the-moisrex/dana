@@ -1,7 +1,7 @@
 #include "../sdk/prompt_registry.hpp"
 #include "tse_find_impl.hpp"
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void execute_tse_find(view const& v, result& r) {
         execute_tse_find_impl(v, r);
@@ -13,7 +13,7 @@ namespace prompt::prompts {
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "tse.find",
       "Turn a plain-language market request (\"what to buy tomorrow\", \"oversold stocks with heavy volume\", "
       "\"undervalued banks\") into a `tse.find` screening command for the Tehran Stock Exchange, or review a "
@@ -25,4 +25,4 @@ namespace prompt::prompts {
       &execute_tse_find,
       &render_help_tse_find);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

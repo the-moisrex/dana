@@ -16,7 +16,7 @@
 #include <set>
 #include <string>
 
-namespace prompt::ai {
+namespace dana::ai {
 
     namespace {
 
@@ -145,7 +145,7 @@ namespace prompt::ai {
                         attachments.push_back(read_attachment(path));
                     }
                 } catch (file_error const& failure) {
-                    sink(prompt::ai::error(failure.what()));
+                    sink(dana::ai::error(failure.what()));
                     return;
                 }
 
@@ -301,7 +301,7 @@ namespace prompt::ai {
                                     }
                                     if (!text.empty()) {
                                         answer += text;
-                                        sink(prompt::ai::text(text));
+                                        sink(dana::ai::text(text));
                                     }
                                 }
                                 if (delta.contains("tool_calls") && delta["tool_calls"].is_array()) {
@@ -322,7 +322,7 @@ namespace prompt::ai {
                         }
                     });
                 } catch (std::exception const& failure) {
-                    sink(prompt::ai::error(owner_.error_hint(failure.what(), base_url_)));
+                    sink(dana::ai::error(owner_.error_hint(failure.what(), base_url_)));
                     return;
                 }
                 ++turns_;
@@ -533,4 +533,4 @@ namespace prompt::ai {
         return text;
     }
 
-} // namespace prompt::ai
+} // namespace dana::ai

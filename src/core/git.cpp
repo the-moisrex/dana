@@ -41,8 +41,8 @@ namespace detail {
 } // namespace detail
 
 // Run a git command and return stdout with trailing newlines stripped.
-std::string prompt::git::run(std::vector<std::string> const& args) {
-    auto        result = prompt::process::run_command(args);
+std::string dana::git::run(std::vector<std::string> const& args) {
+    auto        result = dana::process::run_command(args);
     std::string out    = std::move(result.stdout_data);
     while (!out.empty() && out.back() == '\n') {
         out.pop_back();
@@ -50,7 +50,7 @@ std::string prompt::git::run(std::vector<std::string> const& args) {
     return out;
 }
 
-std::string prompt::git::run(std::initializer_list<char const*> args) {
+std::string dana::git::run(std::initializer_list<char const*> args) {
     std::vector<std::string> v;
     v.reserve(args.size());
     for (auto const* a : args) {
@@ -61,7 +61,7 @@ std::string prompt::git::run(std::initializer_list<char const*> args) {
 
 // Annotate ordinary unified diffs using destination-file line numbers.
 // Combined diffs (multiple prefix columns) are left unchanged.
-std::string prompt::git::add_line_numbers_to_diff(std::string_view diff) {
+std::string dana::git::add_line_numbers_to_diff(std::string_view diff) {
     std::istringstream stream{std::string(diff)};
     std::string        line;
     std::string        result;
@@ -125,7 +125,7 @@ std::string prompt::git::add_line_numbers_to_diff(std::string_view diff) {
 //   * `includes` non-empty => only blocks whose path matches one of them are kept.
 //   * `excludes`          => blocks whose path matches any of them are dropped.
 // Paths are matched both verbatim and by basename, using `detail::glob_match`.
-std::string prompt::git::filter_diff_by_path(
+std::string dana::git::filter_diff_by_path(
   std::string_view                diff,
   std::vector<std::string> const& includes,
   std::vector<std::string> const& excludes) {
@@ -138,12 +138,12 @@ std::string prompt::git::filter_diff_by_path(
             return false;
         }
         for (auto const& pat : patterns) {
-            if (prompt::glob::match(pat, path)) {
+            if (dana::glob::match(pat, path)) {
                 return true;
             }
             auto slash = path.rfind('/');
             auto base  = slash == std::string_view::npos ? path : path.substr(slash + 1);
-            if (prompt::glob::match(pat, base)) {
+            if (dana::glob::match(pat, base)) {
                 return true;
             }
         }

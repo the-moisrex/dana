@@ -36,7 +36,7 @@ namespace {
     // The URL forms are matched whole, in preference to the bare ISIN/insCode
     // tokens they contain.
     void test_urls() {
-        using prompt::clipboard::detect_identifier;
+        using dana::clipboard::detect_identifier;
 
         check_id(detect_identifier("https://d.easytrader.ir/easy-chart/IRO1FOLD0001"),
                  "https://d.easytrader.ir/easy-chart/IRO1FOLD0001",
@@ -60,7 +60,7 @@ namespace {
 
     // A bare ISIN or insCode, and a copied Persian symbol, are identifiers too.
     void test_tokens_and_symbols() {
-        using prompt::clipboard::detect_identifier;
+        using dana::clipboard::detect_identifier;
 
         check_id(detect_identifier("IRO1FOLD0001"), "IRO1FOLD0001", "bare ISIN");
         check_id(detect_identifier("123456789012345"), "123456789012345", "bare insCode");
@@ -70,7 +70,7 @@ namespace {
 
     // CR/LF from a terminal copy are stripped before matching.
     void test_line_endings() {
-        using prompt::clipboard::detect_identifier;
+        using dana::clipboard::detect_identifier;
 
         check_id(detect_identifier("فولاد\n"), "فولاد", "trailing newline");
         check_id(detect_identifier("فولاد\r\n"), "فولاد", "CRLF");
@@ -81,7 +81,7 @@ namespace {
 
     // A sentence is not an identifier: Latin letters, digits or excessive length.
     void test_rejections() {
-        using prompt::clipboard::detect_identifier;
+        using dana::clipboard::detect_identifier;
 
         check_none(detect_identifier("hello"), "a Latin word");
         check_none(detect_identifier("فولاد 123"), "a symbol plus digits");

@@ -12,7 +12,7 @@
 #include <utility>
 #include <vector>
 
-namespace prompt::schema {
+namespace dana::schema {
 
     namespace {
 
@@ -222,9 +222,9 @@ namespace prompt::schema {
         return argv;
     }
 
-} // namespace prompt::schema
+} // namespace dana::schema
 
-namespace prompt::tool_call {
+namespace dana::tool_call {
 
     namespace {
 
@@ -534,4 +534,4 @@ namespace prompt::tool_call {
         return out;
     }
 
-} // namespace prompt::tool_call
+} // namespace dana::tool_call

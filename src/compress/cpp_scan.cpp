@@ -9,7 +9,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::compress::cpp {
+namespace dana::compress::cpp {
 
     namespace {
 
@@ -628,4 +628,4 @@ namespace prompt::compress::cpp {
         return out;
     }
 
-} // namespace prompt::compress::cpp
+} // namespace dana::compress::cpp

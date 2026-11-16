@@ -11,7 +11,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void render_help_expect(std::ostream& os);
 
@@ -89,7 +89,7 @@ Options:
 )EOF";
     }
 
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "expect",
       "State the exact response shape the AI should return and publish it for the following "
       "extraction stage.",
@@ -97,4 +97,4 @@ Options:
       &render_help_expect,
       &extract::complete_selector);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

@@ -4,7 +4,7 @@
 #include <string>
 #include <unistd.h>
 
-namespace prompt::fs {
+namespace dana::fs {
 
     std::optional<std::filesystem::path> find_git_root(std::filesystem::path const& start) {
         auto current = start;
@@ -121,4 +121,4 @@ namespace prompt::fs {
         return bare;
     }
 
-} // namespace prompt::fs
+} // namespace dana::fs

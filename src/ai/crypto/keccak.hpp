@@ -9,9 +9,9 @@
 #include <cstdint>
 #include <string_view>
 
-namespace prompt::ai::crypto {
+namespace dana::ai::crypto {
 
     // The 32-byte DeepSeekHashV1 digest of `data`.
     std::array<std::uint8_t, 32> deepseek_hash_v1(std::string_view data);
 
-} // namespace prompt::ai::crypto
+} // namespace dana::ai::crypto

@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void execute_list_prompts(view const& v, result& r) {
         // list-prompts.sh runs init_prompt --no-files, so parse_arguments validates
@@ -69,11 +69,11 @@ See also: prompt list (short descriptions, one line per prompt).
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "list-prompts",
       "Print the full help text of every available prompt, one after another. Bash prompts are shown "
       "via their --help output; .txt/.md prompts are printed in full.",
       &execute_list_prompts,
       &render_help_list_prompts);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

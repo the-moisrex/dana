@@ -6,7 +6,7 @@
 
 #include <string>
 
-namespace prompt::compress::cpp_symbols {
+namespace dana::compress::cpp_symbols {
 
     namespace {
 
@@ -90,4 +90,4 @@ namespace prompt::compress::cpp_symbols {
       .priority = 10,
     });
 
-} // namespace prompt::compress::cpp_symbols
+} // namespace dana::compress::cpp_symbols

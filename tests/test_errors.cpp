@@ -4,7 +4,7 @@
 #include <cstdio>
 #include <string>
 
-using namespace prompt;
+using namespace dana;
 
 namespace {
 

@@ -16,7 +16,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -232,7 +232,7 @@ Examples:
         execute_purge(v, r);
     }
 
-    bool const registered_history_purge = prompt::register_prompt(
+    bool const registered_history_purge = dana::register_prompt(
       "history.purge",
       "Delete recorded prompt runs by age, count or total size (with --dry-run).",
       &execute_history_purge_entry,
@@ -245,4 +245,4 @@ Examples:
       false,
       false);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

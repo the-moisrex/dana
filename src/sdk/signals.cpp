@@ -6,7 +6,7 @@
 #include <unordered_set>
 #include <utility>
 
-namespace prompt::signals {
+namespace dana::signals {
 
     namespace {
 
@@ -170,4 +170,4 @@ namespace prompt::signals {
         return out;
     }
 
-} // namespace prompt::signals
+} // namespace dana::signals

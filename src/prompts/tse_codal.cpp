@@ -11,7 +11,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void render_help_tse_codal(std::ostream& os);
 
@@ -125,7 +125,7 @@ namespace prompt::prompts {
         // stderr is inherited and a failure aborts the prompt.
         std::vector<std::string> tool_argv = {
           "python3",
-          prompt::fs::bin_tool("tse.codal", v.env.exe_path, std::nullopt).string(),
+          dana::fs::bin_tool("tse.codal", v.env.exe_path, std::nullopt).string(),
           "snapshot",
           config.symbol,
           "--markdown",
@@ -180,7 +180,7 @@ The data comes from `tse.codal snapshot`; run that tool directly for `search`,
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "tse.codal",
       "Fetch the raw Codal.ir dataset for an Iranian بورس instrument — recent announcements, extracted statement "
       "rows, monthly fund portfolio reports and derived ratios — as Markdown, with no analysis instructions attached. "
@@ -198,4 +198,4 @@ The data comes from `tse.codal snapshot`; run that tool directly for `search`,
       nullptr,
       &tse_data::declare_identifier);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

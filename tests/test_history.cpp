@@ -18,7 +18,7 @@
 #include <utility>
 #include <vector>
 
-using namespace prompt;
+using namespace dana;
 
 namespace {
 

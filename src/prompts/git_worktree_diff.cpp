@@ -11,14 +11,14 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
         // bash captures with `2>/dev/null` — the tool's diagnostics never reach the
         // user (git_raw is for `$(...)` of a command that may legitimately fail).
         std::string git_raw(std::vector<std::string> const& args) {
-            return prompt::process::command{args}.discard_stderr().run().stdout_data;
+            return dana::process::command{args}.discard_stderr().run().stdout_data;
         }
 
         std::string strip_trailing_newlines(std::string_view s) {
@@ -48,8 +48,9 @@ namespace prompt::prompts {
     static void execute_git_worktree_diff(view const& v, result& r) {
         auto head_lines = head_lines_or_throw(v);
 
-        if (prompt::process::run_command(std::vector<std::string>{"git", "rev-parse", "--is-inside-work-tree"})
-              .exit_code != 0)
+        if (
+          dana::process::run_command(std::vector<std::string>{"git", "rev-parse", "--is-inside-work-tree"}).exit_code !=
+          0)
         {
             throw soft_error{"prompt git.worktree.diff: Error: Not inside a git repository.\n"};
         }
@@ -113,7 +114,7 @@ namespace prompt::prompts {
 
         std::string diff_output = strip_trailing_newlines(git_raw(git_cmd));
         if (!filter.exclude().empty()) {
-            diff_output = prompt::git::filter_diff_by_path(diff_output, {}, filter.exclude());
+            diff_output = dana::git::filter_diff_by_path(diff_output, {}, filter.exclude());
         }
         if (!diff_output.empty()) {
             std::string output;
@@ -144,7 +145,7 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "git.worktree.diff",
       "Shows Git diffs for files changed since the upstream branch. By default, compares against the "
       "upstream tracking branch (or origin/main). Explicit FILE arguments restrict the diff to only "
@@ -152,4 +153,4 @@ Options:
       &execute_git_worktree_diff,
       &render_help_git_worktree_diff);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

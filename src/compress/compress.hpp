@@ -11,7 +11,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::compress {
+namespace dana::compress {
 
     // A fenced code block lifted from the accumulated context (context mode) or one
     // file (source mode). Compressors only ever see a region, never the raw
@@ -28,7 +28,7 @@ namespace prompt::compress {
     // `keys::focus` facts (or `.compress --for`); `level` rises as the planner
     // tightens a budget.
     struct signals {
-        prompt::signals::intent  mode = prompt::signals::intent::general;
+        dana::signals::intent    mode = dana::signals::intent::general;
         std::vector<std::string> focus;
         project::info            project;
         int                      level = 1;
@@ -114,4 +114,4 @@ namespace prompt::compress {
     // an alternative expansion (e.g. "`prompt gtest-case --exact Suite.Test`").
     [[nodiscard]] std::string expand_hint(std::string_view path, std::string_view extra = {});
 
-} // namespace prompt::compress
+} // namespace dana::compress

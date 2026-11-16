@@ -4,7 +4,7 @@
 
 #include <string>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void execute_tweets(view const& v, result& r) {
         auto head_lines = head_lines_or_throw(v);
@@ -43,11 +43,11 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "tweets",
       "Generate tweet ideas from the provided content. Produce a table showing each tweet, why "
       "it works, and its expected impact. No hashtags or weird emojis.",
       &execute_tweets,
       &render_help_tweets);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

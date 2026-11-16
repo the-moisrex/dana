@@ -11,7 +11,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt {
+namespace dana {
 
     // A sink invocation after the shared flags have been removed. `rest` is what
     // the sink's own implementation (or the tool it calls) should see.
@@ -49,4 +49,4 @@ namespace prompt {
       std::string               stdin_data,
       std::chrono::milliseconds timeout = std::chrono::milliseconds{0});
 
-} // namespace prompt
+} // namespace dana

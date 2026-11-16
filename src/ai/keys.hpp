@@ -15,7 +15,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::ai::keys {
+namespace dana::ai::keys {
 
     struct resolved {
         std::string key;
@@ -33,4 +33,4 @@ namespace prompt::ai::keys {
     std::pair<std::string, std::string> describe(std::string_view             provider,
                                                  std::span<std::string const> env_names = {});
 
-} // namespace prompt::ai::keys
+} // namespace dana::ai::keys

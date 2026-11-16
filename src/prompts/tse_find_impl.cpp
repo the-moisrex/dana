@@ -15,7 +15,7 @@
 #include <system_error>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -371,7 +371,7 @@ print(command)
                 command += " < /dev/null";
             }
 
-            auto result = prompt::process::run_command({"bash", "-c", command, script_storage}, stdin_data);
+            auto result = dana::process::run_command({"bash", "-c", command, script_storage}, stdin_data);
             return {.output = captured(result.stdout_data), .exit_code = result.exit_code};
         }
 
@@ -767,7 +767,7 @@ print(command)
                 return paths.tool.string();
             }
             // Same file for the installed/build layouts.
-            return prompt::fs::bin_tool("tse.find", v.env.exe_path, v.env.git_root).string();
+            return dana::fs::bin_tool("tse.find", v.env.exe_path, v.env.git_root).string();
         }
 
     } // namespace
@@ -801,10 +801,10 @@ print(command)
                 for (auto const& file : input.review_files) {
                     // `$(cat -- "$resolved")`: its stderr is inherited and its
                     // trailing newlines are dropped by the capture.
-                    auto payload  = captured(prompt::process::run_command({"cat", "--", file}).stdout_data);
+                    auto payload  = captured(dana::process::run_command({"cat", "--", file}).stdout_data);
                     auto rendered = emit_review(
                       "doc",
-                      prompt::fs::relative_path(file, v.env.git_root).string(),
+                      dana::fs::relative_path(file, v.env.git_root).string(),
                       payload,
                       parsed.head_lines);
                     output += rendered.output;
@@ -841,7 +841,7 @@ print(command)
 
             // The tool's stderr is inherited, exactly like the script's `$(...)`
             // capture, so it lands on this prompt's stderr.
-            auto screen = prompt::process::run_command(command);
+            auto screen = dana::process::run_command(command);
             if (screen.exit_code != 0) {
                 throw soft_error{"prompt tse.find: tse.find failed (see its error above)\n", {}, false, stdin_consumed};
             }
@@ -861,7 +861,7 @@ print(command)
         }
 
         // Generator: embed the tool's own --help as the flag reference.
-        auto help_run = prompt::process::run_command({"bash", "-c", R"(NO_COLOR=1 "$0" "$@" 2>&1)", tool, "--help"});
+        auto help_run = dana::process::run_command({"bash", "-c", R"(NO_COLOR=1 "$0" "$@" 2>&1)", tool, "--help"});
         if (help_run.exit_code != 0) {
             throw soft_error{"prompt tse.find: tse.find --help failed:\n" + captured(help_run.stdout_data) + "\n",
                              {},
@@ -897,4 +897,4 @@ print(command)
         os << kHelpText;
     }
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

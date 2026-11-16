@@ -9,7 +9,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt {
+namespace dana {
 
     chain_result parse_chain(std::span<char const* const> argv, std::span<prompt_descriptor const> registry) {
         auto find = [&](std::string_view name) -> prompt_descriptor const* {
@@ -191,4 +191,4 @@ namespace prompt {
         return plan;
     }
 
-} // namespace prompt
+} // namespace dana

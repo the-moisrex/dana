@@ -3,7 +3,7 @@
 #include <ostream>
 #include <string>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void render_help_bigo(std::ostream& os);
 
@@ -36,7 +36,7 @@ Asks the AI to calculate the Big O time and space complexity of the algorithms i
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "bigo",
       "Asks the AI to calculate the Big O time and space complexity of the algorithms in "
       "the prompt. This prompt carries no data and takes no arguments: chain it after a "
@@ -44,4 +44,4 @@ Asks the AI to calculate the Big O time and space complexity of the algorithms i
       &execute_bigo,
       &render_help_bigo);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

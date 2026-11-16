@@ -8,7 +8,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::ai {
+namespace dana::ai {
 
     class sse_decoder {
       public:
@@ -59,4 +59,4 @@ namespace prompt::ai {
         std::vector<std::string> data_;
     };
 
-} // namespace prompt::ai
+} // namespace dana::ai

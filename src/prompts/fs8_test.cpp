@@ -6,7 +6,7 @@
 #include <string_view>
 #include <system_error>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -336,11 +336,11 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "fs8.test",
       "Builds a prompt for writing GoogleTest tests for a foresight pipeline mod. Must be run from "
       "inside the foresight git repo (or a subdirectory of it).",
       &execute_fs8_test,
       &render_help_fs8_test);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void execute_table_lookup(view const& v, result& r) {
         auto opts = file_options_or_throw(v);
@@ -68,10 +68,10 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "table-lookup",
       "Replace conditional logic with precomputed table lookups.",
       &execute_table_lookup,
       &render_help_table_lookup);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

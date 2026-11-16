@@ -6,7 +6,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::ai {
+namespace dana::ai {
 
     // Normalise an API root: a scheme, no trailing slash, an explicit /v1.
     std::string normalise_base(std::string_view url);
@@ -43,4 +43,4 @@ namespace prompt::ai {
         provider_info info_;
     };
 
-} // namespace prompt::ai
+} // namespace dana::ai

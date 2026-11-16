@@ -4,7 +4,7 @@
 #include <string>
 #include <string_view>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void execute_cpp_modernize([[maybe_unused]] view const& v, result& r) {
         r.out = R"PROMPT(Modernize this C++ code to the C++ Core Guidelines and C++26.
@@ -28,10 +28,10 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "cpp.modernize",
       "Modernize this C++ code to the C++ Core Guidelines and C++26.",
       &execute_cpp_modernize,
       &render_help_cpp_modernize);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

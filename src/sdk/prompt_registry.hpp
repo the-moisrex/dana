@@ -13,7 +13,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt {
+namespace dana {
 
     // The catalog grouping `.tools` filters on. It is metadata on the prompt, so it
     // lives on the descriptor; `category_for` derives it from the name at
@@ -225,4 +225,4 @@ namespace prompt {
         return os.str();
     }
 
-} // namespace prompt
+} // namespace dana

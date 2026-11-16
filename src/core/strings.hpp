@@ -5,7 +5,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::text {
+namespace dana::text {
 
     // The bash `$(...)` rule: trailing newlines are always stripped by command
     // substitution. 15 prompt files carried a private copy of this.
@@ -48,4 +48,4 @@ namespace prompt::text {
     // Escape every regex metacharacter (for interpolating $HOME/$USER into patterns).
     std::string regex_escape(std::string_view s);
 
-} // namespace prompt::text
+} // namespace dana::text

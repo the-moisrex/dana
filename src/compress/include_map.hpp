@@ -7,7 +7,7 @@
 #include <span>
 #include <string>
 
-namespace prompt::compress::include_map {
+namespace dana::compress::include_map {
 
     // A compact one-line declaration list for a scanned file: `class Foo; void
     // bar(int); enum Color`. Empty when nothing declaration-like was found.
@@ -23,4 +23,4 @@ namespace prompt::compress::include_map {
     // Convenience: scan `r.text` for its `#include` lines first.
     [[nodiscard]] std::string render(region const& r, signals const& s);
 
-} // namespace prompt::compress::include_map
+} // namespace dana::compress::include_map

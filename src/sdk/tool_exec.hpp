@@ -16,7 +16,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::tool_exec {
+namespace dana::tool_exec {
 
     struct options {
         // Turn policy asks into allows (never overrides a deny).
@@ -44,4 +44,4 @@ namespace prompt::tool_exec {
     // aborts, whatever `abort_on_error` says: that is the user saying no.
     [[nodiscard]] outcome run(view const& v, std::string_view text, options const& opts);
 
-} // namespace prompt::tool_exec
+} // namespace dana::tool_exec

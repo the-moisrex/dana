@@ -25,7 +25,7 @@
 #include <utility>
 #include <vector>
 
-namespace prompt::extract {
+namespace dana::extract {
 
     // One row of a table (or any record with named cells).
     using cells = std::vector<std::pair<std::string, std::string>>;
@@ -140,4 +140,4 @@ namespace prompt::extract {
     // `.extract`, `.exec` and `.each`.
     void complete_selector(completion_request const& request, std::ostream& os);
 
-} // namespace prompt::extract
+} // namespace dana::extract

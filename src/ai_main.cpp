@@ -35,25 +35,25 @@ int main(int argc, char** argv) {
     }
 
     if (command == "keys") {
-        return prompt::ai::run_keys_cli(args);
+        return dana::ai::run_keys_cli(args);
     }
     if (command == "debate") {
-        return prompt::ai::run_debate_cli(args);
+        return dana::ai::run_debate_cli(args);
     }
-    if (!command.empty() && prompt::ai::canonical_provider(command)) {
-        return prompt::ai::run_provider_cli(command, args);
+    if (!command.empty() && dana::ai::canonical_provider(command)) {
+        return dana::ai::run_provider_cli(command, args);
     }
 
     if (!args.empty()) {
         std::string const first = args.front();
         if (first == "keys") {
-            return prompt::ai::run_keys_cli({args.begin() + 1, args.end()});
+            return dana::ai::run_keys_cli({args.begin() + 1, args.end()});
         }
         if (first == "debate") {
-            return prompt::ai::run_debate_cli({args.begin() + 1, args.end()});
+            return dana::ai::run_debate_cli({args.begin() + 1, args.end()});
         }
-        if (prompt::ai::canonical_provider(first)) {
-            return prompt::ai::run_provider_cli(first, {args.begin() + 1, args.end()});
+        if (dana::ai::canonical_provider(first)) {
+            return dana::ai::run_provider_cli(first, {args.begin() + 1, args.end()});
         }
     }
 
@@ -61,7 +61,7 @@ int main(int argc, char** argv) {
                  "       ai.keys [PROVIDER...]\n"
                  "       ai.debate PROVIDER... [OPTIONS] [PROMPT...]\n"
                  "Providers:";
-    for (auto* instance : prompt::ai::all_providers()) {
+    for (auto* instance : dana::ai::all_providers()) {
         std::cerr << ' ' << instance->info().name;
     }
     std::cerr << '\n';

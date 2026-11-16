@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <vector>
 
-namespace prompt::ai {
+namespace dana::ai {
 
     namespace {
 
@@ -440,4 +440,4 @@ namespace prompt::ai {
         return error_;
     }
 
-} // namespace prompt::ai
+} // namespace dana::ai

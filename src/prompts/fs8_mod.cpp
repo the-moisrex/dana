@@ -6,7 +6,7 @@
 #include <string_view>
 #include <system_error>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -343,11 +343,11 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "fs8.mod",
       "Builds a prompt for writing a new pipeline mod for the foresight project. Must be run from "
       "inside the foresight git repo (or a subdirectory of it).",
       &execute_fs8_mod,
       &render_help_fs8_mod);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

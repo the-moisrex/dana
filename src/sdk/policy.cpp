@@ -12,7 +12,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::policy {
+namespace dana::policy {
 
     namespace {
 
@@ -306,4 +306,4 @@ namespace prompt::policy {
         require(argv, agent::join_argv(argv));
     }
 
-} // namespace prompt::policy
+} // namespace dana::policy

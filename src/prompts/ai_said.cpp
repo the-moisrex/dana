@@ -14,7 +14,7 @@
 #include <unistd.h>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -244,7 +244,7 @@ namespace prompt::prompts {
         if (char const* cmd = std::getenv("CLIPBOARD_CMD")) {
             clipboard_path = cmd;
         } else {
-            clipboard_path = prompt::fs::bin_tool("clipboard", v.env.exe_path, v.env.git_root).string();
+            clipboard_path = dana::fs::bin_tool("clipboard", v.env.exe_path, v.env.git_root).string();
         }
         if (::access(clipboard_path.c_str(), X_OK) != 0) {
             throw soft_error{"prompt ai-said: Clipboard helper not found: " + clipboard_path + "\n"};
@@ -252,10 +252,10 @@ namespace prompt::prompts {
 
         // Capture the paste like bash's $(...): trailing newlines are stripped.
         auto paste = [] -> std::string {
-            return strip_trailing_nl(prompt::clipboard::paste());
+            return strip_trailing_nl(dana::clipboard::paste());
         };
 
-        prompt::clipboard::init();
+        dana::clipboard::init();
 
         std::string              err;
         std::vector<std::string> entries;
@@ -271,7 +271,7 @@ namespace prompt::prompts {
 
         std::string baseline;
         if (clear_on_start) {
-            prompt::clipboard::clear();
+            dana::clipboard::clear();
             watch_sleep(0.2);
             baseline = paste(); // paste never signals failure here (backend absent == empty)
             if (!only_whitespace(baseline)) {
@@ -330,7 +330,7 @@ namespace prompt::prompts {
             // combined = $(build_output): trailing newlines stripped before it is
             // copied back and hashed as the loop guard.
             std::string combined = strip_trailing_nl(build_output(entries, head_lines));
-            if (prompt::clipboard::copy(combined)) {
+            if (dana::clipboard::copy(combined)) {
                 last_wrote      = combined;
                 have_last_wrote = true;
             } else {
@@ -367,10 +367,10 @@ namespace prompt::prompts {
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "ai-said",
       "Collect multiple AI chat outputs via the clipboard and combine them into a single prompt.",
       &execute_ai_said,
       &render_help_ai_said);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

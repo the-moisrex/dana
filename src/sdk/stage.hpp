@@ -11,7 +11,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt {
+namespace dana {
 
     // Process-wide, built once at startup and never written again: where the repo
     // is, where this executable lives, and the clipboard/file-picker services.
@@ -153,4 +153,4 @@ namespace prompt {
       facts const*                      extra_facts        = nullptr,
       bool                              inherit_file_scope = true);
 
-} // namespace prompt
+} // namespace dana

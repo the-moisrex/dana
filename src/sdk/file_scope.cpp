@@ -3,7 +3,7 @@
 #include <system_error>
 #include <utility>
 
-namespace prompt {
+namespace dana {
 
     std::string file_key(std::filesystem::path const& path) {
         std::error_code ec;
@@ -61,4 +61,4 @@ namespace prompt {
         return out;
     }
 
-} // namespace prompt
+} // namespace dana

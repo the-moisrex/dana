@@ -4,7 +4,7 @@
 #include <string>
 #include <string_view>
 
-using prompt::sanitize::sanitize;
+using dana::sanitize::sanitize;
 
 namespace {
 
@@ -36,7 +36,7 @@ namespace {
     }
 
     void test_legend_mentions_the_placeholders() {
-        std::string_view legend = prompt::sanitize::kRedactionLegend;
+        std::string_view legend = dana::sanitize::kRedactionLegend;
         check(legend.starts_with("[prompt] "), "the legend carries the harness-visible marker");
         check(legend.contains("IP_ADDRESS"), "the legend lists IP_ADDRESS");
         check(legend.contains("EMAIL_ADDRESS"), "the legend lists EMAIL_ADDRESS");

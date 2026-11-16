@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void render_help_cli(std::ostream& os);
 
@@ -32,7 +32,7 @@ namespace prompt::prompts {
         }
 
         std::vector<char const*> argv   = {"bash", "-c", "eval \"$0\" 2>&1", command.c_str(), nullptr};
-        auto                     result = prompt::process::run_command(argv, v.in.text());
+        auto                     result = dana::process::run_command(argv, v.in.text());
 
         std::string output;
         output += std::format("Output of command `{}`:\n\n", command);
@@ -75,7 +75,7 @@ Options:
         schema::argument("COMMAND", "Command and arguments to run", true, true),
       });
 
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "cli",
       "Executes the given CLI command and appends its output as a Markdown code block. Useful for "
       "appending the output of arbitrary commands to your prompt chain.",
@@ -90,4 +90,4 @@ Options:
       true,
       &k_cli_tool);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -24,11 +24,11 @@ namespace prompt::prompts {
         // Realpath, invoked as the external tool so the printed path matches bash's
         // `realpath "$check_path"` byte-for-byte.
         std::string realpath_of(std::string const& p) {
-            return strip_trailing_newlines(prompt::process::run_command({"realpath", p}).stdout_data);
+            return strip_trailing_newlines(dana::process::run_command({"realpath", p}).stdout_data);
         }
 
         std::string git_toplevel() {
-            auto r = prompt::process::run_command(std::vector<std::string>{"git", "rev-parse", "--show-toplevel"});
+            auto r = dana::process::run_command(std::vector<std::string>{"git", "rev-parse", "--show-toplevel"});
             return r.exit_code == 0 ? strip_trailing_newlines(r.stdout_data) : std::string{};
         }
 
@@ -146,7 +146,7 @@ namespace prompt::prompts {
             storage.push_back(a);
         }
 
-        auto result = prompt::process::run_command(storage);
+        auto result = dana::process::run_command(storage);
 
         std::string output;
         output += '\n';
@@ -185,11 +185,11 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "clang-tidy",
       "Runs `clang-tidy` on the provided files and outputs a prompt to fix the identified "
       "issues. If no files are provided, `fzf -m` is used to choose them interactively.",
       &execute_clang_tidy,
       &render_help_clang_tidy);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

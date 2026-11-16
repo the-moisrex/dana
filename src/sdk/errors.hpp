@@ -4,7 +4,7 @@
 #include <string>
 #include <string_view>
 
-namespace prompt {
+namespace dana {
 
     // A failing prompt throws this; the dispatcher catches it once and turns it
     // back into the process result: `message` on stderr (verbatim, unsanitized,
@@ -72,4 +72,4 @@ namespace prompt {
           : prompt_error(1, std::move(message), std::move(partial_output), no_clipboard, stdin_consumed) {}
     };
 
-} // namespace prompt
+} // namespace dana

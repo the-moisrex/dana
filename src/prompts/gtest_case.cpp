@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void execute_gtest_case(view const& v, result& r) {
         auto head_lines = head_lines_or_throw(v, false);
@@ -36,7 +36,7 @@ namespace prompt::prompts {
                               std::move(output)};
         }
 
-        std::string tool = prompt::fs::bin_tool("gtest-case", v.env.exe_path, v.env.git_root).string();
+        std::string tool = dana::fs::bin_tool("gtest-case", v.env.exe_path, v.env.git_root).string();
 
         std::vector<std::string> cmd;
         cmd.push_back(tool);
@@ -47,7 +47,7 @@ namespace prompt::prompts {
             cmd.push_back(name);
         }
 
-        auto result = prompt::process::run_command(cmd, v.in.text());
+        auto result = dana::process::run_command(cmd, v.in.text());
 
         std::string tests;
         for (std::size_t i = 0; i < test_names.size(); ++i) {
@@ -81,11 +81,11 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "gtest-case",
       "Builds a debugging prompt and embeds the original source for Google Test cases. By default, test "
       "names are prefix matches.",
       &execute_gtest_case,
       &render_help_gtest_case);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

@@ -10,7 +10,7 @@
 #include <string_view>
 #include <utility>
 
-namespace prompt::ai {
+namespace dana::ai {
 
     enum class event_kind : unsigned char {
         thinking,  // reasoning text (DeepSeek reasoning_content, ChatGPT thoughts, …)
@@ -101,4 +101,4 @@ namespace prompt::ai {
 
     using event_sink = std::function<void(stream_event const&)>;
 
-} // namespace prompt::ai
+} // namespace dana::ai

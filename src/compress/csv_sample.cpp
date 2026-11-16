@@ -7,7 +7,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::compress {
+namespace dana::compress {
 
     namespace {
 
@@ -160,4 +160,4 @@ namespace prompt::compress {
       .priority = 10,
     });
 
-} // namespace prompt::compress
+} // namespace dana::compress

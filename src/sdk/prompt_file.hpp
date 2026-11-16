@@ -8,7 +8,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt {
+namespace dana {
 
     // Prompt files: `prompt debug.prompt` — the chain DSL the dispatcher already
     // understands, kept in a text file instead of argv.
@@ -95,4 +95,4 @@ namespace prompt {
     void
     write_prompt_file_candidates(std::ostream& out, std::string_view current, std::filesystem::path const& git_root);
 
-} // namespace prompt
+} // namespace dana

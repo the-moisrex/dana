@@ -22,7 +22,7 @@
 #include <unistd.h>
 #include <vector>
 
-using namespace prompt;
+using namespace dana;
 
 namespace {
 
@@ -477,7 +477,7 @@ namespace {
     // The model catalog: one table behind every provider's `--list` and the `-m`
     // completion, so a model added there is immediately offered everywhere.
     void test_ai_model_catalog() {
-        using namespace prompt::ai;
+        using namespace dana::ai;
         for (
           char const* provider :
           {"chatgpt", "claude", "dseek", "gap", "gemini", "grok", "kimi", "perplexity", "lms", "openai", "openrouter"})

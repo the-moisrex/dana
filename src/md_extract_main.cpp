@@ -34,11 +34,11 @@
 
 namespace {
 
-    using prompt::soft_error;
-    using prompt::usage_error;
-    using prompt::extract::block;
-    using prompt::extract::match;
-    using prompt::extract::selection;
+    using dana::soft_error;
+    using dana::usage_error;
+    using dana::extract::block;
+    using dana::extract::match;
+    using dana::extract::selection;
 
     constexpr std::string_view kProg = "md.extract";
 
@@ -161,12 +161,12 @@ namespace {
         if (!q.langs.empty() && b.kind != "code" && b.kind != "frontmatter") {
             return false;
         }
-        if (!prompt::extract::lang_matches(b, join_commas(q.langs), q.guess)) {
+        if (!dana::extract::lang_matches(b, join_commas(q.langs), q.guess)) {
             return false;
         }
         if (!q.heading.empty() && !any_search(q.heading,
                                               [&] {
-                                                  return prompt::extract::nearest_heading(b);
+                                                  return dana::extract::nearest_heading(b);
                                               }))
         {
             return false;
@@ -312,7 +312,7 @@ namespace {
 
     // --- Rendering --------------------------------------------------------------
 
-    prompt::extract::render_options render_options_from(bool with_heading, bool with_intro, bool fence) {
+    dana::extract::render_options render_options_from(bool with_heading, bool with_intro, bool fence) {
         return {.with_heading = with_heading, .with_intro = with_intro, .fence = fence};
     }
 
@@ -320,7 +320,7 @@ namespace {
         std::vector<match> out;
         out.reserve(blocks.size());
         for (auto const& b : blocks) {
-            out.push_back(prompt::extract::match_from(b));
+            out.push_back(dana::extract::match_from(b));
         }
         return out;
     }
@@ -432,7 +432,7 @@ namespace {
         } else {
             std::string language = m.lang;
             if (language.empty() && guess) {
-                language = prompt::extract::infer_family(m.source);
+                language = dana::extract::infer_family(m.source);
             }
             stem = std::format("{}-{}", language.empty() ? m.kind : language, m.index);
         }
@@ -442,7 +442,7 @@ namespace {
         if (!std::filesystem::path(stem).has_extension()) {
             std::string language = m.lang;
             if (language.empty() && guess) {
-                language = prompt::extract::infer_family(m.source);
+                language = dana::extract::infer_family(m.source);
             }
             auto const  it        = extensions().find(language);
             std::string extension = it != extensions().end() ? it->second : std::string{};
@@ -518,7 +518,7 @@ namespace {
 
         if (dry_run) {
             for (auto const& [path, m] : targets) {
-                std::cout << path.string() << '\t' << prompt::extract::count_lines(m->source) << " lines\n";
+                std::cout << path.string() << '\t' << dana::extract::count_lines(m->source) << " lines\n";
             }
             return;
         }
@@ -760,25 +760,25 @@ EXIT STATUS
 
     int run(options const& args) {
         if (args.kinds) {
-            std::cout << prompt::extract::kinds_help();
+            std::cout << dana::extract::kinds_help();
             return 0;
         }
         if (!args.contract.empty()) {
             std::vector<selection> selectors;
             selectors.reserve(args.contract.size());
             for (auto const& spec : args.contract) {
-                selectors.push_back(prompt::extract::parse_selection(spec));
+                selectors.push_back(dana::extract::parse_selection(spec));
             }
             if (selectors.size() == 1) {
-                std::cout << prompt::extract::contract_for(selectors.front());
+                std::cout << dana::extract::contract_for(selectors.front());
             } else {
-                std::cout << prompt::extract::combined_contract(selectors);
+                std::cout << dana::extract::combined_contract(selectors);
             }
             return 0;
         }
 
         std::optional<selection> const selector =
-          args.has_select ? std::optional<selection>(prompt::extract::parse_selection(args.select)) : std::nullopt;
+          args.has_select ? std::optional<selection>(dana::extract::parse_selection(args.select)) : std::nullopt;
 
         std::set<std::string> kinds =
           args.kind.empty() ? std::set<std::string>{"code"} : std::set<std::string>(args.kind.begin(), args.kind.end());
@@ -851,11 +851,11 @@ EXIT STATUS
         for (auto const& source : sources) {
             auto text = source == "-" ? read_stdin() : read_file(source);
             texts.emplace_back(source, text);
-            prompt::extract::parse_options const parse_options{
+            dana::extract::parse_options const parse_options{
               .indented            = args.indented,
               .include_subsections = !args.no_subsections,
             };
-            auto parsed = prompt::extract::parse_document(text, source, file_order, parse_options);
+            auto parsed = dana::extract::parse_document(text, source, file_order, parse_options);
             for (auto& b : parsed) {
                 blocks.push_back(std::move(b));
             }
@@ -864,7 +864,7 @@ EXIT STATUS
         {
             std::vector<block> commands;
             for (auto const& b : blocks) {
-                if (auto command = prompt::extract::derive_command(b); command.has_value()) {
+                if (auto command = dana::extract::derive_command(b); command.has_value()) {
                     commands.push_back(std::move(*command));
                 }
             }
@@ -872,20 +872,20 @@ EXIT STATUS
                 blocks.push_back(std::move(command));
             }
         }
-        prompt::extract::assign_indices(blocks);
+        dana::extract::assign_indices(blocks);
 
         if (args.has_items) {
-            auto const items_selector = prompt::extract::parse_selection(args.items);
+            auto const items_selector = dana::extract::parse_selection(args.items);
             // The engine parses each source itself.
             std::vector<match> items_matches;
             for (auto const& [name, text] : texts) {
                 (void) name;
-                auto part = prompt::extract::run(text, items_selector);
+                auto part = dana::extract::run(text, items_selector);
                 for (auto& m : part) {
                     items_matches.push_back(std::move(m));
                 }
             }
-            auto const items = prompt::extract::items_to_json(items_matches, args.guess);
+            auto const items = dana::extract::items_to_json(items_matches, args.guess);
             if (items.empty()) {
                 throw soft_error{std::format("{}: selector '{}' produced no items\n", kProg, args.items)};
             }
@@ -897,7 +897,7 @@ EXIT STATUS
         if (selector.has_value()) {
             for (auto const& [name, text] : texts) {
                 (void) name;
-                auto part = prompt::extract::run(text, *selector);
+                auto part = dana::extract::run(text, *selector);
                 for (auto& m : part) {
                     selected.push_back(std::move(m));
                 }
@@ -924,29 +924,29 @@ EXIT STATUS
         }
         if (selected.empty()) {
             auto const names =
-              selector.has_value() ? prompt::extract::selector_kind_names(*selector) : join_sorted(kinds);
+              selector.has_value() ? dana::extract::selector_kind_names(*selector) : join_sorted(kinds);
             throw soft_error{
               std::format("{}: no matching {} blocks (try --list, --kind any, or --guess)\n", kProg, names)};
         }
         if (args.list) {
-            std::cout << prompt::extract::render_list(selected, args.guess);
+            std::cout << dana::extract::render_list(selected, args.guess);
             return 0;
         }
         if (args.pick) {
-            selected = prompt::extract::pick(selected, args.guess);
+            selected = dana::extract::pick(selected, args.guess);
         }
 
         if (args.json) {
             auto array = nlohmann::ordered_json::array();
             for (auto const& m : selected) {
-                array.push_back(prompt::extract::block_record(m, args.guess));
+                array.push_back(dana::extract::block_record(m, args.guess));
             }
             std::cout << array.dump(2) << '\n';
             return 0;
         }
         if (args.jsonl) {
             for (auto const& m : selected) {
-                std::cout << spaced_json(prompt::extract::block_record(m, args.guess)) << '\n';
+                std::cout << spaced_json(dana::extract::block_record(m, args.guess)) << '\n';
             }
             return 0;
         }
@@ -956,7 +956,7 @@ EXIT STATUS
             if (args.has_out_dir) {
                 throw usage_error{std::format("{}: --select cannot be combined with --out-dir\n", kProg)};
             }
-            auto const rendered = prompt::extract::render_selection(selected, *selector, args.no_header, options);
+            auto const rendered = dana::extract::render_selection(selected, *selector, args.no_header, options);
             if (args.has_output && args.output != "-") {
                 std::ofstream file(args.output);
                 file << rendered;
@@ -966,7 +966,7 @@ EXIT STATUS
             return 0;
         }
         if (args.output == "-") {
-            std::cout << prompt::extract::render_many(selected, options);
+            std::cout << dana::extract::render_many(selected, options);
             return 0;
         }
         if (args.has_output || args.has_out_dir) {
@@ -982,7 +982,7 @@ EXIT STATUS
               args.guess);
             return 0;
         }
-        std::cout << prompt::extract::render_many(selected, options);
+        std::cout << dana::extract::render_many(selected, options);
         return 0;
     }
 

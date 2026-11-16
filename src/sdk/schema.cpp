@@ -7,7 +7,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::schema {
+namespace dana::schema {
 
     namespace {
 
@@ -310,4 +310,4 @@ namespace prompt::schema {
         }
     }
 
-} // namespace prompt::schema
+} // namespace dana::schema

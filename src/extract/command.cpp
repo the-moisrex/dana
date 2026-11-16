@@ -9,7 +9,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::extract {
+namespace dana::extract {
 
     namespace {
 
@@ -74,4 +74,4 @@ namespace prompt::extract {
       .complete = &complete_command,
     });
 
-} // namespace prompt::extract
+} // namespace dana::extract

@@ -10,7 +10,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void render_help_tse_intraday(std::ostream& os);
     static void render_help_tse_intraday_analysis(std::ostream& os);
@@ -128,7 +128,7 @@ namespace prompt::prompts {
         // tool already prefixes its errors) and a failure aborts the prompt.
         std::vector<std::string> tool_argv = {
           "python3",
-          prompt::fs::bin_tool("tse.intraday", v.env.exe_path, std::nullopt).string(),
+          dana::fs::bin_tool("tse.intraday", v.env.exe_path, std::nullopt).string(),
         };
         for (auto const& arg : config.tool_args) {
             tool_argv.push_back(arg);
@@ -237,7 +237,7 @@ Options:
     // (the same split as `tse` / `tse.analyze`). Registration runs at static-init
     // time, which is why `prompt_lib` must stay an OBJECT library (no central list
     // — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "tse.intraday",
       "Fetch per-minute OHLCV bars with `tse.intraday` — rebuilt from the per-trade tape with each bar's VWAP, the "
       "official daily row, each session's high/low times, opening ranges, value area and largest prints, the daily "
@@ -257,7 +257,7 @@ Options:
       nullptr,
       &tse_data::declare_identifier);
 
-    bool const registered_analysis = prompt::register_prompt(
+    bool const registered_analysis = dana::register_prompt(
       "tse.intraday.analysis",
       "Print the same-day intraday trading instructions for the dataset collected by `tse.intraday` — read the bars, "
       "VWAP and official row, each session's structure and value area, today's price limits, the context/breadth/index "
@@ -267,4 +267,4 @@ Options:
       &execute_tse_intraday_analysis,
       &render_help_tse_intraday_analysis);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

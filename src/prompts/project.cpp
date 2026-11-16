@@ -10,7 +10,7 @@
 #include <string>
 #include <string_view>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -86,10 +86,10 @@ Options:
 )EOF";
     }
 
-    bool const registered_project = prompt::register_prompt(
+    bool const registered_project = dana::register_prompt(
       "project",
       "Detects the project shape and publishes the `project.*` facts.",
       &execute_project,
       &render_help_project);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

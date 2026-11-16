@@ -6,7 +6,7 @@
 #include <iterator>
 #include <string>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void execute_cat(view const& v, result& r) {
         auto const opts    = file_options_or_throw(v);
@@ -45,10 +45,7 @@ Options:
 )EOF" << file_options_help("the file", true);
     }
 
-    bool const registered = prompt::register_prompt(
-      "cat",
-      "Append one file's contents as plain prompt text.",
-      &execute_cat,
-      &render_help_cat);
+    bool const registered =
+      dana::register_prompt("cat", "Append one file's contents as plain prompt text.", &execute_cat, &render_help_cat);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

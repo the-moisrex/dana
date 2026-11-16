@@ -11,7 +11,7 @@
 #include <utility>
 #include <vector>
 
-namespace prompt::ai {
+namespace dana::ai {
 
     namespace {
 
@@ -182,4 +182,4 @@ namespace prompt::ai {
         }
     }
 
-} // namespace prompt::ai
+} // namespace dana::ai

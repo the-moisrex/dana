@@ -7,7 +7,7 @@
 #include <string>
 #include <string_view>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -112,11 +112,11 @@ See also: `.skill` (load and manage cached skills), `.delegate` (generate a
 )EOF";
     }
 
-    bool const registered_skill_gen = prompt::register_prompt(
+    bool const registered_skill_gen = dana::register_prompt(
       "skill.gen",
       "Generate a reusable skill with an AI and save it into the skills directory "
       "($XDG_DATA_HOME/agents/skills/<name>/SKILL.md).",
       &execute_skill_gen,
       &render_help_skill_gen);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

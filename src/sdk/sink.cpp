@@ -6,7 +6,7 @@
 #include <string_view>
 #include <utility>
 
-namespace prompt {
+namespace dana {
 
     namespace {
 
@@ -157,4 +157,4 @@ namespace prompt {
         return cmd.run();
     }
 
-} // namespace prompt
+} // namespace dana

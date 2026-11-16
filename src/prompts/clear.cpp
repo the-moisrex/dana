@@ -4,7 +4,7 @@
 #include <ostream>
 #include <string>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void render_help_clear(std::ostream& os);
 
@@ -39,7 +39,7 @@ Examples:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_sink(
+    bool const registered = dana::register_sink(
       "clear",
       "Reset the accumulated chain context so later prompts and sinks start a new, independent section.",
       &execute_clear,
@@ -47,4 +47,4 @@ Examples:
       nullptr,
       false);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

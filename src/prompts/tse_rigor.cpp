@@ -3,7 +3,7 @@
 #include <ostream>
 #include <string>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void render_help_tse_rigor(std::ostream& os);
 
@@ -68,7 +68,7 @@ Examples:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "tse.rigor",
       "A verification checklist that keeps Tehran Stock Exchange (TSE) and general market analysis or backtests "
       "honest: compute ratios from a table instead of prose, never cite uncomputed averages or levels, avoid "
@@ -78,4 +78,4 @@ Examples:
       &execute_tse_rigor,
       &render_help_tse_rigor);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

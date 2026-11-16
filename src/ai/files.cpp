@@ -7,7 +7,7 @@
 #include <iterator>
 #include <string>
 
-namespace prompt::ai {
+namespace dana::ai {
 
     namespace {
 
@@ -166,4 +166,4 @@ namespace prompt::ai {
         return out;
     }
 
-} // namespace prompt::ai
+} // namespace dana::ai

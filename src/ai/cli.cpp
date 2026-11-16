@@ -22,7 +22,7 @@
 #include <string>
 #include <unistd.h>
 
-namespace prompt::ai {
+namespace dana::ai {
 
     namespace {
 
@@ -83,10 +83,10 @@ namespace prompt::ai {
         }
 
         bool copy_answer_text(std::string const& text) {
-            auto const exe = prompt::fs::bin_tool(
+            auto const exe = dana::fs::bin_tool(
               "clipboard",
-              prompt::fs::self_path().value_or(std::filesystem::path{}),
-              prompt::fs::find_git_root());
+              dana::fs::self_path().value_or(std::filesystem::path{}),
+              dana::fs::find_git_root());
             if (exe.empty()) {
                 warn("--copy: no clipboard tool found");
                 return false;
@@ -427,7 +427,7 @@ namespace prompt::ai {
                 temporary = write_prompt_file(prompt);
             } catch (std::exception const& failure) {
                 stream_event problem =
-                  prompt::ai::error(std::string("could not write the prompt file: ") + failure.what());
+                  dana::ai::error(std::string("could not write the prompt file: ") + failure.what());
                 if (options.json) {
                     emit_json(out, problem, options.json_fields);
                 } else {
@@ -457,7 +457,7 @@ namespace prompt::ai {
         if (!options.context_file.empty()) {
             context.open(options.context_file, std::ios::binary | std::ios::trunc);
             if (!context) {
-                stream_event problem = prompt::ai::error("could not open --context-file " + options.context_file);
+                stream_event problem = dana::ai::error("could not open --context-file " + options.context_file);
                 if (options.json) {
                     emit_json(out, problem, options.json_fields);
                 } else {
@@ -528,7 +528,7 @@ namespace prompt::ai {
         try {
             chat.send(message, files, handle);
         } catch (std::exception const& failure) {
-            handle(prompt::ai::error(std::string("error: ") + failure.what()));
+            handle(dana::ai::error(std::string("error: ") + failure.what()));
         }
 
         if (context) {
@@ -543,7 +543,7 @@ namespace prompt::ai {
             }
         }
         if (!failed && !terminal) {
-            stream_event problem = prompt::ai::error("stream ended before the model produced a reply");
+            stream_event problem = dana::ai::error("stream ended before the model produced a reply");
             if (options.json) {
                 emit_json(out, problem, options.json_fields);
             } else {
@@ -910,4 +910,4 @@ namespace prompt::ai {
         return 0;
     }
 
-} // namespace prompt::ai
+} // namespace dana::ai

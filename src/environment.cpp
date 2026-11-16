@@ -15,7 +15,7 @@
 #include <utility>
 #include <vector>
 
-namespace prompt {
+namespace dana {
 
     namespace {
 
@@ -383,9 +383,9 @@ namespace prompt {
         }
 
         return environment{
-          .git_root             = ::prompt::fs::find_git_root().value_or(std::filesystem::path{}),
+          .git_root             = ::dana::fs::find_git_root().value_or(std::filesystem::path{}),
           .working_dir          = std::move(working_dir),
-          .exe_path             = ::prompt::fs::self_path().value_or(std::filesystem::path{}),
+          .exe_path             = ::dana::fs::self_path().value_or(std::filesystem::path{}),
           .clipboard_content    = &clipboard::paste,
           .clipboard_identifier = [] -> std::optional<std::string> {
               return clipboard::detect_identifier(clipboard::paste());
@@ -395,4 +395,4 @@ namespace prompt {
         };
     }
 
-} // namespace prompt
+} // namespace dana

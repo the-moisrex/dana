@@ -13,7 +13,7 @@
 #include <utility>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -67,7 +67,7 @@ namespace prompt::prompts {
 
         // git ls-files --error-unmatch <path> &>/dev/null — silence both streams.
         bool git_tracked(std::string const& path) {
-            return prompt::process::run_command(
+            return dana::process::run_command(
                      {"bash", "-c", "git ls-files --error-unmatch \"$0\" >/dev/null 2>&1", path})
                      .exit_code == 0;
         }
@@ -122,7 +122,7 @@ namespace prompt::prompts {
                 if (i + 1 >= v.args.size()) {
                     throw usage_error{"Missing value for --context\n"};
                 }
-                context_lines = prompt::text::to_ll(v.args[i + 1], 0); // bash $((word)) treats a bare word as 0
+                context_lines = dana::text::to_ll(v.args[i + 1], 0); // bash $((word)) treats a bare word as 0
                 ++i;
             } else if (a == "--full") {
                 mode = "full";
@@ -134,7 +134,7 @@ namespace prompt::prompts {
                 if (head_value.find_first_not_of("0123456789") != std::string::npos) {
                     sed_error = "sed: -e expression #1, char 3: unexpected ','\n";
                 } else {
-                    head_lines = prompt::text::to_size(head_value, 0);
+                    head_lines = dana::text::to_size(head_value, 0);
                 }
                 ++i;
             } else if (is_number_flag(a)) {
@@ -162,7 +162,7 @@ namespace prompt::prompts {
         if (!stdin_content.empty()) {
             auto                     tool   = fs::bin_tool("paths", v.env.exe_path, git_root_opt);
             std::vector<char const*> argv   = {tool.c_str(), nullptr};
-            auto                     result = prompt::process::run_command({tool}, stdin_content);
+            auto                     result = dana::process::run_command({tool}, stdin_content);
             for (auto const& line : split_lines(result.stdout_data)) {
                 auto [clean, line_num] = parse_hit(line);
                 bool seen              = false;
@@ -253,7 +253,7 @@ namespace prompt::prompts {
             if (!line_num.empty()) {
                 std::string content = read_file(std::filesystem::path(resolved));
                 long long   total   = count_newlines(content);
-                long long   ln      = prompt::text::to_ll(line_num, 0);
+                long long   ln      = dana::text::to_ll(line_num, 0);
                 long long   start   = ln - context_lines;
                 start               = std::max<long long>(start, 1);
                 long long end       = ln + context_lines;
@@ -305,11 +305,11 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "paths",
       "Extracts file paths from stdin (via bin/paths) and/or arguments, resolves each, and "
       "embeds only Git-tracked files.",
       &execute_paths,
       &render_help_paths);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

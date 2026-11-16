@@ -2,7 +2,7 @@
 
 #include <cstring>
 
-namespace prompt::ai::crypto {
+namespace dana::ai::crypto {
 
     namespace {
 
@@ -114,4 +114,4 @@ namespace prompt::ai::crypto {
         return digest;
     }
 
-} // namespace prompt::ai::crypto
+} // namespace dana::ai::crypto

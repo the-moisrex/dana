@@ -13,7 +13,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::extract {
+namespace dana::extract {
 
     inline std::string_view trim_view(std::string_view text) {
         while (!text.empty() && std::isspace(static_cast<unsigned char>(text.front())) != 0) {
@@ -150,4 +150,4 @@ namespace prompt::extract {
         return contract_text{.full = std::move(full), .clause = std::move(clause)};
     }
 
-} // namespace prompt::extract
+} // namespace dana::extract

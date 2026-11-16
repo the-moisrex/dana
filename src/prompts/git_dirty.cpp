@@ -16,12 +16,12 @@
 #include <system_error>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
         std::string git_raw(std::vector<std::string> const& args) {
-            return prompt::process::run_command(args).stdout_data;
+            return dana::process::run_command(args).stdout_data;
         }
 
         // Port of `var="$(git ...)"` — trailing newlines stripped (matters for the
@@ -307,8 +307,9 @@ namespace prompt::prompts {
             output_files = true;
         }
 
-        if (prompt::process::run_command(std::vector<std::string>{"git", "rev-parse", "--is-inside-work-tree"})
-              .exit_code != 0)
+        if (
+          dana::process::run_command(std::vector<std::string>{"git", "rev-parse", "--is-inside-work-tree"}).exit_code !=
+          0)
         {
             throw soft_error{"prompt git-dirty: Error: Not inside a git repository.\n"};
         }
@@ -426,8 +427,8 @@ namespace prompt::prompts {
         filter_name_status(unstaged_files);
         filter_plain(untracked_files);
         if (!filter.exclude().empty()) {
-            staged_diff   = prompt::git::filter_diff_by_path(staged_diff, {}, filter.exclude());
-            unstaged_diff = prompt::git::filter_diff_by_path(unstaged_diff, {}, filter.exclude());
+            staged_diff   = dana::git::filter_diff_by_path(staged_diff, {}, filter.exclude());
+            unstaged_diff = dana::git::filter_diff_by_path(unstaged_diff, {}, filter.exclude());
         }
 
         bool has_content = !staged_files.empty() || !unstaged_files.empty() || !untracked_files.empty();
@@ -592,11 +593,11 @@ EXAMPLES:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_file_prompt(
+    bool const registered = dana::register_file_prompt(
       "git-dirty",
       "Show uncommitted/changed files in the current Git repository. By default it lists all staged "
       "and unstaged changes (--all --files); the options below switch to diffs or full file contents.",
       &execute_git_dirty,
       &render_help_git_dirty);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

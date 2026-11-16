@@ -38,16 +38,16 @@ namespace {
         }
     }
 
-    prompt::ai::turn_result answered(std::string text) {
-        prompt::ai::turn_result result;
+    dana::ai::turn_result answered(std::string text) {
+        dana::ai::turn_result result;
         result.answer = std::move(text);
         return result;
     }
 
     void test_stops_without_calls() {
-        std::vector<std::string>       prompts;
-        prompt::ai::agent_loop_options options;
-        prompt::ai::agent_loop_io      io;
+        std::vector<std::string>     prompts;
+        dana::ai::agent_loop_options options;
+        dana::ai::agent_loop_io      io;
         io.turn = [&](std::string const& prompt) {
             prompts.push_back(prompt);
             return answered("done");
@@ -56,7 +56,7 @@ namespace {
             return std::optional<std::string>{};
         };
 
-        auto const result = prompt::ai::run_agent_loop("task", options, io);
+        auto const result = dana::ai::run_agent_loop("task", options, io);
         check_equal(result.turns, std::size_t{1}, "one turn");
         check_equal(result.answer, "done", "the answer is the context");
         check_equal(result.transcript, "done\n", "the transcript holds the answer");
@@ -67,10 +67,10 @@ namespace {
     }
 
     void test_feeds_tool_results_back() {
-        std::vector<std::string>       prompts;
-        std::vector<std::string>       seen;
-        prompt::ai::agent_loop_options options;
-        prompt::ai::agent_loop_io      io;
+        std::vector<std::string>     prompts;
+        std::vector<std::string>     seen;
+        dana::ai::agent_loop_options options;
+        dana::ai::agent_loop_io      io;
         io.turn = [&](std::string const& prompt) {
             prompts.push_back(prompt);
             return answered(prompts.size() == 1 ? "calling" : "finished");
@@ -83,7 +83,7 @@ namespace {
             return std::nullopt;
         };
 
-        auto const result = prompt::ai::run_agent_loop("task", options, io);
+        auto const result = dana::ai::run_agent_loop("task", options, io);
         check_equal(result.turns, std::size_t{2}, "two turns");
         check_equal(result.answer, "finished", "the last answer wins");
         check_equal(prompts.size(), std::size_t{2}, "two prompts");
@@ -95,10 +95,10 @@ namespace {
     }
 
     void test_exhaustion() {
-        int                            turns = 0;
-        prompt::ai::agent_loop_options options;
+        int                          turns = 0;
+        dana::ai::agent_loop_options options;
         options.max_turns = 3;
-        prompt::ai::agent_loop_io io;
+        dana::ai::agent_loop_io io;
         io.turn = [&](std::string const&) {
             ++turns;
             return answered("still calling");
@@ -107,7 +107,7 @@ namespace {
             return std::optional<std::string>{"### Tool: cli\nok"};
         };
 
-        auto const result = prompt::ai::run_agent_loop("task", options, io);
+        auto const result = dana::ai::run_agent_loop("task", options, io);
         check_equal(turns, 3, "the turn budget is honoured");
         check(result.exhausted, "exhausted");
         check_equal(result.answer, "still calling", "the last answer is kept");
@@ -115,10 +115,10 @@ namespace {
     }
 
     void test_failed_turn() {
-        prompt::ai::agent_loop_options options;
-        prompt::ai::agent_loop_io      io;
+        dana::ai::agent_loop_options options;
+        dana::ai::agent_loop_io      io;
         io.turn = [](std::string const&) {
-            prompt::ai::turn_result result;
+            dana::ai::turn_result result;
             result.status = 1;
             result.answer = "partial";
             return result;
@@ -127,7 +127,7 @@ namespace {
             return std::optional<std::string>{"unused"};
         };
 
-        auto const result = prompt::ai::run_agent_loop("task", options, io);
+        auto const result = dana::ai::run_agent_loop("task", options, io);
         check(result.status != 0, "the failure is reported");
         check_equal(result.answer, "partial", "the partial answer is kept");
         check_equal(result.turns, std::size_t{1}, "the loop stops at the failure");
@@ -135,10 +135,10 @@ namespace {
     }
 
     void test_status_callback() {
-        std::string                    streamed;
-        prompt::ai::agent_loop_options options;
+        std::string                  streamed;
+        dana::ai::agent_loop_options options;
         options.show_tools = true;
-        prompt::ai::agent_loop_io io;
+        dana::ai::agent_loop_io io;
         io.turn = [](std::string const&) {
             return answered("answer");
         };
@@ -151,12 +151,12 @@ namespace {
 
         // max_turns 1 still calls run_tools once, so the status callback fires.
         options.max_turns = 1;
-        (void) prompt::ai::run_agent_loop("task", options, io);
+        (void) dana::ai::run_agent_loop("task", options, io);
         check_equal(streamed, "### Tool: cli\nok", "the tool block is streamed when asked");
     }
 
     void test_truncate() {
-        check_equal(prompt::ai::truncate_tool_result("short", 400, 64 * 1024), "short", "short text is untouched");
+        check_equal(dana::ai::truncate_tool_result("short", 400, 64 * 1024), "short", "short text is untouched");
 
         std::string many;
         for (int i = 0; i < 10; ++i) {
@@ -164,16 +164,16 @@ namespace {
             many += std::to_string(i);
             many += '\n';
         }
-        auto const head = prompt::ai::truncate_tool_result(many, 3, 0);
+        auto const head = dana::ai::truncate_tool_result(many, 3, 0);
         check(head.starts_with("line 0\nline 1\nline 2\n"), "the head lines are kept");
         check(head.find("[truncated: ") != std::string::npos, "a truncation note is appended");
         check(head.find("first 3 lines kept") != std::string::npos, "the note names the line cap");
 
-        auto const bytes = prompt::ai::truncate_tool_result(many, 0, 10);
+        auto const bytes = dana::ai::truncate_tool_result(many, 0, 10);
         check(bytes.starts_with("line 0\nlin"), "the byte cap is honoured");
         check(bytes.find("[truncated: ") != std::string::npos, "a byte truncation is noted");
 
-        check_equal(prompt::ai::truncate_tool_result(many, 0, 0), many, "no limits means no change");
+        check_equal(dana::ai::truncate_tool_result(many, 0, 0), many, "no limits means no change");
     }
 
 } // namespace

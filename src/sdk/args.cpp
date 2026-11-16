@@ -7,7 +7,7 @@
 #include <format>
 #include <limits>
 
-namespace prompt {
+namespace dana {
 
     std::string
     parse_head_option(std::span<std::string_view const> args, std::optional<std::size_t>& head_lines, bool strict) {
@@ -141,4 +141,4 @@ namespace prompt {
         return collect_file_args(in.args);
     }
 
-} // namespace prompt
+} // namespace dana

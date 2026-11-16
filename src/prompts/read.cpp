@@ -20,7 +20,7 @@
 #include <utility>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -321,7 +321,7 @@ Options:
         schema::argument("FILE", "File or directory to read", true, true),
       });
 
-    bool const registered = prompt::register_file_prompt(
+    bool const registered = dana::register_file_prompt(
       "read",
       "Read the contents of a file or directory, with each text line prefixed by its 1-based line number.",
       &execute_read,
@@ -333,4 +333,4 @@ Options:
       true,
       &k_read_tool);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -14,7 +14,7 @@ namespace prompt::prompts {
         // the tool on PATH.
         bool tool_exists(std::string const& name) {
             std::string cmd = "command -v " + name + " >/dev/null 2>&1";
-            return prompt::process::run_command({"bash", "-c", cmd}).exit_code == 0;
+            return dana::process::run_command({"bash", "-c", cmd}).exit_code == 0;
         }
 
     } // namespace
@@ -40,7 +40,7 @@ namespace prompt::prompts {
             // cppman "$page" 2>/dev/null | col -bx — col's status gates the branch;
             // cppman's stderr is discarded exactly like the script.
             std::vector<std::string> storage = {"bash", "-c", "cppman \"$0\" 2>/dev/null | col -bx", page};
-            auto                     result  = prompt::process::run_command(storage);
+            auto                     result  = dana::process::run_command(storage);
 
             if (result.exit_code == 0) {
                 std::string stripped = result.stdout_data;
@@ -76,11 +76,11 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "cppman",
       "Fetches C++ documentation for the specified standard library components using `cppman` "
       "(which pulls from cppreference.com) and appends it to the prompt context.",
       &execute_cppman,
       &render_help_cppman);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

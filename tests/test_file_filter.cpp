@@ -8,7 +8,7 @@
 #include <string_view>
 #include <system_error>
 
-using namespace prompt;
+using namespace dana;
 
 namespace {
 

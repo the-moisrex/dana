@@ -15,7 +15,7 @@
 #include <thread>
 #include <unistd.h>
 
-namespace prompt::clipboard {
+namespace dana::clipboard {
 
     namespace {
         backend current_backend = backend::none;
@@ -206,7 +206,7 @@ namespace prompt::clipboard {
             case backend::kde: {
                 // bash's bin/clipboard prefers the dbus-send/qdbus call over its
                 // python-dbus client; klipper takes the text as an argv element.
-                prompt::process::command cmd{
+                dana::process::command cmd{
                   "qdbus",
                   "org.kde.klipper",
                   "/klipper",
@@ -252,4 +252,4 @@ namespace prompt::clipboard {
         }
     }
 
-} // namespace prompt::clipboard
+} // namespace dana::clipboard

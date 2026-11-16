@@ -8,7 +8,7 @@
 #include <string_view>
 #include <system_error>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -103,6 +103,6 @@ Examples:
     } // namespace
 
     bool const registered_files_scope =
-      prompt::register_file_filter("files.scope", kSummary, &execute_files_scope, &render_help_files_scope);
+      dana::register_file_filter("files.scope", kSummary, &execute_files_scope, &render_help_files_scope);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

@@ -12,7 +12,7 @@
 #include <system_error>
 #include <utility>
 
-namespace prompt {
+namespace dana {
     namespace {
 
         // One file's worth of tokens, plus the lexer's one possible failure. The
@@ -472,4 +472,4 @@ namespace prompt {
         }
     }
 
-} // namespace prompt
+} // namespace dana

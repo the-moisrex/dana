@@ -12,7 +12,7 @@
 #include <utility>
 #include <vector>
 
-namespace prompt::compress {
+namespace dana::compress {
 
     namespace {
 
@@ -198,8 +198,7 @@ namespace prompt::compress {
                   return tc.failed;
               }));
 
-            bool const general =
-              s.mode == prompt::signals::intent::general || s.mode == prompt::signals::intent::review;
+            bool const general = s.mode == dana::signals::intent::general || s.mode == dana::signals::intent::review;
             if (!general && failed_count == 0) {
                 // Nothing identifies a failure: keep the whole file rather than feed the
                 // model a compressed view of a suite that might be hiding the one test
@@ -309,4 +308,4 @@ namespace prompt::compress {
       .priority = 20,
     });
 
-} // namespace prompt::compress
+} // namespace dana::compress

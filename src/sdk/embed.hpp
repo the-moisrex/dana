@@ -7,7 +7,7 @@
 #include <string>
 #include <string_view>
 
-namespace prompt {
+namespace dana {
 
     // How to render an embedded file: `head_lines` caps the kept lines (--head) and
     // `numbered` prefixes each kept line with its line number (--num/--numbered).
@@ -65,4 +65,4 @@ namespace prompt {
     // head_lines is ignored (only trim_context applies it), so it is ignored here.
     std::string embed_stdin(std::string_view content, std::optional<std::size_t> head_lines);
 
-} // namespace prompt
+} // namespace dana

@@ -20,7 +20,7 @@
 #include <utility>
 #include <vector>
 
-namespace prompt::ai {
+namespace dana::ai {
 
     namespace {
 
@@ -450,7 +450,7 @@ namespace prompt::ai {
                 std::string const delta = full.substr(text_);
                 text_                   = full.size();
                 answer_parts_.push_back(delta);
-                return {prompt::ai::text(delta)};
+                return {dana::ai::text(delta)};
             }
 
             std::size_t                text_     = 0;
@@ -1058,4 +1058,4 @@ namespace prompt::ai {
     // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
     bool const chatgpt_registered = register_provider(std::make_unique<chatgpt_provider>());
 
-} // namespace prompt::ai
+} // namespace dana::ai

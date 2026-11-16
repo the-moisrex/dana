@@ -12,7 +12,7 @@
 #include <sstream>
 #include <utility>
 
-namespace prompt {
+namespace dana {
     namespace {
 
         using string_list = std::vector<std::string>;
@@ -583,4 +583,4 @@ namespace prompt {
         return out;
     }
 
-} // namespace prompt
+} // namespace dana

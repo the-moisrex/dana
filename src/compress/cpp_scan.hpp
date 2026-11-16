@@ -5,7 +5,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::compress::cpp {
+namespace dana::compress::cpp {
 
     // One declaration the scanner recognized. `signature` is the declaration header
     // (everything before its `{` or `;`), normalized onto single lines.
@@ -47,4 +47,4 @@ namespace prompt::compress::cpp {
     // matching brace without duplicating the comment/string state machine use this.
     [[nodiscard]] std::string structural_view(std::string_view text);
 
-} // namespace prompt::compress::cpp
+} // namespace dana::compress::cpp

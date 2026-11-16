@@ -6,7 +6,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::signals {
+namespace dana::signals {
 
     // What a chain is doing. Published as the `keys::mode` fact by `.fix`/`.debug`/
     // `.run` and overridable with `.compress --for`; a compressor reads it to pick
@@ -40,4 +40,4 @@ namespace prompt::signals {
     [[nodiscard]] std::vector<std::string> parse_focus(std::string_view value);
     [[nodiscard]] std::string              join_focus(std::span<std::string const> items);
 
-} // namespace prompt::signals
+} // namespace dana::signals

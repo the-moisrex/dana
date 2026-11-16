@@ -4,7 +4,7 @@
 
 #include <algorithm>
 
-namespace prompt {
+namespace dana {
 
     void facts::set(std::string_view key, std::string_view value) {
         auto it = std::ranges::find_if(entries_, [key](entry const& e) {
@@ -85,4 +85,4 @@ namespace prompt {
         return out;
     }
 
-} // namespace prompt
+} // namespace dana

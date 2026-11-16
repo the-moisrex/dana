@@ -8,7 +8,7 @@
 #include <system_error>
 #include <vector>
 
-namespace prompt {
+namespace dana {
 
     std::string_view infer_lang(std::filesystem::path const& file) {
         auto ext = file.extension().string();
@@ -271,4 +271,4 @@ namespace prompt {
         errors += "' not found.\n";
     }
 
-} // namespace prompt
+} // namespace dana

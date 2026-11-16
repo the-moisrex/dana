@@ -14,7 +14,7 @@
 #include <string>
 #include <string_view>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void render_help_clipboard(std::ostream& os);
     static void render_help_cp(std::ostream& os);
@@ -54,7 +54,7 @@ namespace prompt::prompts {
             // both sides here too, so `--head N` counts real content lines rather than
             // the blank edges a terminal copy carries (the dispatcher trims the emitted
             // block the same way).
-            std::string content(prompt::text::strip_newlines(clipboard_content(v.env)));
+            std::string content(dana::text::strip_newlines(clipboard_content(v.env)));
             if (content.empty()) {
                 throw soft_error{std::format("prompt {}: Clipboard is empty or unavailable.\n", v.name)};
             }
@@ -86,7 +86,7 @@ namespace prompt::prompts {
         if (content.empty()) {
             throw soft_error{"prompt c.c: no chain context to copy\n"};
         }
-        if (!prompt::clipboard::copy(content)) {
+        if (!dana::clipboard::copy(content)) {
             throw soft_error{"prompt c.c: could not copy to the clipboard\n"};
         }
 
@@ -146,21 +146,21 @@ Examples:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "clipboard",
       "Read from the clipboard and embed the content as context for the AI.",
       &execute_clipboard,
       &render_help_clipboard);
 
     // `.c.p` is the short paste alias; it reuses the same executor.
-    bool const registered_cp = prompt::register_prompt(
+    bool const registered_cp = dana::register_prompt(
       "c.p",
       "Paste alias for `.clipboard`: read the clipboard and embed the content as context.",
       &execute_cp,
       &render_help_cp);
 
     // `.c.c` is the copy sink: the chain context goes to the clipboard unchanged.
-    bool const registered_cc = prompt::register_sink(
+    bool const registered_cc = dana::register_sink(
       "c.c",
       "Copy the accumulated chain context to the system clipboard, then pass the context through unchanged.",
       &execute_cc,
@@ -168,4 +168,4 @@ Examples:
       nullptr,
       false);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

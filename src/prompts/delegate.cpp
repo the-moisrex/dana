@@ -10,7 +10,7 @@
 #include <system_error>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -32,7 +32,7 @@ namespace prompt::prompts {
         // prompt_descriptor_less so it matches `prompt list`. The registry is the
         // complete prompt catalog, so no prompts/ directory is needed.
         std::string build_prompt_list() {
-            auto                                  prompts = prompt::get_all_prompts();
+            auto                                  prompts = dana::get_all_prompts();
             std::vector<prompt_descriptor const*> sorted;
             sorted.reserve(prompts.size());
             for (auto const& desc : prompts) {
@@ -182,11 +182,11 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "delegate",
       "Generates a ready-to-run `prompt` command line that bundles all the context needed to ask "
       "another AI for help with a coding problem.",
       &execute_delegate,
       &render_help_delegate);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

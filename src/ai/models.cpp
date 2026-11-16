@@ -2,7 +2,7 @@
 
 #include <array>
 
-namespace prompt::ai::models {
+namespace dana::ai::models {
 
     namespace {
 
@@ -250,4 +250,4 @@ namespace prompt::ai::models {
         return std::nullopt;
     }
 
-} // namespace prompt::ai::models
+} // namespace dana::ai::models

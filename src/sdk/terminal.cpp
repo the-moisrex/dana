@@ -10,7 +10,7 @@
 #include <string_view>
 #include <unistd.h>
 
-namespace prompt::terminal {
+namespace dana::terminal {
 
     namespace {
 
@@ -167,4 +167,4 @@ namespace prompt::terminal {
         return slug(raw);
     }
 
-} // namespace prompt::terminal
+} // namespace dana::terminal

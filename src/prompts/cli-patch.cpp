@@ -4,7 +4,7 @@
 #include <ostream>
 #include <string>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void execute_cli_patch([[maybe_unused]] view const& v, result& r) {
         r.out =
@@ -30,11 +30,11 @@ Options:
 )EOF" << file_options_help("the embedded files", true);
     }
 
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "cli.patch",
       "Generate a paste-ready CLI script that applies repository changes "
       "directly instead of applying a patch or git diff.",
       &execute_cli_patch,
       &render_help_cli_patch);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

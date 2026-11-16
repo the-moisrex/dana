@@ -4,7 +4,7 @@
 #include <map>
 #include <string>
 
-namespace prompt::ai {
+namespace dana::ai {
 
     namespace {
 
@@ -60,4 +60,4 @@ namespace prompt::ai {
         return std::nullopt;
     }
 
-} // namespace prompt::ai
+} // namespace dana::ai

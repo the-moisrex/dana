@@ -9,7 +9,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt {
+namespace dana {
 
     // The dispatcher-side result of one segment: its `result` plus the status and
     // the bookkeeping the prompt never sees. The fork wire is a codec of this type.
@@ -43,4 +43,4 @@ namespace prompt {
     // child is ready next.
     [[nodiscard]] std::vector<std::string> drain_all(std::span<int const> fds);
 
-} // namespace prompt
+} // namespace dana

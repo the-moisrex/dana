@@ -10,7 +10,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -85,7 +85,7 @@ namespace prompt::prompts {
                 argv.push_back(arg.c_str());
             }
             argv.push_back(nullptr);
-            auto result = prompt::process::run_command(cmd, stdin_data);
+            auto result = dana::process::run_command(cmd, stdin_data);
             stdout_data = result.stdout_data;
             return result.exit_code;
         }
@@ -136,7 +136,7 @@ namespace prompt::prompts {
         std::vector<std::string> tools;
         tools.reserve(3);
         for (char const* name : {"yt.links", "subtitle", "srt2text"}) {
-            tools.push_back(prompt::fs::bin_tool(name, v.env.exe_path, v.env.git_root).string());
+            tools.push_back(dana::fs::bin_tool(name, v.env.exe_path, v.env.git_root).string());
         }
 
         // bash checks `[ -t 0 ]`: a piped stdin wins over the clipboard.
@@ -179,11 +179,11 @@ If stdin is a single URL, it tries to fetch subtitles/text first.
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "summarize",
       "Builds a prompt that summarizes stdin. If stdin is a single URL, it tries to "
       "fetch subtitles/text first.",
       &execute_summarize,
       &render_help_summarize);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

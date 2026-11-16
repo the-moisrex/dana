@@ -14,7 +14,7 @@
 #include <thread>
 #include <vector>
 
-namespace prompt::ai::pow {
+namespace dana::ai::pow {
 
     namespace {
 
@@ -167,4 +167,4 @@ namespace prompt::ai::pow {
         return base64_encode(payload.dump());
     }
 
-} // namespace prompt::ai::pow
+} // namespace dana::ai::pow

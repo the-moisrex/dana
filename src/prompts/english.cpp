@@ -1,8 +1,8 @@
 #include "../sdk/prompt_registry.hpp"
 
 #include <string>
-using prompt::prompts::result;
-using prompt::prompts::view;
+using dana::prompts::result;
+using dana::prompts::view;
 
 static void execute_english([[maybe_unused]] view const &inp, result &res) {
     res.out =
@@ -24,4 +24,4 @@ Options:
 // This file is the prompt: it implements it and registers it at static-init
 // time (no central list — see sdk/prompt_registry.hpp).
 bool const registered =
-  prompt::register_prompt("english", "Translate to English.", &execute_english, &render_help_english);
+  dana::register_prompt("english", "Translate to English.", &execute_english, &render_help_english);

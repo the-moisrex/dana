@@ -27,7 +27,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::schema {
+namespace dana::schema {
 
     // The JSON-Schema object `.tools` emits (and `to_json` dumps).
     [[nodiscard]] nlohmann::ordered_json to_json_value(tool const& value);
@@ -38,9 +38,9 @@ namespace prompt::schema {
     // `.tools` advertises must parse here, and an unadvertised input is rejected.
     [[nodiscard]] std::vector<std::string> parse(tool const& value, nlohmann::json const& input);
 
-} // namespace prompt::schema
+} // namespace dana::schema
 
-namespace prompt::tool_call {
+namespace dana::tool_call {
 
     // One call found in an AI answer.
     struct call {
@@ -68,4 +68,4 @@ namespace prompt::tool_call {
     //     <output>
     [[nodiscard]] std::string format_result(call const& value, std::string_view output, int exit_code, bool ok);
 
-} // namespace prompt::tool_call
+} // namespace dana::tool_call

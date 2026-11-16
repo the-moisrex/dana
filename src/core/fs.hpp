@@ -5,7 +5,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::fs {
+namespace dana::fs {
 
     std::optional<std::filesystem::path> find_git_root(
       std::filesystem::path const& start = std::filesystem::current_path());
@@ -27,4 +27,4 @@ namespace prompt::fs {
                                    std::filesystem::path const&                exe_path,
                                    std::optional<std::filesystem::path> const& git_root);
 
-} // namespace prompt::fs
+} // namespace dana::fs

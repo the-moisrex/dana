@@ -13,7 +13,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -189,7 +189,7 @@ Examples:
     // (no central list — see sdk/prompt_registry.hpp). The summary is a
     // static-storage string_view; `register_prompt` keeps the view, so never pass a
     // temporary std::string here.
-    bool const registered_glob = prompt::register_prompt(
+    bool const registered_glob = dana::register_prompt(
       "glob",
       kGlobSummary,
       &execute_glob,
@@ -203,4 +203,4 @@ Examples:
       true,
       &k_glob_tool);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

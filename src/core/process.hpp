@@ -10,7 +10,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::process {
+namespace dana::process {
 
     struct command_result {
         std::string stdout_data;
@@ -98,4 +98,4 @@ namespace prompt::process {
       std::vector<std::string> const& env        = {},
       std::chrono::milliseconds       timeout    = std::chrono::seconds(30));
 
-} // namespace prompt::process
+} // namespace dana::process

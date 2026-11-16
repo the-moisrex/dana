@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <string>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void execute_comments(view const& v, result& r) {
         auto opts = file_options_or_throw(v);
@@ -42,10 +42,10 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "comments",
       "Improve the comments and inline documentation here.",
       &execute_comments,
       &render_help_comments);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

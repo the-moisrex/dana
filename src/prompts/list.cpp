@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void execute_list(view const& v, result& r) {
         // This prompt embeds no files, so --head is validated (and stripped) but
@@ -80,10 +80,10 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "list",
       "List all available prompts with a short description.",
       &execute_list,
       &render_help_list);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

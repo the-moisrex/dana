@@ -15,7 +15,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::ai {
+namespace dana::ai {
 
     struct provider_info {
         std::string              name;
@@ -146,4 +146,4 @@ namespace prompt::ai {
         virtual std::string              error_hint(std::string const& message, std::string const& base);
     };
 
-} // namespace prompt::ai
+} // namespace dana::ai

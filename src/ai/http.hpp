@@ -15,7 +15,7 @@
 #include <utility>
 #include <vector>
 
-namespace prompt::ai {
+namespace dana::ai {
 
     class http_error : public std::runtime_error {
       public:
@@ -104,4 +104,4 @@ namespace prompt::ai {
     // True when the linked libcurl is the impersonating build.
     bool have_impersonate();
 
-} // namespace prompt::ai
+} // namespace dana::ai

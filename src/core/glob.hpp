@@ -2,7 +2,7 @@
 
 #include <string_view>
 
-namespace prompt::glob {
+namespace dana::glob {
 
     // Tiny shell-style glob matcher supporting '*' and '?'. `*` matches any
     // sequence, including '/', so both `*.cpp` (a basename pattern) and
@@ -38,4 +38,4 @@ namespace prompt::glob {
         return pattern.find_first_of("*?") != std::string_view::npos;
     }
 
-} // namespace prompt::glob
+} // namespace dana::glob

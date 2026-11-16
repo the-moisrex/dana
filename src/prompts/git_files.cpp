@@ -13,7 +13,7 @@
 #include <unistd.h>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -296,11 +296,11 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_file_prompt(
+    bool const registered = dana::register_file_prompt(
       "git.files",
       "Embeds the given files as Markdown code blocks. File headings are printed relative to the Git "
       "repository root. If no files are provided, `fzf -m` is used to choose from tracked files.",
       &execute_git_files,
       &render_help_git_files);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

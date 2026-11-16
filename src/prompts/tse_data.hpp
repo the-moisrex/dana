@@ -27,7 +27,7 @@
 #include <unistd.h>
 #include <vector>
 
-namespace prompt::prompts::tse_data {
+namespace dana::prompts::tse_data {
 
     // The four lines `tse snapshot` prints (fetched, stale, note, instrument).
     struct snapshot_info {
@@ -361,8 +361,8 @@ namespace prompt::prompts::tse_data {
 
         if (!file_inputs.empty()) {
             cfg.cache_mode       = true;
-            auto        git_root = prompt::fs::find_git_root();
-            std::string tse_tool = prompt::fs::bin_tool("tse", v.env.exe_path, std::nullopt).string();
+            auto        git_root = dana::fs::find_git_root();
+            std::string tse_tool = dana::fs::bin_tool("tse", v.env.exe_path, std::nullopt).string();
             for (auto const& input : file_inputs) {
                 std::filesystem::path resolved;
                 if (std::filesystem::is_regular_file(input)) {
@@ -384,7 +384,7 @@ namespace prompt::prompts::tse_data {
                     return cfg;
                 }
                 auto probe =
-                  prompt::process::command{"python3", tse_tool, "snapshot", resolved.string()}.stderr_to_stdout().run();
+                  dana::process::command{"python3", tse_tool, "snapshot", resolved.string()}.stderr_to_stdout().run();
                 if (probe.exit_code != 0) {
                     cfg.failed    = true;
                     cfg.exit_code = 2;
@@ -409,7 +409,7 @@ namespace prompt::prompts::tse_data {
       std::string const&           name,
       std::string&                 errors) {
         std::error_code ec;
-        auto            base = prompt::fs::find_git_root().value_or(std::filesystem::current_path(ec));
+        auto            base = dana::fs::find_git_root().value_or(std::filesystem::current_path(ec));
         auto            rel  = std::filesystem::relative(std::filesystem::weakly_canonical(path, ec), base, ec);
         if (ec || rel.empty()) {
             rel = path;
@@ -430,7 +430,7 @@ namespace prompt::prompts::tse_data {
             output += info.instrument + "\n";
         }
 
-        auto render = prompt::process::command{"python3", tse_tool, "markdown", path.string()}.stderr_to_stdout().run();
+        auto render = dana::process::command{"python3", tse_tool, "markdown", path.string()}.stderr_to_stdout().run();
         if (render.exit_code == 0) {
             output += '\n';
             output += trim_context_nl(render.stdout_data, head_lines);
@@ -442,7 +442,7 @@ namespace prompt::prompts::tse_data {
               rel_path,
               rstrip_newlines(render.stdout_data));
             output += std::format("\nFile: {}\n```json\n", rel_path);
-            output += trim_context_nl(prompt::read_file(path), head_lines);
+            output += trim_context_nl(dana::read_file(path), head_lines);
             output += "\n```\n";
         }
         return output;
@@ -460,12 +460,12 @@ namespace prompt::prompts::tse_data {
     // `tse: <message>` is inherited and appears above), or a successful run that
     // produced no dataset — which would otherwise reach `.save`/an AI sink as an
     // empty context.
-    inline prompt::process::command_result run_tool(
+    inline dana::process::command_result run_tool(
       std::string const&              name,
       std::string const&              tool_label,
       std::vector<std::string> const& argv,
       std::chrono::milliseconds       timeout = kToolTimeout) {
-        auto result = prompt::process::command{argv}.timeout(timeout).run();
+        auto result = dana::process::command{argv}.timeout(timeout).run();
         if (result.timed_out) {
             throw soft_error{std::format(
               "prompt {}: {} timed out after {}s (the fetch was killed; retry with a "
@@ -513,7 +513,7 @@ namespace prompt::prompts::tse_data {
     // The collected data block: the live Markdown (capped by --head) or the
     // rendered snapshot files. Fetch failures throw, exactly as before.
     inline std::string collect(view const& v, config const& cfg, std::string& errors) {
-        std::string tse_tool = prompt::fs::bin_tool("tse", v.env.exe_path, std::nullopt).string();
+        std::string tse_tool = dana::fs::bin_tool("tse", v.env.exe_path, std::nullopt).string();
         if (cfg.cache_mode) {
             std::string out;
             for (std::size_t i = 0; i < cfg.snapshot_files.size(); ++i) {
@@ -539,9 +539,9 @@ namespace prompt::prompts::tse_data {
         if (req.prefix.starts_with('-')) {
             return;
         }
-        auto exe    = prompt::fs::self_path().value_or(std::filesystem::path{});
-        auto tool   = prompt::fs::bin_tool("tse.resolve", exe, prompt::fs::find_git_root());
-        auto result = prompt::process::command{"python3", tool.string(), "--complete", std::string(req.prefix)}
+        auto exe    = dana::fs::self_path().value_or(std::filesystem::path{});
+        auto tool   = dana::fs::bin_tool("tse.resolve", exe, dana::fs::find_git_root());
+        auto result = dana::process::command{"python3", tool.string(), "--complete", std::string(req.prefix)}
                         .discard_stderr()
                         .run();
         if (result.exit_code == 0) {
@@ -549,4 +549,4 @@ namespace prompt::prompts::tse_data {
         }
     }
 
-} // namespace prompt::prompts::tse_data
+} // namespace dana::prompts::tse_data

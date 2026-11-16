@@ -11,7 +11,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt {
+namespace dana {
     namespace {
 
         // The dispatcher's own flags, offered only at the head (a step's flags come
@@ -255,4 +255,4 @@ namespace prompt {
         }
     }
 
-} // namespace prompt
+} // namespace dana

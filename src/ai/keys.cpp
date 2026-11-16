@@ -15,7 +15,7 @@
 #include <string>
 #include <vector>
 
-namespace prompt::ai::keys {
+namespace dana::ai::keys {
 
     namespace {
 
@@ -146,7 +146,7 @@ namespace prompt::ai::keys {
             }
 
             fs::path stop = home_dir();
-            if (auto const root = prompt::fs::find_git_root()) {
+            if (auto const root = dana::fs::find_git_root()) {
                 stop = *root;
             }
 
@@ -285,7 +285,7 @@ namespace prompt::ai::keys {
         std::pair<std::map<std::string, std::string>, std::string> opencode_export() {
             for (auto const* const tool : {"opencode2", "opencode"}) {
                 auto const exe =
-                  prompt::fs::bin_tool(tool, prompt::fs::self_path().value_or(fs::path{}), prompt::fs::find_git_root());
+                  dana::fs::bin_tool(tool, dana::fs::self_path().value_or(fs::path{}), dana::fs::find_git_root());
                 if (exe.empty()) {
                     continue;
                 }
@@ -516,4 +516,4 @@ namespace prompt::ai::keys {
         return {value.source.empty() ? "(none)" : value.source, mask(value.key)};
     }
 
-} // namespace prompt::ai::keys
+} // namespace dana::ai::keys

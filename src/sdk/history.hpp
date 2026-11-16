@@ -11,7 +11,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::history {
+namespace dana::history {
 
     // The per-user record of `prompt` invocations. One run is one append-only
     // Markdown file under <root>/runs, with HTML-comment markers framing every
@@ -175,4 +175,4 @@ namespace prompt::history {
     std::string format_time(long long epoch_seconds);
     std::string human_bytes(std::uintmax_t bytes);
 
-} // namespace prompt::history
+} // namespace dana::history

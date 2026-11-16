@@ -22,7 +22,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::alias {
+namespace dana::alias {
 
     namespace fs = std::filesystem;
 
@@ -99,4 +99,4 @@ namespace prompt::alias {
     [[nodiscard]] std::string          encode(table const& aliases);
     [[nodiscard]] std::optional<table> decode(std::string_view text);
 
-} // namespace prompt::alias
+} // namespace dana::alias

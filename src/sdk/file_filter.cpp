@@ -11,7 +11,7 @@
 #include <utility>
 #include <vector>
 
-namespace prompt {
+namespace dana {
 
     namespace fs_std = std::filesystem;
 
@@ -384,4 +384,4 @@ namespace prompt {
         return parse_picked(result.stdout_data, base);
     }
 
-} // namespace prompt
+} // namespace dana

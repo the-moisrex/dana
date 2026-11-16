@@ -8,7 +8,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::ai {
+namespace dana::ai {
 
     bool register_provider(std::unique_ptr<provider> value);
 
@@ -19,4 +19,4 @@ namespace prompt::ai {
     // `perplexity`; nullopt for an unknown name.
     std::optional<std::string> canonical_provider(std::string_view name);
 
-} // namespace prompt::ai
+} // namespace dana::ai

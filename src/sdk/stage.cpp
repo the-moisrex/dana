@@ -4,7 +4,7 @@
 
 #include <utility>
 
-namespace prompt {
+namespace dana {
 
     void stdin_source::load(std::string content) {
         content_ = std::move(content);
@@ -74,4 +74,4 @@ namespace prompt {
         return out;
     }
 
-} // namespace prompt
+} // namespace dana

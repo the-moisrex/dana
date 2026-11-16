@@ -5,7 +5,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::git {
+namespace dana::git {
 
     // Run a git command and return stdout with trailing newlines stripped.
     std::string run(std::vector<std::string> const& args);
@@ -24,4 +24,4 @@ namespace prompt::git {
       std::string_view                diff,
       std::vector<std::string> const& includes,
       std::vector<std::string> const& excludes);
-} // namespace prompt::git
+} // namespace dana::git

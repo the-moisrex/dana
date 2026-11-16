@@ -13,7 +13,7 @@
 #include <utility>
 #include <vector>
 
-namespace prompt::extract {
+namespace dana::extract {
 
     namespace {
 
@@ -1346,4 +1346,4 @@ namespace prompt::extract {
         return {};
     }
 
-} // namespace prompt::extract
+} // namespace dana::extract

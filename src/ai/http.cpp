@@ -22,7 +22,7 @@
 extern "C" CURLcode curl_easy_impersonate(CURL* curl, char const* target, int default_headers);
 #endif
 
-namespace prompt::ai {
+namespace dana::ai {
 
     namespace {
 
@@ -744,4 +744,4 @@ namespace prompt::ai {
         return out;
     }
 
-} // namespace prompt::ai
+} // namespace dana::ai

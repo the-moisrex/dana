@@ -18,7 +18,7 @@
 #include <thread>
 #include <vector>
 
-namespace prompt::ai {
+namespace dana::ai {
 
     namespace {
 
@@ -301,10 +301,10 @@ namespace prompt::ai {
             }
 
             static std::string cli_endpoint() {
-                auto const executable = prompt::fs::bin_tool(
+                auto const executable = dana::fs::bin_tool(
                   "lms",
-                  prompt::fs::self_path().value_or(std::filesystem::path{}),
-                  prompt::fs::find_git_root());
+                  dana::fs::self_path().value_or(std::filesystem::path{}),
+                  dana::fs::find_git_root());
                 if (executable.empty()) {
                     return {};
                 }
@@ -347,4 +347,4 @@ namespace prompt::ai {
     // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
     bool const lms_registered = register_provider(std::make_unique<lms_provider>());
 
-} // namespace prompt::ai
+} // namespace dana::ai

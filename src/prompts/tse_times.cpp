@@ -3,7 +3,7 @@
 #include <ostream>
 #include <string>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     // The TSE/IFB session schedule. Reference data with no instructions of its own,
     // so it is useful standalone or chained onto a data prompt
@@ -46,7 +46,7 @@ Examples:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "tse.times",
       "The pre-open and continuous-trading session times for every Tehran Stock Exchange (TSE) and Iran Fara Bourse "
       "(IFB) instrument category, plus the Sat–Wed trading week. Reference data for reasoning about trading hours; "
@@ -54,4 +54,4 @@ Examples:
       &execute_tse_times,
       &render_help_tse_times);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

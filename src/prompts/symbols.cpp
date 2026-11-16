@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <string>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void execute_symbols(view const& v, result& r) {
         auto opts = file_options_or_throw(v);
@@ -52,11 +52,11 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "symbols",
       "Builds a prompt that reviews symbol names. If file paths are given, it reads those files; "
       "otherwise it reads stdin. Example: `prompt symbols $(fzf)`",
       &execute_symbols,
       &render_help_symbols);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

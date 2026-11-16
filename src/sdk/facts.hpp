@@ -7,7 +7,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt {
+namespace dana {
 
     // The keys the dispatcher and the built-in prompts agree on. A key is a plain
     // string, so a prompt family can publish its own without touching the SDK; the
@@ -147,4 +147,4 @@ namespace prompt {
         std::vector<entry> entries_;
     };
 
-} // namespace prompt
+} // namespace dana

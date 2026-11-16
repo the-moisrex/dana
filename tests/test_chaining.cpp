@@ -10,7 +10,7 @@
 #include <string>
 #include <string_view>
 
-using namespace prompt;
+using namespace dana;
 
 namespace {
 

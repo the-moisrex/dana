@@ -17,7 +17,7 @@
 #include <string>
 #include <string_view>
 
-namespace prompt::ai {
+namespace dana::ai {
 
     struct agent_loop_options {
         // Hard stop; a model that never stops calling tools cannot run forever.
@@ -63,4 +63,4 @@ namespace prompt::ai {
     [[nodiscard]] std::string
     truncate_tool_result(std::string_view text, std::size_t head_lines, std::size_t max_bytes);
 
-} // namespace prompt::ai
+} // namespace dana::ai

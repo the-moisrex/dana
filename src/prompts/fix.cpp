@@ -10,7 +10,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -80,7 +80,7 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "fix",
       "Find the root problem here and propose the smallest useful fix.",
       &execute_fix,
@@ -91,4 +91,4 @@ Options:
       nullptr,
       &declare_fix);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

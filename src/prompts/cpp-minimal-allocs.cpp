@@ -3,7 +3,7 @@
 
 #include <string>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void execute_cpp_minimal_allocations(view const& v, result& r) {
         r.out = R"PROMPT(Reduce the number of heap allocations in this code to the practical minimum.
@@ -28,10 +28,10 @@ Options:
 )EOF" << file_options_help("the embedded context");
     }
 
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "cpp.minimal-allocations",
       "Ask the AI to rewrite this code to use as few heap allocations as possible.",
       &execute_cpp_minimal_allocations,
       &render_help_cpp_minimal_allocations);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

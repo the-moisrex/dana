@@ -16,7 +16,7 @@
 #include <unistd.h>
 #include <vector>
 
-namespace prompt::ai {
+namespace dana::ai {
 
     namespace {
 
@@ -611,4 +611,4 @@ namespace prompt::ai {
     // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
     bool const claude_registered = register_provider(std::make_unique<claude_provider>());
 
-} // namespace prompt::ai
+} // namespace dana::ai

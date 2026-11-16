@@ -2,7 +2,7 @@
 
 #include "sdk/stage.hpp"
 
-namespace prompt {
+namespace dana {
 
     // Build the process-wide environment once, at startup: where the repository is,
     // where this executable lives, and the clipboard/file-picker services a prompt
@@ -11,4 +11,4 @@ namespace prompt {
     // the clipboard it reads (see clipboard::detect_identifier).
     environment make_environment();
 
-} // namespace prompt
+} // namespace dana

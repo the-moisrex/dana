@@ -11,7 +11,7 @@
 #include <string>
 #include <string_view>
 
-namespace prompt::ai {
+namespace dana::ai {
 
     //: Fallback inline budget for a provider that does not declare one.
     inline constexpr std::size_t kDefaultInlineLimit = 64UL * 1024UL;
@@ -56,4 +56,4 @@ namespace prompt::ai {
       bool                     auto_attach,
       std::optional<long long> limit);
 
-} // namespace prompt::ai
+} // namespace dana::ai

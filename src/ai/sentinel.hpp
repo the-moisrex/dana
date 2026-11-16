@@ -11,7 +11,7 @@
 #include <string>
 #include <string_view>
 
-namespace prompt::ai::sentinel {
+namespace dana::ai::sentinel {
 
     // The sentinel gate rejected us, or a puzzle could not be solved.
     class error : public std::runtime_error {
@@ -54,4 +54,4 @@ namespace prompt::ai::sentinel {
     std::string                encode_base64(std::string_view data);
     std::optional<std::string> decode_base64(std::string_view data);
 
-} // namespace prompt::ai::sentinel
+} // namespace dana::ai::sentinel

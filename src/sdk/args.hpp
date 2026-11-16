@@ -12,7 +12,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt {
+namespace dana {
 
     // --head validation: finds "--head" in args, stores its value in head_lines and
     // returns "" on success, or the exact message to print on stderr (the caller
@@ -90,4 +90,4 @@ namespace prompt {
     // carries the files into the chain — a prompt must not embed them a second time.
     file_args collect_file_args(view const& in);
 
-} // namespace prompt
+} // namespace dana

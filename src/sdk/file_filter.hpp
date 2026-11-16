@@ -9,7 +9,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt {
+namespace dana {
 
     // The chain-wide file selection filter, built from the facts `.files.exclude`
     // and `.files.scope` publish:
@@ -86,4 +86,4 @@ namespace prompt {
     // outside a repository) when that stays inside it, absolute otherwise.
     std::string display_path(environment const& env, std::filesystem::path const& path);
 
-} // namespace prompt
+} // namespace dana

@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -21,7 +21,7 @@ namespace prompt::prompts {
                 storage.push_back(p);
             }
 
-            auto                     result = prompt::process::run_command(storage);
+            auto                     result = dana::process::run_command(storage);
             std::vector<std::string> lines;
             std::size_t              start = 0;
             while (start <= result.stdout_data.size()) {
@@ -147,11 +147,11 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_file_prompt(
+    bool const registered = dana::register_file_prompt(
       "ci",
       "CI/CD pipeline review prompt. Automatically finds and embeds all CI/CD configuration "
       "files from the repository (GitHub Actions, GitLab CI, Jenkins, Docker, etc.).",
       &execute_ci,
       &render_help_ci);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

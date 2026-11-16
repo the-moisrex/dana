@@ -9,7 +9,7 @@
 #include <string>
 #include <string_view>
 
-namespace prompt::ai::pow {
+namespace dana::ai::pow {
 
     // The challenge could not be solved within the nonce budget.
     class error : public std::runtime_error {
@@ -38,4 +38,4 @@ namespace prompt::ai::pow {
       long long          answer,
       std::string const& target_path);
 
-} // namespace prompt::ai::pow
+} // namespace dana::ai::pow

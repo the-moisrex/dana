@@ -10,7 +10,7 @@
 #include <unistd.h>
 #include <vector>
 
-namespace prompt::sanitize {
+namespace dana::sanitize {
 
     std::string strip_osc(std::string_view input) {
         // An ESC byte is what every branch of the pattern starts with, so text
@@ -50,7 +50,7 @@ namespace prompt::sanitize {
                     }
                 };
                 auto quote = [](std::string_view raw) {
-                    return prompt::text::regex_escape(raw);
+                    return dana::text::regex_escape(raw);
                 };
 
                 char const* user   = std::getenv("USER");
@@ -112,4 +112,4 @@ namespace prompt::sanitize {
         return {.text = std::move(text), .redacted = redacted};
     }
 
-} // namespace prompt::sanitize
+} // namespace dana::sanitize

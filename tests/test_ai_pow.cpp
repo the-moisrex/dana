@@ -20,7 +20,7 @@ namespace {
     }
 
     void check_hash(std::string const& input, char const* expected, char const* label) {
-        std::string const actual = prompt::ai::pow::deepseek_hash_hex(input);
+        std::string const actual = dana::ai::pow::deepseek_hash_hex(input);
         if (actual == expected) {
             return;
         }
@@ -48,20 +48,19 @@ int main() {
 
     // The solver must find the nonce whose digest the challenge carries.
     std::string const challenge = "262bfabaacdd9c115ae3301ab58a714f3bd5e1f72a7eca314ec223baafdba97d";
-    check(prompt::ai::pow::solve_deepseek("abc", 1'700'000'000, 5, challenge, 1) == 0, "solve finds nonce 0");
+    check(dana::ai::pow::solve_deepseek("abc", 1'700'000'000, 5, challenge, 1) == 0, "solve finds nonce 0");
 
     // A malformed challenge is a hard error, not a silent no-solution loop.
     bool threw = false;
     try {
-        prompt::ai::pow::solve_deepseek("abc", 1'700'000'000, 5, "not-hex", 1);
-    } catch (prompt::ai::pow::error const&) {
+        dana::ai::pow::solve_deepseek("abc", 1'700'000'000, 5, "not-hex", 1);
+    } catch (dana::ai::pow::error const&) {
         threw = true;
     }
     check(threw, "malformed challenge throws");
 
     // The header value is base64 of the compact JSON the site expects.
-    std::string const header =
-      prompt::ai::pow::deepseek_response("salt", challenge, "sig", 0, "/api/v0/chat/completion");
+    std::string const header = dana::ai::pow::deepseek_response("salt", challenge, "sig", 0, "/api/v0/chat/completion");
     check(!header.empty(), "response header is not empty");
     check(header.find('{') == std::string::npos, "response header is base64, not raw JSON");
 

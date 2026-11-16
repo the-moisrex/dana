@@ -11,7 +11,7 @@
 #include <system_error>
 #include <utility>
 
-namespace prompt::alias {
+namespace dana::alias {
 
     namespace {
 
@@ -374,4 +374,4 @@ namespace prompt::alias {
         return aliases;
     }
 
-} // namespace prompt::alias
+} // namespace dana::alias

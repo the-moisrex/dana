@@ -6,7 +6,7 @@
 #include <cstdlib>
 #include <string>
 
-namespace prompt::ai {
+namespace dana::ai {
 
     namespace {
 
@@ -79,4 +79,4 @@ namespace prompt::ai {
         return message;
     }
 
-} // namespace prompt::ai
+} // namespace dana::ai

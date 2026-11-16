@@ -18,7 +18,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::ai::models {
+namespace dana::ai::models {
 
     struct alias {
         std::string_view from;
@@ -49,4 +49,4 @@ namespace prompt::ai::models {
     //: entry; an empty value means the alias explicitly asks for the site default.
     std::optional<std::string_view> resolve_alias(std::string_view provider, std::string_view name);
 
-} // namespace prompt::ai::models
+} // namespace dana::ai::models

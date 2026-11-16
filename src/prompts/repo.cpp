@@ -16,7 +16,7 @@
 #include <utility>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -66,7 +66,7 @@ namespace prompt::prompts {
             }
             tr                               += " --fromfile";
             std::vector<std::string> storage  = {"bash", "-c", ls + " | " + tr};
-            return prompt::process::run_command(storage).stdout_data;
+            return dana::process::run_command(storage).stdout_data;
         }
 
         repo_format parse_format(std::string_view value) {
@@ -305,8 +305,9 @@ namespace prompt::prompts {
         // repo.sh scans every arg for --help/-h itself (before the git check);
         // the native dispatcher already intercepted those before we run.
 
-        if (prompt::process::run_command(std::vector<std::string>{"git", "rev-parse", "--is-inside-work-tree"})
-              .exit_code != 0)
+        if (
+          dana::process::run_command(std::vector<std::string>{"git", "rev-parse", "--is-inside-work-tree"}).exit_code !=
+          0)
         {
             throw soft_error{"prompt repo: Not inside a git repository.\n"};
         }
@@ -392,11 +393,11 @@ Arguments:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "repo",
       "Displays the repository's file structure using only git-tracked files. Useful for giving an AI "
       "a high-level view of the codebase.",
       &execute_repo,
       &render_help_repo);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

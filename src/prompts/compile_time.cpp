@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <string>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void execute_compile_time(view const& v, result& r) {
         auto opts = file_options_or_throw(v);
@@ -51,10 +51,10 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "compile-time",
       "Review C++ code for opportunities to reduce compile time.",
       &execute_compile_time,
       &render_help_compile_time);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

@@ -9,7 +9,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt {
+namespace dana {
 
     // Functions: the third kind of step. A prompt and a sink are compiled in; a
     // function is a named, parameterized chain template the user defines, and it is
@@ -98,4 +98,4 @@ namespace prompt {
     // blocks are legal. A non-empty `error` means print it and exit 2.
     expanded_argv expand_functions(std::span<std::string const> argv, function_table& table, bool allow_chain);
 
-} // namespace prompt
+} // namespace dana

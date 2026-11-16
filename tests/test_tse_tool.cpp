@@ -5,8 +5,8 @@
 #include <string>
 #include <vector>
 
-using namespace prompt;
-namespace tse_data = prompt::prompts::tse_data;
+using namespace dana;
+namespace tse_data = dana::prompts::tse_data;
 
 namespace {
 

@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void execute_gdb(view const& v, result& r) {
         auto opts = file_options_or_throw(v);
@@ -62,7 +62,7 @@ Running the command: `gdb -q --nh -batch -ex "help" -ex "help data" -ex "help br
         storage.emplace_back(
           "gdb -q --nh -batch -ex \"help\" -ex \"help data\" -ex \"help breakpoints\" -ex "
           "\"help tracepoint\" | grep -Ev \"^(Type|Command name|Making program|set )\"");
-        output += prompt::process::run_command(storage).stdout_data;
+        output += dana::process::run_command(storage).stdout_data;
 
         std::string error;
         for (auto const& file : files) {
@@ -91,11 +91,11 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "gdb",
       "Generates a prompt asking the LLM to write a GDB script that helps debug the specified "
       "code (e.g., tracking variables in loops, pretty-printing).",
       &execute_gdb,
       &render_help_gdb);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

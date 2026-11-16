@@ -8,7 +8,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt {
+namespace dana {
 
     struct prompt_invocation {
         std::string_view name;
@@ -46,4 +46,4 @@ namespace prompt {
     // Partition a parsed chain into maximal normal/sink runs.
     chain_plan plan_chain(chain_result const& chain, std::span<prompt_descriptor const> registry);
 
-} // namespace prompt
+} // namespace dana

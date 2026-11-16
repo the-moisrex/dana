@@ -15,7 +15,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::project {
+namespace dana::project {
 
     namespace {
 
@@ -519,4 +519,4 @@ namespace prompt::project {
         return out;
     }
 
-} // namespace prompt::project
+} // namespace dana::project

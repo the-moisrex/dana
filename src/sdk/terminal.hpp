@@ -2,7 +2,7 @@
 
 #include <string>
 
-namespace prompt::terminal {
+namespace dana::terminal {
 
     // A terminal/session identity: what "this terminal" means across separate
     // `prompt` invocations, so a feature can scope itself to one place instead of
@@ -49,4 +49,4 @@ namespace prompt::terminal {
     // the same per-terminal directory.
     std::string scope(id const& value);
 
-} // namespace prompt::terminal
+} // namespace dana::terminal

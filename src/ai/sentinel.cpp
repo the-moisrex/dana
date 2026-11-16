@@ -19,7 +19,7 @@
 #include <utility>
 #include <vector>
 
-namespace prompt::ai::sentinel {
+namespace dana::ai::sentinel {
 
     namespace {
 
@@ -986,4 +986,4 @@ namespace prompt::ai::sentinel {
         return out;
     }
 
-} // namespace prompt::ai::sentinel
+} // namespace dana::ai::sentinel

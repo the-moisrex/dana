@@ -17,7 +17,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::ai {
+namespace dana::ai {
 
     namespace {
 
@@ -572,4 +572,4 @@ namespace prompt::ai {
     // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
     bool const grok_registered = register_provider(std::make_unique<grok_provider>());
 
-} // namespace prompt::ai
+} // namespace dana::ai

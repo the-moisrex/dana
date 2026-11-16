@@ -3,7 +3,7 @@
 #include <ostream>
 #include <string>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void render_help_tse_analyze(std::ostream& os);
 
@@ -124,7 +124,7 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "tse.analyze",
       "Print the institutional-analyst instructions for the TSETMC dataset collected by `tse` — instrument type, "
       "market context (including multi-session breadth), adjusted history and derived technicals, the last session's "
@@ -134,4 +134,4 @@ Options:
       &execute_tse_analyze,
       &render_help_tse_analyze);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

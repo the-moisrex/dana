@@ -8,7 +8,7 @@
 #include <unistd.h>
 
 namespace fs = std::filesystem;
-using prompt::fs::bin_tool;
+using dana::fs::bin_tool;
 
 namespace {
 

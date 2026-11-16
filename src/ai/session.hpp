@@ -12,7 +12,7 @@
 #include <utility>
 #include <vector>
 
-namespace prompt::ai::session {
+namespace dana::ai::session {
 
     class session_error : public std::runtime_error {
       public:
@@ -56,4 +56,4 @@ namespace prompt::ai::session {
     std::optional<std::string> storage_value(match const& value, std::vector<std::string_view> const& keys);
     std::optional<std::string> cookie_value(match const& value, std::string_view name);
 
-} // namespace prompt::ai::session
+} // namespace dana::ai::session

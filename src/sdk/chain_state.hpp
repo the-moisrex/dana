@@ -6,7 +6,7 @@
 #include <string>
 #include <string_view>
 
-namespace prompt {
+namespace dana {
 
     // The dispatcher's single accumulator. `append` is the one text-merge rule
     // (`text::append_block`): trim the block on both sides, skip it when empty, and
@@ -33,4 +33,4 @@ namespace prompt {
         }
     };
 
-} // namespace prompt
+} // namespace dana

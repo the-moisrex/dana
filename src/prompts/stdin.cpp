@@ -4,7 +4,7 @@
 
 #include <string>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void execute_stdin(view const& v, result& r) {
         auto head_lines = head_lines_or_throw(v);
@@ -31,11 +31,11 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "stdin",
       "Read from stdin and embed the content as context for the AI. Pipe something into "
       "this prompt to include it in the AI context.",
       &execute_stdin,
       &render_help_stdin);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

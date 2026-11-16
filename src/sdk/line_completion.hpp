@@ -5,7 +5,7 @@
 #include <span>
 #include <string_view>
 
-namespace prompt {
+namespace dana {
 
     // Whole-line shell completion, the entry point `shell/completions.fish` calls:
     //
@@ -22,4 +22,4 @@ namespace prompt {
                        std::filesystem::path const&      git_root,
                        std::ostream&                     out);
 
-} // namespace prompt
+} // namespace dana

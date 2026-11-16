@@ -6,7 +6,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -412,12 +412,12 @@ namespace prompt::prompts {
           "learn", "ai",   "remote",     "freelance",   "side-project", "content",  "security",
           "cloud", "data", "automation", "health",      "creative",     "all",
         };
-        prompt::completion::write_values(os, req.prefix, kCategories);
+        dana::completion::write_values(os, req.prefix, kCategories);
     }
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "opportunities",
       "Find opportunities in a specific category such as money, tech, cpp, career, or business. Use "
       "the category `all` for a brief overview of every category.",
@@ -425,4 +425,4 @@ namespace prompt::prompts {
       &render_help_opportunities,
       &complete_opportunities);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <string>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void execute_perf(view const& v, result& r) {
         auto opts = file_options_or_throw(v);
@@ -41,6 +41,6 @@ Options:
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
     bool const registered =
-      prompt::register_prompt("perf", "Review this for performance issues.", &execute_perf, &render_help_perf);
+      dana::register_prompt("perf", "Review this for performance issues.", &execute_perf, &render_help_perf);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

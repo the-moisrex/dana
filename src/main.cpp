@@ -75,11 +75,11 @@ namespace {
         std::string clipboard;
 
         void add(std::string_view output, bool no_clipboard) {
-            prompt::text::append_block(text, output);
+            dana::text::append_block(text, output);
             if (no_clipboard) {
                 return;
             }
-            prompt::text::append_block(clipboard, output);
+            dana::text::append_block(clipboard, output);
         }
     };
 
@@ -89,7 +89,7 @@ namespace {
     class output_emitter {
       public:
         void emit(std::string_view output, bool no_clipboard, bool redacted) {
-            output = prompt::text::strip_newlines(output);
+            output = dana::text::strip_newlines(output);
             if (output.empty()) {
                 return;
             }
@@ -98,7 +98,7 @@ namespace {
             }
             first_stdout_ = false;
             if (redacted && !stdout_legend_ && !inner_process) {
-                std::println(std::cout, "{}", prompt::sanitize::kRedactionLegend);
+                std::println(std::cout, "{}", dana::sanitize::kRedactionLegend);
                 stdout_legend_ = true;
             }
             std::println(std::cout, "{}", output);
@@ -111,7 +111,7 @@ namespace {
                 std::print(std::cout, "\n");
             }
             std::cout.flush();
-            output = prompt::text::strip_newlines(output);
+            output = dana::text::strip_newlines(output);
             if (output.empty()) {
                 return;
             }
@@ -137,13 +137,13 @@ namespace {
             if (no_clipboard) {
                 return;
             }
-            if (!prompt::text::append_block(clipboard_, output)) {
+            if (!dana::text::append_block(clipboard_, output)) {
                 return;
             }
             if (redacted && !clipboard_legend_ && !inner_process) {
                 // A one-line header, so it sits directly above the first redacted
                 // block with no blank line between them.
-                clipboard_        = std::string(prompt::sanitize::kRedactionLegend) + "\n" + clipboard_;
+                clipboard_        = std::string(dana::sanitize::kRedactionLegend) + "\n" + clipboard_;
                 clipboard_legend_ = true;
             }
         }
@@ -154,12 +154,12 @@ namespace {
         std::string clipboard_;
     };
 
-    prompt::segment_outcome run_prompt(prompt::view const& in, prompt::prompt_descriptor const& desc) {
-        prompt::result          out;
-        prompt::segment_outcome outcome;
+    dana::segment_outcome run_prompt(dana::view const& in, dana::prompt_descriptor const& desc) {
+        dana::result          out;
+        dana::segment_outcome outcome;
         try {
             desc.execute_fn(in, out);
-            auto clean              = prompt::sanitize::sanitize(out.out);
+            auto clean              = dana::sanitize::sanitize(out.out);
             outcome.out             = std::move(clean.text);
             outcome.redacted        = clean.redacted;
             outcome.no_clipboard    = out.no_clipboard;
@@ -172,8 +172,8 @@ namespace {
             outcome.silent          = out.silent;
             outcome.stdout_streamed = out.stdout_streamed;
             outcome.stderr_streamed = out.stderr_streamed;
-        } catch (prompt::prompt_error const& err) {
-            auto clean              = prompt::sanitize::sanitize(err.partial_output());
+        } catch (dana::prompt_error const& err) {
+            auto clean              = dana::sanitize::sanitize(err.partial_output());
             outcome.out             = std::move(clean.text);
             outcome.redacted        = clean.redacted;
             outcome.no_clipboard    = err.no_clipboard();
@@ -199,7 +199,7 @@ namespace {
         });
     }
 
-    bool invocation_wants_help(prompt::prompt_invocation const& inv) {
+    bool invocation_wants_help(dana::prompt_invocation const& inv) {
         // `.exec -- COMMAND ...` owns the rest of argv, so a command's own `-h`
         // (e.g. `shutdown -h now`) must not turn into this prompt's help request.
         auto args = std::span<std::string_view const>(inv.args);
@@ -211,20 +211,20 @@ namespace {
         return wants_help(args);
     }
 
-    prompt::segment_outcome render_help_result(prompt::prompt_descriptor const& desc) {
-        prompt::segment_outcome outcome;
-        std::ostringstream      help;
+    dana::segment_outcome render_help_result(dana::prompt_descriptor const& desc) {
+        dana::segment_outcome outcome;
+        std::ostringstream    help;
         if (desc.render_help_fn != nullptr) {
             desc.render_help_fn(help);
         }
-        auto clean       = prompt::sanitize::sanitize(help.str());
+        auto clean       = dana::sanitize::sanitize(help.str());
         outcome.out      = std::move(clean.text);
         outcome.redacted = clean.redacted;
         return outcome;
     }
 
-    prompt::segment_outcome failure_result(std::string message) {
-        prompt::segment_outcome outcome;
+    dana::segment_outcome failure_result(std::string message) {
+        dana::segment_outcome outcome;
         outcome.err       = std::move(message);
         outcome.failed    = true;
         outcome.exit_code = 1;
@@ -251,7 +251,7 @@ namespace {
     // What the dispatcher knows about one chain position: its descriptor and the
     // arguments the prompt actually sees (a sink's shared flags are stripped).
     struct segment {
-        prompt::prompt_descriptor const*  desc = nullptr;
+        dana::prompt_descriptor const*    desc = nullptr;
         std::string_view                  name;
         std::vector<std::string_view>     args;
         std::span<std::string_view const> body;
@@ -271,8 +271,8 @@ namespace {
     // other segments of their batch regardless of argv position: a filter written
     // after a file prompt still applies to it. Filter steps emit nothing, so the
     // reorder does not change the output; results stay indexed by argv position.
-    std::vector<std::size_t> batch_execution_order(std::span<segment const>                   segs,
-                                                   std::span<prompt::prompt_invocation const> invs) {
+    std::vector<std::size_t> batch_execution_order(std::span<segment const>                 segs,
+                                                   std::span<dana::prompt_invocation const> invs) {
         auto const is_filter = [&](std::size_t k) {
             return segs[k].desc->filters_files && !invocation_wants_help(invs[k]);
         };
@@ -291,8 +291,8 @@ namespace {
         return order;
     }
 
-    void write_segment(int fd, prompt::segment_outcome const& outcome) {
-        std::string const blob   = prompt::encode_outcome(outcome);
+    void write_segment(int fd, dana::segment_outcome const& outcome) {
+        std::string const blob   = dana::encode_outcome(outcome);
         std::size_t       offset = 0;
         while (offset < blob.size()) {
             auto const n = ::write(fd, blob.data() + offset, blob.size() - offset);
@@ -326,12 +326,12 @@ namespace {
     // in the child, so it may only read state that already exists in the parent.
     // `--help` requests are answered in the parent and keep their argv position.
     // Outcomes come back in argv order regardless of which child finishes first.
-    std::vector<prompt::segment_outcome> run_parallel(std::span<segment const>                           segs,
-                                                      std::function<prompt::view(segment const&)> const& make_view) {
-        std::size_t const                    size = segs.size();
-        std::vector<prompt::segment_outcome> outcomes(size);
-        std::vector<int>                     read_fds(size, -1);
-        std::vector<pid_t>                   children(size, -1);
+    std::vector<dana::segment_outcome> run_parallel(std::span<segment const>                         segs,
+                                                    std::function<dana::view(segment const&)> const& make_view) {
+        std::size_t const                  size = segs.size();
+        std::vector<dana::segment_outcome> outcomes(size);
+        std::vector<int>                   read_fds(size, -1);
+        std::vector<pid_t>                 children(size, -1);
 
         // Fork every segment before reading anything: a prompt must never fork from
         // a multi-threaded parent, and forking up front keeps each child
@@ -366,14 +366,14 @@ namespace {
             children[i] = pid;
         }
 
-        auto const blobs = prompt::drain_all(read_fds);
+        auto const blobs = dana::drain_all(read_fds);
         for (std::size_t i = 0; i < size; ++i) {
             if (children[i] < 0) {
                 continue;
             }
             int status = 0;
             ::waitpid(children[i], &status, 0);
-            if (auto decoded = prompt::decode_outcome(blobs[i])) {
+            if (auto decoded = dana::decode_outcome(blobs[i])) {
                 outcomes[i] = std::move(*decoded);
             } else {
                 outcomes[i] = failure_result("prompt " + std::string(segs[i].name) +
@@ -520,7 +520,7 @@ Notes:
                 line.push_back(arg(i));
             }
             std::ostringstream out;
-            prompt::complete_line(current, line, prompt::fs::find_git_root().value_or(std::filesystem::path{}), out);
+            dana::complete_line(current, line, dana::fs::find_git_root().value_or(std::filesystem::path{}), out);
             std::print(std::cout, "{}", out.str());
             return 0;
         }
@@ -561,9 +561,9 @@ Notes:
             while (!complete_name.empty() && (complete_name.front() == '.' || complete_name.front() == '-')) {
                 complete_name.remove_prefix(1);
             }
-            if (auto const* desc = prompt::find_prompt(complete_name); desc != nullptr) {
+            if (auto const* desc = dana::find_prompt(complete_name); desc != nullptr) {
                 std::ostringstream out;
-                prompt::write_prompt_candidates(*desc, prefix, prior, out);
+                dana::write_prompt_candidates(*desc, prefix, prior, out);
                 std::print(std::cout, "{}", out.str());
             }
             return 0;
@@ -576,15 +576,15 @@ Notes:
 
     // Initialize clipboard
     if (!inner_process) {
-        prompt::clipboard::init();
+        dana::clipboard::init();
     }
 
     // The process-wide environment: built once, never written again.
-    prompt::environment env = prompt::make_environment();
+    dana::environment env = dana::make_environment();
 
     // Read stdin if available: anything that is not a terminal counts as a
     // pipe, so an empty pipe still yields (empty) piped stdin.
-    prompt::stdin_source stdin;
+    dana::stdin_source stdin;
     if (isatty(STDIN_FILENO) == 0) {
         std::string content;
         std::string line;
@@ -599,7 +599,7 @@ Notes:
     // file holds, so chain parsing, sinks, `.each` bodies and the history store
     // below only ever see an ordinary argv (see sdk/prompt_file.hpp).
     std::span<char const* const> argv_span(argv, static_cast<std::size_t>(argc));
-    prompt::expanded_argv expanded = prompt::expand_prompt_files(argv_span, env.git_root, expand_prompt_files_flag);
+    dana::expanded_argv expanded = dana::expand_prompt_files(argv_span, env.git_root, expand_prompt_files_flag);
     if (!expanded.error.empty()) {
         std::println(std::cerr, "{}", expanded.error);
         return 2;
@@ -610,12 +610,12 @@ Notes:
     // They expand to ordinary tokens after prompt files and before chain
     // parsing, so sinks, `.each` bodies and the history store below only ever
     // see a normal argv.
-    prompt::function_table functions;
-    if (std::string function_error; !prompt::load_function_files(functions, env.git_root, function_error)) {
+    dana::function_table functions;
+    if (std::string function_error; !dana::load_function_files(functions, env.git_root, function_error)) {
         std::println(std::cerr, "{}", function_error);
         return 2;
     }
-    expanded = prompt::expand_functions(expanded.storage, functions, true);
+    expanded = dana::expand_functions(expanded.storage, functions, true);
     if (!expanded.error.empty()) {
         std::println(std::cerr, "{}", expanded.error);
         return 2;
@@ -624,7 +624,7 @@ Notes:
     argv_span = std::span<char const* const>(argv_pointers.data(), argv_pointers.size());
 
     // Parse chained prompts
-    auto chain = prompt::parse_chain(argv_span, prompt::get_all_prompts());
+    auto chain = dana::parse_chain(argv_span, dana::get_all_prompts());
     if (!chain.error.empty()) {
         std::println(std::cerr, "{}", chain.error);
         return 2;
@@ -632,7 +632,7 @@ Notes:
 
     // If no prompts found, default to "auto"
     if (chain.invocations.empty()) {
-        chain.invocations.push_back(prompt::prompt_invocation{.name = "auto", .args = {}, .body = {}});
+        chain.invocations.push_back(dana::prompt_invocation{.name = "auto", .args = {}, .body = {}});
     }
 
     std::size_t const    count = chain.invocations.size();
@@ -641,12 +641,12 @@ Notes:
     // The dispatcher owns the common sink flags: parse them once, before any
     // batch runs, and hand the sink only the remaining arguments. This also
     // makes --show-context known before the first segment is emitted.
-    std::vector<std::optional<prompt::sink_args>> sink_args(count);
-    bool                                          has_sink     = false;
-    bool                                          show_context = false;
+    std::vector<std::optional<dana::sink_args>> sink_args(count);
+    bool                                        has_sink     = false;
+    bool                                        show_context = false;
     for (std::size_t i = 0; i < count; ++i) {
         auto const& inv  = chain.invocations[i];
-        auto const* desc = prompt::find_prompt(inv.name);
+        auto const* desc = dana::find_prompt(inv.name);
         if (desc == nullptr) {
             std::println(std::cerr, "prompt: prompt '{}' not found", inv.name);
             return 3;
@@ -656,11 +656,11 @@ Notes:
         segments[i].args = inv.args;
         segments[i].body = inv.body;
 
-        if (desc->role != prompt::chain_role::sink) {
+        if (desc->role != dana::chain_role::sink) {
             continue;
         }
         has_sink    = true;
-        auto parsed = prompt::parse_sink_args(inv.args);
+        auto parsed = dana::parse_sink_args(inv.args);
         if (!parsed.error.empty()) {
             std::print(std::cerr, "prompt {}: {}", inv.name, parsed.error);
             return 2;
@@ -670,7 +670,7 @@ Notes:
         sink_args[i]     = std::move(parsed);
     }
 
-    auto const plan = prompt::plan_chain(chain, prompt::get_all_prompts());
+    auto const plan = dana::plan_chain(chain, dana::get_all_prompts());
     if (!plan.error.empty()) {
         std::println(std::cerr, "prompt: {}", plan.error);
         return 2;
@@ -679,11 +679,11 @@ Notes:
     // A sink asking for help is a terminal help request, not an AI call with
     // the help text as context.
     for (std::size_t i = 0; i < count; ++i) {
-        if (segments[i].desc->role == prompt::chain_role::sink && invocation_wants_help(chain.invocations[i])) {
+        if (segments[i].desc->role == dana::chain_role::sink && invocation_wants_help(chain.invocations[i])) {
             auto outcome = render_help_result(*segments[i].desc);
             std::print(std::cout, "{}", outcome.out);
             if (!inner_process && !outcome.out.empty()) {
-                prompt::clipboard::copy(outcome.out);
+                dana::clipboard::copy(outcome.out);
             }
             return 0;
         }
@@ -693,20 +693,20 @@ Notes:
     // dormant until the first recordable segment, so help requests and the
     // `.history*` family never create a run of their own. Every write is best
     // effort: an unwritable store can never fail a prompt run.
-    prompt::history::recorder history{
-      prompt::history::recorder::info{
-                                      .argv     = argv_strings(argv_span),
-                                      .cwd      = current_directory(),
-                                      .git_root = env.git_root,
-                                      .terminal = prompt::terminal::current(),
-                                      .tty      = ::isatty(STDOUT_FILENO) != 0,
-                                      .inner    = inner_process,
-                                      .parent =
+    dana::history::recorder history{
+      dana::history::recorder::info{
+                                    .argv     = argv_strings(argv_span),
+                                    .cwd      = current_directory(),
+                                    .git_root = env.git_root,
+                                    .terminal = dana::terminal::current(),
+                                    .tty      = ::isatty(STDOUT_FILENO) != 0,
+                                    .inner    = inner_process,
+                                    .parent =
           [] {
               char const* raw = std::getenv("PROMPT_HISTORY_PARENT");
               return raw == nullptr ? std::string{} : std::string(raw);
           }(),
-                                      }
+                                    }
     };
 
     // `.history.purge` protects the run that is being written right now.
@@ -715,21 +715,21 @@ Notes:
     }
 
     auto record_segment =
-      [&](std::size_t                    i,
-          prompt::segment_outcome const& outcome,
-          std::string_view               merge,
-          std::string_view               status,
-          bool                           emitted,
-          std::string_view               input = {}) {
+      [&](std::size_t                  i,
+          dana::segment_outcome const& outcome,
+          std::string_view             merge,
+          std::string_view             status,
+          bool                         emitted,
+          std::string_view             input = {}) {
           if (!segments[i].desc->record) {
               return;
           }
           auto const& inv = chain.invocations[i];
           history.segment(
-            prompt::history::stored_segment{
+            dana::history::stored_segment{
               .index          = i + 1,
               .name           = std::string(inv.name),
-              .role           = segments[i].desc->role == prompt::chain_role::sink ? "sink" : "prompt",
+              .role           = segments[i].desc->role == dana::chain_role::sink ? "sink" : "prompt",
               .args           = std::vector<std::string>(inv.args.begin(), inv.args.end()),
               .body           = std::vector<std::string>(inv.body.begin(), inv.body.end()),
               .merge          = std::string(merge),
@@ -747,27 +747,27 @@ Notes:
     // so parallel siblings can agree on argv-derived identity. A failing
     // declaration is a hint, not an error: the segment falls back to its own
     // arguments at execute time.
-    prompt::facts declared;
+    dana::facts declared;
     for (std::size_t i = 0; i < count; ++i) {
         if (segments[i].desc->declare == nullptr || invocation_wants_help(chain.invocations[i])) {
             continue;
         }
-        prompt::facts local;
+        dana::facts local;
         try {
-            prompt::declaration declaration{
+            dana::declaration declaration{
               .args     = segments[i].args,
               .env      = env,
               .prior    = declared,
               .declared = local,
             };
             segments[i].desc->declare(declaration);
-        } catch (prompt::prompt_error const&) { // NOLINT(bugprone-empty-catch) — best effort
+        } catch (dana::prompt_error const&) { // NOLINT(bugprone-empty-catch) — best effort
         }
         declared.merge(local, false);
     }
 
-    auto merge_prior = [&](prompt::facts const& artifacts) {
-        prompt::facts prior = artifacts;
+    auto merge_prior = [&](dana::facts const& artifacts) {
+        dana::facts prior = artifacts;
         prior.merge(declared, false);
         return prior;
     };
@@ -780,8 +780,8 @@ Notes:
     auto make_view = [&](std::string_view                  name,
                          std::span<std::string_view const> args,
                          std::span<std::string_view const> body,
-                         prompt::facts const&              prior) {
-        return prompt::view{
+                         dana::facts const&                prior) {
+        return dana::view{
           .name  = name,
           .args  = args,
           .text  = {},
@@ -804,7 +804,7 @@ Notes:
         try {
             segments[i].desc->preflight(
               make_view(chain.invocations[i].name, segments[i].args, segments[i].body, prior));
-        } catch (prompt::prompt_error const& err) {
+        } catch (dana::prompt_error const& err) {
             if (!err.partial_output().empty()) {
                 std::print(std::cout, "{}", err.partial_output());
             }
@@ -814,7 +814,7 @@ Notes:
     }
 
     if (!has_sink) {
-        std::vector<prompt::segment_outcome> outcomes(count);
+        std::vector<dana::segment_outcome> outcomes(count);
 
         // Piped stdin is shared with a spend-once rule, so keep that case
         // sequential. Without piped stdin the segments are independent and run
@@ -829,7 +829,7 @@ Notes:
             // Sequential: each segment sees the facts the finished ones
             // published (last writer wins), exactly like the sink path. Filter
             // steps run first so they apply to the whole batch.
-            prompt::facts artifacts;
+            dana::facts artifacts;
             for (std::size_t const i : batch_execution_order(segments, chain.invocations)) {
                 auto const& inv = chain.invocations[i];
                 if (invocation_wants_help(inv)) {
@@ -871,16 +871,16 @@ Notes:
 
         std::string final_output = std::move(accumulator.text);
         if (redacted && !final_output.empty() && !inner_process) {
-            final_output = std::string(prompt::sanitize::kRedactionLegend) + "\n" + final_output;
+            final_output = std::string(dana::sanitize::kRedactionLegend) + "\n" + final_output;
         }
         std::print(std::cout, "{}", final_output);
 
         std::string clip = std::move(accumulator.clipboard);
         if (redacted && !clip.empty() && !inner_process) {
-            clip = std::string(prompt::sanitize::kRedactionLegend) + "\n" + clip;
+            clip = std::string(dana::sanitize::kRedactionLegend) + "\n" + clip;
         }
         if (!inner_process && !clip.empty()) {
-            prompt::clipboard::copy(clip);
+            dana::clipboard::copy(clip);
         }
 
         history.finish(exit_code, false);
@@ -889,12 +889,12 @@ Notes:
 
     // Sink chain: ordinary prompts run in batches; a sink is a barrier whose
     // answer becomes the context later prompts and sinks see.
-    prompt::chain_state state;
-    bool                stdin_pending = stdin.piped();
-    int                 exit_code     = 0;
-    output_emitter      emitter;
+    dana::chain_state state;
+    bool              stdin_pending = stdin.piped();
+    int               exit_code     = 0;
+    output_emitter    emitter;
 
-    auto report_result = [&](prompt::segment_outcome const& outcome) {
+    auto report_result = [&](dana::segment_outcome const& outcome) {
         if (!outcome.err.empty()) {
             std::print(std::cerr, "{}", outcome.err);
         }
@@ -904,8 +904,8 @@ Notes:
     };
 
     auto batch_view =
-      [&](segment const& seg, std::string_view text, prompt::facts const& prior, prompt::stream_config stream) {
-          return prompt::view{
+      [&](segment const& seg, std::string_view text, dana::facts const& prior, dana::stream_config stream) {
+          return dana::view{
             .name   = seg.name,
             .args   = seg.args,
             .text   = text,
@@ -917,17 +917,17 @@ Notes:
           };
       };
 
-    auto run_normal_batch = [&](std::size_t run_index, prompt::chain_run const& run) {
+    auto run_normal_batch = [&](std::size_t run_index, dana::chain_run const& run) {
         std::string batch_context = state.text;
         if (state.redacted && !batch_context.empty() && !inner_process) {
-            batch_context = prepend_block(prompt::sanitize::kRedactionLegend, batch_context);
+            batch_context = prepend_block(dana::sanitize::kRedactionLegend, batch_context);
         }
         auto declarations = merge_prior(state.known);
 
-        std::size_t const                    size = run.end - run.begin;
-        std::vector<prompt::segment_outcome> batch(size);
-        auto const                           run_segments = std::span<segment const>(segments).subspan(run.begin, size);
-        bool const                           parallel = size > 1 && !stdin.available() && !any_sequential(run_segments);
+        std::size_t const                  size = run.end - run.begin;
+        std::vector<dana::segment_outcome> batch(size);
+        auto const                         run_segments = std::span<segment const>(segments).subspan(run.begin, size);
+        bool const                         parallel = size > 1 && !stdin.available() && !any_sequential(run_segments);
         if (parallel) {
             batch = run_parallel(run_segments, [&](segment const& seg) {
                 return batch_view(seg, batch_context, declarations, {});
@@ -939,10 +939,10 @@ Notes:
             // first segment of this batch still sees them (the parallel path
             // passes `declarations`, which is the same base). Filter steps run
             // first so they apply to the whole batch.
-            prompt::facts artifacts = state.known;
+            dana::facts artifacts = state.known;
             for (std::size_t const k : batch_execution_order(
                    run_segments,
-                   std::span<prompt::prompt_invocation const>(chain.invocations).subspan(run.begin, size)))
+                   std::span<dana::prompt_invocation const>(chain.invocations).subspan(run.begin, size)))
             {
                 std::size_t const i   = run.begin + k;
                 auto const&       inv = chain.invocations[i];
@@ -950,9 +950,9 @@ Notes:
                     batch[k] = render_help_result(*segments[i].desc);
                     continue;
                 }
-                prompt::facts effective = merge_prior(artifacts);
-                auto          in        = batch_view(segments[i], batch_context, effective, {});
-                batch[k]                = run_prompt(in, *segments[i].desc);
+                dana::facts effective = merge_prior(artifacts);
+                auto        in        = batch_view(segments[i], batch_context, effective, {});
+                batch[k]              = run_prompt(in, *segments[i].desc);
                 if (!batch[k].failed) {
                     artifacts.merge(batch[k].published, true);
                 }
@@ -1007,10 +1007,10 @@ Notes:
         }
         auto const& opts = sink_args[i]->options;
         if (opts.head_lines) {
-            input = std::string(prompt::trim_context_lines(input, *opts.head_lines));
+            input = std::string(dana::trim_context_lines(input, *opts.head_lines));
         }
         if (state.redacted && !input.empty() && !inner_process) {
-            std::string with_legend  = std::string(prompt::sanitize::kRedactionLegend);
+            std::string with_legend  = std::string(dana::sanitize::kRedactionLegend);
             with_legend             += "\n\n";
             with_legend             += input;
             input                    = std::move(with_legend);
@@ -1024,7 +1024,7 @@ Notes:
           segments[i],
           input,
           declarations,
-          prompt::stream_config{
+          dana::stream_config{
             .stdout_writer =
               [](std::string_view chunk) {
                   std::cout.write(chunk.data(), static_cast<std::streamsize>(chunk.size()));
@@ -1043,7 +1043,7 @@ Notes:
         return run_prompt(in, *segments[i].desc);
     };
 
-    auto emit_sink = [&](prompt::segment_outcome const& outcome) {
+    auto emit_sink = [&](dana::segment_outcome const& outcome) {
         if (outcome.silent) {
             return;
         }
@@ -1054,16 +1054,16 @@ Notes:
         }
     };
 
-    auto update_from_sink = [&](std::size_t i, prompt::segment_outcome const& outcome, std::string_view& merge) {
+    auto update_from_sink = [&](std::size_t i, dana::segment_outcome const& outcome, std::string_view& merge) {
         auto const& opts       = sink_args[i]->options;
-        bool const  has_output = !prompt::text::strip_newlines(outcome.out).empty();
+        bool const  has_output = !dana::text::strip_newlines(outcome.out).empty();
         if (outcome.failed) {
             merge = "abort";
-            if (opts.failure == prompt::sink_failure::abort) {
+            if (opts.failure == dana::sink_failure::abort) {
                 return true;
             }
             merge = "skip";
-            if (opts.failure == prompt::sink_failure::skip) {
+            if (opts.failure == dana::sink_failure::skip) {
                 return false;
             }
             if (has_output) {
@@ -1072,7 +1072,7 @@ Notes:
                     state.append(outcome.out, outcome.redacted);
                 } else {
                     merge      = "replace";
-                    state.text = std::string(prompt::text::strip_newlines(outcome.out));
+                    state.text = std::string(dana::text::strip_newlines(outcome.out));
                     if (!state.text.empty()) {
                         state.text += '\n';
                     }
@@ -1114,7 +1114,7 @@ Notes:
         if (opts.with_context) {
             state.append(outcome.out, outcome.redacted);
         } else {
-            state.text = std::string(prompt::text::strip_newlines(outcome.out));
+            state.text = std::string(dana::text::strip_newlines(outcome.out));
             if (!state.text.empty()) {
                 state.text += '\n';
             }
@@ -1127,9 +1127,9 @@ Notes:
     // A sink that is never invoked cannot explain itself: when the source batch
     // failed and the chain policy stops it, say which sink did not run — so
     // `.save` (and every other sink) never "does nothing" silently.
-    auto note_skipped_sink = [&](std::size_t i, prompt::sink_failure policy) {
+    auto note_skipped_sink = [&](std::size_t i, dana::sink_failure policy) {
         std::string_view name = segments[i].desc->name;
-        if (policy == prompt::sink_failure::abort) {
+        if (policy == dana::sink_failure::abort) {
             std::println(std::cerr,
                          "prompt: .{} not run: an earlier prompt failed; pass --on-error continue to run it anyway",
                          name);
@@ -1141,7 +1141,7 @@ Notes:
     bool chain_aborted = false;
     // A sink the policy never ran still needs a record entry; this is the
     // outcome it would have had (empty, complete, no output).
-    prompt::segment_outcome const skipped_outcome{};
+    dana::segment_outcome const skipped_outcome{};
     for (std::size_t run_index = 0; run_index < plan.runs.size() && !chain_aborted; ++run_index) {
         auto const& run = plan.runs[run_index];
         if (!run.sink) {
@@ -1152,13 +1152,13 @@ Notes:
         for (std::size_t i = run.begin; i < run.end; ++i) {
             auto const& opts = sink_args[i]->options;
             if (state.incomplete) {
-                if (opts.failure == prompt::sink_failure::abort) {
+                if (opts.failure == dana::sink_failure::abort) {
                     note_skipped_sink(i, opts.failure);
                     record_segment(i, skipped_outcome, "skip", "skipped", false);
                     chain_aborted = true;
                     break;
                 }
-                if (opts.failure == prompt::sink_failure::skip) {
+                if (opts.failure == dana::sink_failure::skip) {
                     note_skipped_sink(i, opts.failure);
                     record_segment(i, skipped_outcome, "skip", "skipped", false);
                     continue;
@@ -1182,7 +1182,7 @@ Notes:
               outcome,
               merge,
               outcome.failed ? "failed" : "ok",
-              !outcome.silent && !prompt::text::strip_newlines(outcome.out).empty(),
+              !outcome.silent && !dana::text::strip_newlines(outcome.out).empty(),
               input);
             if (abort) {
                 chain_aborted = true;
@@ -1193,7 +1193,7 @@ Notes:
 
     auto clip = emitter.clipboard();
     if (!inner_process && !clip.empty()) {
-        prompt::clipboard::copy(clip);
+        dana::clipboard::copy(clip);
     }
     history.finish(exit_code, state.incomplete);
     return exit_code;

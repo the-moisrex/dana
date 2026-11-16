@@ -19,7 +19,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void render_help_exec(std::ostream& os);
 
@@ -271,11 +271,11 @@ Examples:
 )EOF";
     }
 
-    bool const registered = prompt::register_sink(
+    bool const registered = dana::register_sink(
       "exec",
       "Run a command or an AI-generated `prompt` chain and continue the chain with its output.",
       &execute_exec,
       &render_help_exec,
       &extract::complete_selector);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

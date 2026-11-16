@@ -9,7 +9,7 @@
 #include <unistd.h>
 #include <vector>
 
-using namespace prompt;
+using namespace dana;
 
 namespace {
 

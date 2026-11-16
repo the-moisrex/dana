@@ -9,7 +9,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::policy {
+namespace dana::policy {
 
     // The command policy. Prompts are trusted code the user typed; the gate is for
     // *commands* (`.exec`, and the `.exec` steps of a `.each` body), because that
@@ -70,4 +70,4 @@ namespace prompt::policy {
         std::vector<rule> rules_;
     };
 
-} // namespace prompt::policy
+} // namespace dana::policy

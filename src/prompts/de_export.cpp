@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -135,11 +135,11 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "de-export",
       "Reduce unnecessary exports from C++20 modules and move implementations out "
       "of headers.",
       &execute_de_export,
       &render_help_de_export);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

@@ -11,20 +11,20 @@
 #include <system_error>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
         // Run `git <args>` in the inherited cwd (git.sh never uses -C / find_git_root
         // for its own git calls, so the output is cwd-relative exactly like the script).
         std::string git_raw(std::vector<std::string> const& args) {
-            return prompt::process::run_command(args).stdout_data;
+            return dana::process::run_command(args).stdout_data;
         }
 
         // ```bash echo "$(git branch --show-current ... || echo detached)"``` only
         // substitutes 'detached' on a non-zero exit, so the exit code matters here.
         std::string git_branch() {
-            auto result = prompt::process::run_command(std::vector<std::string>{"git", "branch", "--show-current"});
+            auto result = dana::process::run_command(std::vector<std::string>{"git", "branch", "--show-current"});
             if (result.exit_code != 0) {
                 return "detached";
             }
@@ -82,8 +82,9 @@ Common scenarios you can help with:
 
         // Embed git status context if in a git repo.
         std::vector<char const*> rev = {"git", "rev-parse", "--is-inside-work-tree", nullptr};
-        if (prompt::process::run_command(std::vector<std::string>{"git", "rev-parse", "--is-inside-work-tree"})
-              .exit_code == 0)
+        if (
+          dana::process::run_command(std::vector<std::string>{"git", "rev-parse", "--is-inside-work-tree"}).exit_code ==
+          0)
         {
             output += "Current git context:\n\n```text\n";
             output += std::format("Branch: {}\n", git_branch());
@@ -130,11 +131,11 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "git",
       "Git workflow assistance prompt. Helps with branching strategies, merge conflicts, rebasing, "
       "bisecting, and other git operations.",
       &execute_git,
       &render_help_git);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

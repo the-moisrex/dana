@@ -37,7 +37,7 @@
 
 namespace {
 
-    using namespace prompt;
+    using namespace dana;
 
     struct ai_provider {
         std::string_view name;
@@ -201,7 +201,7 @@ namespace {
     // The model candidates for one provider, offered after `-m`/`--model` (and for
     // the `--model=` form). Returns true when the token is a model position, so a
     // caller can fall back to its other candidates otherwise.
-    bool complete_ai_model(prompt::completion_request const& request, std::ostream& out, std::string_view provider) {
+    bool complete_ai_model(dana::completion_request const& request, std::ostream& out, std::string_view provider) {
         constexpr std::string_view kModelFlag  = "--model=";
         bool const                 equals_form = request.prefix.starts_with(kModelFlag);
         bool const                 value_position =
@@ -219,69 +219,69 @@ namespace {
         if (equals_form) {
             std::string_view const typed = request.prefix.substr(kModelFlag.size());
             for (auto const& model : models) {
-                if (!prompt::completion::matches(typed, model)) {
+                if (!dana::completion::matches(typed, model)) {
                     continue;
                 }
                 std::string value{kModelFlag};
                 value += model;
-                prompt::completion::write_item(out, value, description(model));
+                dana::completion::write_item(out, value, description(model));
             }
             return true;
         }
         for (auto const& model : models) {
-            if (prompt::completion::matches(request.prefix, model)) {
-                prompt::completion::write_item(out, model, description(model));
+            if (dana::completion::matches(request.prefix, model)) {
+                dana::completion::write_item(out, model, description(model));
             }
         }
         return true;
     }
 
-    void complete_ai_chatgpt(prompt::completion_request const& request, std::ostream& out) {
+    void complete_ai_chatgpt(dana::completion_request const& request, std::ostream& out) {
         complete_ai_model(request, out, "chatgpt");
     }
 
-    void complete_ai_claude(prompt::completion_request const& request, std::ostream& out) {
+    void complete_ai_claude(dana::completion_request const& request, std::ostream& out) {
         complete_ai_model(request, out, "claude");
     }
 
-    void complete_ai_dseek(prompt::completion_request const& request, std::ostream& out) {
+    void complete_ai_dseek(dana::completion_request const& request, std::ostream& out) {
         complete_ai_model(request, out, "dseek");
     }
 
-    void complete_ai_gap(prompt::completion_request const& request, std::ostream& out) {
+    void complete_ai_gap(dana::completion_request const& request, std::ostream& out) {
         complete_ai_model(request, out, "gap");
     }
 
-    void complete_ai_gemini(prompt::completion_request const& request, std::ostream& out) {
+    void complete_ai_gemini(dana::completion_request const& request, std::ostream& out) {
         complete_ai_model(request, out, "gemini");
     }
 
-    void complete_ai_grok(prompt::completion_request const& request, std::ostream& out) {
+    void complete_ai_grok(dana::completion_request const& request, std::ostream& out) {
         complete_ai_model(request, out, "grok");
     }
 
-    void complete_ai_kimi(prompt::completion_request const& request, std::ostream& out) {
+    void complete_ai_kimi(dana::completion_request const& request, std::ostream& out) {
         complete_ai_model(request, out, "kimi");
     }
 
-    void complete_ai_perplexity(prompt::completion_request const& request, std::ostream& out) {
+    void complete_ai_perplexity(dana::completion_request const& request, std::ostream& out) {
         complete_ai_model(request, out, "perplexity");
     }
 
-    void complete_ai_lms(prompt::completion_request const& request, std::ostream& out) {
+    void complete_ai_lms(dana::completion_request const& request, std::ostream& out) {
         complete_ai_model(request, out, "lms");
     }
 
-    void complete_ai_openai(prompt::completion_request const& request, std::ostream& out) {
+    void complete_ai_openai(dana::completion_request const& request, std::ostream& out) {
         complete_ai_model(request, out, "openai");
     }
 
-    void complete_ai_openrouter(prompt::completion_request const& request, std::ostream& out) {
+    void complete_ai_openrouter(dana::completion_request const& request, std::ostream& out) {
         complete_ai_model(request, out, "openrouter");
     }
 
-    void complete_ai_debate(prompt::completion_request const& request, std::ostream& out) {
-        using prompt::completion::item;
+    void complete_ai_debate(dana::completion_request const& request, std::ostream& out) {
+        using dana::completion::item;
         static constexpr std::array<item, 15> kProviders = {
           {
            {.value = "chatgpt", .description = "ChatGPT"},
@@ -312,13 +312,13 @@ namespace {
                 std::string_view const typed    = request.prefix.substr(equals + 1);
                 if (auto const* entry = ai::models::find(provider)) {
                     for (auto const& model : ai::models::list(provider)) {
-                        if (!prompt::completion::matches(typed, model)) {
+                        if (!dana::completion::matches(typed, model)) {
                             continue;
                         }
                         std::string value{provider};
                         value += '=';
                         value += model;
-                        prompt::completion::write_item(
+                        dana::completion::write_item(
                           out,
                           value,
                           std::string_view{model} == entry->default_model ? "default model" : "");
@@ -329,13 +329,13 @@ namespace {
             for (auto const& provider : kProviders) {
                 std::string value{provider.value};
                 value += '=';
-                if (prompt::completion::matches(request.prefix, value)) {
-                    prompt::completion::write_item(out, value, provider.description);
+                if (dana::completion::matches(request.prefix, value)) {
+                    dana::completion::write_item(out, value, provider.description);
                 }
             }
             return;
         }
-        prompt::completion::write_items(out, request.prefix, kProviders);
+        dana::completion::write_items(out, request.prefix, kProviders);
     }
 
     // The state directory `bin/ai/state.py` uses, so `.ai.reply` finds the same
@@ -803,8 +803,8 @@ namespace {
             << "  prompt .note \"...\" .ai.gap.loop --print-prompt\n";
     }
 
-    void complete_ai_loop(prompt::completion_request const& request, std::ostream& out) {
-        using prompt::completion::item;
+    void complete_ai_loop(dana::completion_request const& request, std::ostream& out) {
+        using dana::completion::item;
         static constexpr std::array<item, 15> kProviders = {
           {
            {.value = "chatgpt", .description = "ChatGPT"},
@@ -824,10 +824,10 @@ namespace {
            {.value = "openrouter", .description = "OpenRouter"},
            },
         };
-        if (prompt::completion::write_values_after_flag(out, request, "--provider", kReplyProviders)) {
+        if (dana::completion::write_values_after_flag(out, request, "--provider", kReplyProviders)) {
             return;
         }
-        prompt::completion::write_items(out, request.prefix, kProviders);
+        dana::completion::write_items(out, request.prefix, kProviders);
     }
 
     void execute_ai_argv(
@@ -1168,8 +1168,8 @@ namespace {
         return std::nullopt;
     }
 
-    void complete_ai_reply(prompt::completion_request const& request, std::ostream& out) {
-        using prompt::completion::item;
+    void complete_ai_reply(dana::completion_request const& request, std::ostream& out) {
+        using dana::completion::item;
         static constexpr std::array<item, 15> kProviders = {
           {
            {.value = "chatgpt", .description = "ChatGPT"},
@@ -1189,7 +1189,7 @@ namespace {
            {.value = "openrouter", .description = "OpenRouter"},
            },
         };
-        if (prompt::completion::write_values_after_flag(out, request, "--provider", kReplyProviders)) {
+        if (dana::completion::write_values_after_flag(out, request, "--provider", kReplyProviders)) {
             return;
         }
         if (auto const provider = reply_provider_from_args(request.prior_args)) {
@@ -1202,7 +1202,7 @@ namespace {
             // No provider named yet, so there is no model list to offer.
             return;
         }
-        prompt::completion::write_items(out, request.prefix, kProviders);
+        dana::completion::write_items(out, request.prefix, kProviders);
     }
 
     void render_help_ai(std::ostream& out, ai_provider const& provider) {
@@ -1385,70 +1385,70 @@ namespace {
 
 namespace {
 
-    bool const registered_ai_chatgpt = prompt::register_sink(
+    bool const registered_ai_chatgpt = dana::register_sink(
       "ai.chatgpt",
       "Send the accumulated chain context to ChatGPT and use its answer as the next context.",
       &execute_ai_chatgpt,
       &render_help_ai_chatgpt,
       &complete_ai_chatgpt);
 
-    bool const registered_ai_claude = prompt::register_sink(
+    bool const registered_ai_claude = dana::register_sink(
       "ai.claude",
       "Send the accumulated chain context to Claude and use its answer as the next context.",
       &execute_ai_claude,
       &render_help_ai_claude,
       &complete_ai_claude);
 
-    bool const registered_ai_dseek = prompt::register_sink(
+    bool const registered_ai_dseek = dana::register_sink(
       "ai.dseek",
       "Send the accumulated chain context to DeepSeek and use its answer as the next context.",
       &execute_ai_dseek,
       &render_help_ai_dseek,
       &complete_ai_dseek);
 
-    bool const registered_ai_gap = prompt::register_sink(
+    bool const registered_ai_gap = dana::register_sink(
       "ai.gap",
       "Send the accumulated chain context to GapGPT and use its answer as the next context.",
       &execute_ai_gap,
       &render_help_ai_gap,
       &complete_ai_gap);
 
-    bool const registered_ai_gemini = prompt::register_sink(
+    bool const registered_ai_gemini = dana::register_sink(
       "ai.gemini",
       "Send the accumulated chain context to Gemini and use its answer as the next context.",
       &execute_ai_gemini,
       &render_help_ai_gemini,
       &complete_ai_gemini);
 
-    bool const registered_ai_grok = prompt::register_sink(
+    bool const registered_ai_grok = dana::register_sink(
       "ai.grok",
       "Send the accumulated chain context to Grok and use its answer as the next context.",
       &execute_ai_grok,
       &render_help_ai_grok,
       &complete_ai_grok);
 
-    bool const registered_ai_kimi = prompt::register_sink(
+    bool const registered_ai_kimi = dana::register_sink(
       "ai.kimi",
       "Send the accumulated chain context to Kimi and use its answer as the next context.",
       &execute_ai_kimi,
       &render_help_ai_kimi,
       &complete_ai_kimi);
 
-    bool const registered_ai_perplexity = prompt::register_sink(
+    bool const registered_ai_perplexity = dana::register_sink(
       "ai.perplexity",
       "Send the accumulated chain context to Perplexity and use its answer as the next context.",
       &execute_ai_perplexity,
       &render_help_ai_perplexity,
       &complete_ai_perplexity);
 
-    bool const registered_ai_lms = prompt::register_sink(
+    bool const registered_ai_lms = dana::register_sink(
       "ai.lms",
       "Send the accumulated chain context to a local LM Studio model and use its answer as the next context.",
       &execute_ai_lms,
       &render_help_ai_lms,
       &complete_ai_lms);
 
-    bool const registered_ai_openai = prompt::register_sink(
+    bool const registered_ai_openai = dana::register_sink(
       "ai.openai",
       "Send the accumulated chain context to the OpenAI API (or any OpenAI-compatible endpoint) and use its answer as "
       "the next context.",
@@ -1456,21 +1456,21 @@ namespace {
       &render_help_ai_openai,
       &complete_ai_openai);
 
-    bool const registered_ai_openrouter = prompt::register_sink(
+    bool const registered_ai_openrouter = dana::register_sink(
       "ai.openrouter",
       "Send the accumulated chain context to OpenRouter and use its answer as the next context.",
       &execute_ai_openrouter,
       &render_help_ai_openrouter,
       &complete_ai_openrouter);
 
-    bool const registered_ai_debate = prompt::register_sink(
+    bool const registered_ai_debate = dana::register_sink(
       "ai.debate",
       "Ask two or more AIs the same question and let them verify each other's answers, round after round.",
       &execute_ai_debate,
       &render_help_ai_debate,
       &complete_ai_debate);
 
-    bool const registered_ai_reply = prompt::register_sink(
+    bool const registered_ai_reply = dana::register_sink(
       "ai.reply",
       "Reply in the last AI chat from this terminal and use its answer as the next context.",
       &execute_ai_reply,
@@ -1479,84 +1479,84 @@ namespace {
 
     // The agentic loop: `.ai.loop` plus one alias per provider, so the provider is
     // part of the prompt name and the model sees the same tools either way.
-    bool const registered_ai_loop = prompt::register_sink(
+    bool const registered_ai_loop = dana::register_sink(
       "ai.loop",
       "Let the AI read and edit files and run commands, turn after turn, until the task is done.",
       &execute_ai_loop,
       &render_help_ai_loop,
       &complete_ai_loop);
 
-    bool const registered_ai_chatgpt_loop = prompt::register_sink(
+    bool const registered_ai_chatgpt_loop = dana::register_sink(
       "ai.chatgpt.loop",
       "Agentic tool loop on ChatGPT: it reads and edits files and runs commands until done.",
       &execute_ai_loop,
       &render_help_ai_loop,
       &complete_ai_loop);
 
-    bool const registered_ai_claude_loop = prompt::register_sink(
+    bool const registered_ai_claude_loop = dana::register_sink(
       "ai.claude.loop",
       "Agentic tool loop on Claude: it reads and edits files and runs commands until done.",
       &execute_ai_loop,
       &render_help_ai_loop,
       &complete_ai_loop);
 
-    bool const registered_ai_dseek_loop = prompt::register_sink(
+    bool const registered_ai_dseek_loop = dana::register_sink(
       "ai.dseek.loop",
       "Agentic tool loop on DeepSeek: it reads and edits files and runs commands until done.",
       &execute_ai_loop,
       &render_help_ai_loop,
       &complete_ai_loop);
 
-    bool const registered_ai_gap_loop = prompt::register_sink(
+    bool const registered_ai_gap_loop = dana::register_sink(
       "ai.gap.loop",
       "Agentic tool loop on GapGPT: it reads and edits files and runs commands until done.",
       &execute_ai_loop,
       &render_help_ai_loop,
       &complete_ai_loop);
 
-    bool const registered_ai_gemini_loop = prompt::register_sink(
+    bool const registered_ai_gemini_loop = dana::register_sink(
       "ai.gemini.loop",
       "Agentic tool loop on Gemini: it reads and edits files and runs commands until done.",
       &execute_ai_loop,
       &render_help_ai_loop,
       &complete_ai_loop);
 
-    bool const registered_ai_grok_loop = prompt::register_sink(
+    bool const registered_ai_grok_loop = dana::register_sink(
       "ai.grok.loop",
       "Agentic tool loop on Grok: it reads and edits files and runs commands until done.",
       &execute_ai_loop,
       &render_help_ai_loop,
       &complete_ai_loop);
 
-    bool const registered_ai_kimi_loop = prompt::register_sink(
+    bool const registered_ai_kimi_loop = dana::register_sink(
       "ai.kimi.loop",
       "Agentic tool loop on Kimi: it reads and edits files and runs commands until done.",
       &execute_ai_loop,
       &render_help_ai_loop,
       &complete_ai_loop);
 
-    bool const registered_ai_perplexity_loop = prompt::register_sink(
+    bool const registered_ai_perplexity_loop = dana::register_sink(
       "ai.perplexity.loop",
       "Agentic tool loop on Perplexity: it reads and edits files and runs commands until done.",
       &execute_ai_loop,
       &render_help_ai_loop,
       &complete_ai_loop);
 
-    bool const registered_ai_lms_loop = prompt::register_sink(
+    bool const registered_ai_lms_loop = dana::register_sink(
       "ai.lms.loop",
       "Agentic tool loop on a local LM Studio model: it reads and edits files and runs commands.",
       &execute_ai_loop,
       &render_help_ai_loop,
       &complete_ai_loop);
 
-    bool const registered_ai_openai_loop = prompt::register_sink(
+    bool const registered_ai_openai_loop = dana::register_sink(
       "ai.openai.loop",
       "Agentic tool loop on the OpenAI API: it reads and edits files and runs commands until done.",
       &execute_ai_loop,
       &render_help_ai_loop,
       &complete_ai_loop);
 
-    bool const registered_ai_openrouter_loop = prompt::register_sink(
+    bool const registered_ai_openrouter_loop = dana::register_sink(
       "ai.openrouter.loop",
       "Agentic tool loop on OpenRouter: it reads and edits files and runs commands until done.",
       &execute_ai_loop,

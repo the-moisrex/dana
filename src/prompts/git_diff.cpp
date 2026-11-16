@@ -14,12 +14,12 @@
 #include <system_error>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
         std::string git_raw(std::vector<std::string> const& args) {
-            return prompt::process::run_command(args).stdout_data;
+            return dana::process::run_command(args).stdout_data;
         }
 
         std::string strip_trailing_newlines(std::string_view s) {
@@ -127,8 +127,9 @@ namespace prompt::prompts {
     static void execute_git_diff(view const& v, result& r) {
         auto opts = file_options_or_throw(v);
 
-        if (prompt::process::run_command(std::vector<std::string>{"git", "rev-parse", "--is-inside-work-tree"})
-              .exit_code != 0)
+        if (
+          dana::process::run_command(std::vector<std::string>{"git", "rev-parse", "--is-inside-work-tree"}).exit_code !=
+          0)
         {
             throw soft_error{"prompt git.diff: Error: Not inside a git repository.\n"};
         }
@@ -157,7 +158,7 @@ namespace prompt::prompts {
             }
             std::string diff_output = strip_trailing_newlines(git_raw(args));
             if (!filter.exclude().empty()) {
-                diff_output = prompt::git::filter_diff_by_path(diff_output, {}, filter.exclude());
+                diff_output = dana::git::filter_diff_by_path(diff_output, {}, filter.exclude());
             }
             if (!diff_output.empty()) {
                 output += "Diffs:\n\n```diff\n";
@@ -182,7 +183,7 @@ namespace prompt::prompts {
             std::string untracked_stripped = strip_trailing_newlines(untracked);
 
             if (!filter.exclude().empty()) {
-                unstaged_diff = prompt::git::filter_diff_by_path(unstaged_diff, {}, filter.exclude());
+                unstaged_diff = dana::git::filter_diff_by_path(unstaged_diff, {}, filter.exclude());
             }
 
             if (!unstaged_diff.empty()) {
@@ -242,11 +243,11 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_prompt(
+    bool const registered = dana::register_prompt(
       "git.diff",
       "Shows Git diffs for the specified files. If no files are provided, shows all unstaged changes "
       "and untracked files.",
       &execute_git_diff,
       &render_help_git_diff);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

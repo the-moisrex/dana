@@ -4,7 +4,7 @@
 #include <iostream>
 #include <string>
 
-namespace prompt::ai {
+namespace dana::ai {
 
     namespace {
 
@@ -44,4 +44,4 @@ namespace prompt::ai {
         return code;
     }
 
-} // namespace prompt::ai
+} // namespace dana::ai

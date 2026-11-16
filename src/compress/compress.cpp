@@ -15,7 +15,7 @@
 #include <string_view>
 #include <utility>
 
-namespace prompt::compress {
+namespace dana::compress {
 
     namespace {
 
@@ -574,4 +574,4 @@ namespace prompt::compress {
         return lines;
     }
 
-} // namespace prompt::compress
+} // namespace dana::compress

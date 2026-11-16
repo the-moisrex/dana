@@ -4,7 +4,7 @@
 
 #include <string>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void execute_note(view const& v, result& r) {
         std::optional<std::size_t>    head_lines;
@@ -18,7 +18,7 @@ namespace prompt::prompts {
                 if (i + 1 >= v.args.size()) {
                     throw usage_error{"Missing value for --head\n"};
                 }
-                head_lines = prompt::text::to_size(v.args[++i], 0);
+                head_lines = dana::text::to_size(v.args[++i], 0);
             } else if (v.args[i] == "--prepend" || v.args[i] == "-p") {
                 prepend = true;
             } else {
@@ -72,6 +72,6 @@ Options:
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
     bool const registered =
-      prompt::register_prompt("note", "Add a note to the prompt.", &execute_note, &render_help_note);
+      dana::register_prompt("note", "Add a note to the prompt.", &execute_note, &render_help_note);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

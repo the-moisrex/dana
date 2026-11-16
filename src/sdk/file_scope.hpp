@@ -8,7 +8,7 @@
 #include <unordered_set>
 #include <vector>
 
-namespace prompt {
+namespace dana {
 
     // The canonical key for a file path: the absolute, symlink-resolved form when
     // the filesystem can answer, otherwise the absolute lexically-normal path. Two
@@ -36,4 +36,4 @@ namespace prompt {
         std::unordered_set<std::string> set_;
     };
 
-} // namespace prompt
+} // namespace dana

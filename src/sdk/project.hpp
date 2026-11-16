@@ -9,7 +9,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::project {
+namespace dana::project {
 
     // The shape of a project, as enums rather than free-form strings: a compressor
     // branches on `build == build_system::cmake`, not on a string compare, and
@@ -113,4 +113,4 @@ namespace prompt::project {
     // A compact one-or-two-line summary, for `.project` and the compression legend.
     [[nodiscard]] std::string summary_line(info const& value);
 
-} // namespace prompt::project
+} // namespace dana::project

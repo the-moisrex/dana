@@ -14,14 +14,14 @@
 #include <unistd.h>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
         // bash captures with `2>/dev/null` — the tool's diagnostics never reach the
         // user (git_raw is for `$(...)` of a command that may legitimately fail).
         std::string git_raw(std::vector<std::string> const& args) {
-            return prompt::process::command{args}.discard_stderr().run().stdout_data;
+            return dana::process::command{args}.discard_stderr().run().stdout_data;
         }
 
         std::string strip_trailing_newlines(std::string_view s) {
@@ -176,8 +176,9 @@ namespace prompt::prompts {
     static void execute_git_worktree_files(view const& v, result& r) {
         auto opts = file_options_or_throw(v);
 
-        if (prompt::process::run_command(std::vector<std::string>{"git", "rev-parse", "--is-inside-work-tree"})
-              .exit_code != 0)
+        if (
+          dana::process::run_command(std::vector<std::string>{"git", "rev-parse", "--is-inside-work-tree"}).exit_code !=
+          0)
         {
             throw soft_error{"prompt git.worktree.files: Error: Not inside a git repository.\n"};
         }
@@ -316,7 +317,7 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = prompt::register_file_prompt(
+    bool const registered = dana::register_file_prompt(
       "git.worktree.files",
       "Embeds files changed since the upstream branch as Markdown code blocks. By default, compares "
       "against the upstream tracking branch (or origin/main). Explicit FILE arguments restrict "
@@ -324,4 +325,4 @@ Options:
       &execute_git_worktree_files,
       &render_help_git_worktree_files);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

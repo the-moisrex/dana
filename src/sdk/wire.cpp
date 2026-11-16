@@ -8,7 +8,7 @@
 #include <poll.h>
 #include <unistd.h>
 
-namespace prompt {
+namespace dana {
 
     namespace {
 
@@ -183,4 +183,4 @@ namespace prompt {
         return blobs;
     }
 
-} // namespace prompt
+} // namespace dana

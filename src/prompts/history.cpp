@@ -19,7 +19,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     namespace {
 
@@ -913,7 +913,7 @@ Options:
 
     // This file is the prompt: it registers its entry points at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered_history = prompt::register_prompt(
+    bool const registered_history = dana::register_prompt(
       "history",
       "Print a recorded prompt run: the answer/text a previous invocation produced, by id, rank or segment.",
       &execute_history_entry,
@@ -926,7 +926,7 @@ Options:
       false,
       false);
 
-    bool const registered_history_last = prompt::register_prompt(
+    bool const registered_history_last = dana::register_prompt(
       "history.last",
       "Print the newest recorded run from this terminal, to chain into a later invocation.",
       &execute_history_last_entry,
@@ -939,7 +939,7 @@ Options:
       false,
       false);
 
-    bool const registered_last = prompt::register_prompt(
+    bool const registered_last = dana::register_prompt(
       "last",
       "Print the newest recorded run from this terminal, to chain into a later invocation.",
       &execute_history_last_entry,
@@ -952,7 +952,7 @@ Options:
       false,
       false);
 
-    bool const registered_history_list = prompt::register_prompt(
+    bool const registered_history_list = dana::register_prompt(
       "history.list",
       "List recorded prompt runs, newest first: id, start time, exit status, segments, size.",
       &execute_history_list_entry,
@@ -965,7 +965,7 @@ Options:
       false,
       false);
 
-    bool const registered_history_dir = prompt::register_prompt(
+    bool const registered_history_dir = dana::register_prompt(
       "history.dir",
       "Print the directory that holds the recorded prompt runs.",
       &execute_history_dir_entry,
@@ -978,7 +978,7 @@ Options:
       false,
       false);
 
-    bool const registered_last_ai = prompt::register_prompt(
+    bool const registered_last_ai = dana::register_prompt(
       "last.ai",
       "Print the newest AI answer from this terminal, to chain into a later invocation.",
       &execute_last_ai_entry,
@@ -991,7 +991,7 @@ Options:
       false,
       false);
 
-    bool const registered_history_ai = prompt::register_prompt(
+    bool const registered_history_ai = dana::register_prompt(
       "history.ai",
       "Print the newest AI answer from this terminal, to chain into a later invocation.",
       &execute_last_ai_entry,
@@ -1003,4 +1003,4 @@ Options:
       nullptr,
       false,
       false);
-} // namespace prompt::prompts
+} // namespace dana::prompts

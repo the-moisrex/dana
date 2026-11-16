@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-namespace prompt {
+namespace dana {
 
     namespace {
         // Every prompt is native. The catalog is fixed at build time; register_prompt
@@ -227,4 +227,4 @@ namespace prompt {
           keeps_stdin);
     }
 
-} // namespace prompt
+} // namespace dana

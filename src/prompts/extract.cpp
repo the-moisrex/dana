@@ -15,7 +15,7 @@
 #include <utility>
 #include <vector>
 
-namespace prompt::prompts {
+namespace dana::prompts {
 
     static void render_help_extract(std::ostream& os);
 
@@ -186,7 +186,7 @@ Examples:
 )EOF";
     }
 
-    bool const registered = prompt::register_sink(
+    bool const registered = dana::register_sink(
       "extract",
       "Take tables, code blocks, sections, commands or labelled values out of the chain context, using the shape the "
       "AI "
@@ -195,4 +195,4 @@ Examples:
       &render_help_extract,
       &extract::complete_selector);
 
-} // namespace prompt::prompts
+} // namespace dana::prompts

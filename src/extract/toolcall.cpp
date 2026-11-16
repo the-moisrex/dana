@@ -8,7 +8,7 @@
 #include <string_view>
 #include <vector>
 
-namespace prompt::extract {
+namespace dana::extract {
 
     namespace {
 
@@ -50,4 +50,4 @@ namespace prompt::extract {
       .contract = &contract_toolcall,
     });
 
-} // namespace prompt::extract
+} // namespace dana::extract

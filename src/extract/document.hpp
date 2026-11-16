@@ -13,7 +13,7 @@
 #include <utility>
 #include <vector>
 
-namespace prompt::extract {
+namespace dana::extract {
 
     struct block {
         std::string                              kind; // "code" | "table" | "section" | "frontmatter"
@@ -66,4 +66,4 @@ namespace prompt::extract {
     [[nodiscard]] std::size_t count_lines(std::string_view text);
     [[nodiscard]] std::string first_line(std::string_view text, std::size_t limit);
 
-} // namespace prompt::extract
+} // namespace dana::extract
