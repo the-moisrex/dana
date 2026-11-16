@@ -1,0 +1,60 @@
+#include "../sdk/args.hpp"
+#include "../sdk/embed.hpp"
+#include "../sdk/prompt_registry.hpp"
+#include <filesystem>
+#include <string>
+
+namespace prompt::prompts {
+
+static void execute_symbols(view const& v, result& r) {
+    auto opts = file_options_or_throw(v);
+
+    std::string output = R"PROMPT(Review the symbols in this code and find bad names that should be renamed.
+Focus on unclear, misleading, overly abbreviated, inconsistent, or non-idiomatic symbol names.
+For each rename suggestion, provide the current name, the proposed new name, and the reason in a table.
+Only suggest renames that materially improve readability or maintainability.
+)PROMPT";
+
+    // symbols.sh tests $#, which is the script's whole argument list (bash's
+    // parse_arguments shifts the function's own parameters, not the caller's
+    // ones) — so even a bare `--head N` selects the "files" wording.
+    if (!v.args.empty()) {
+        output += "At the end, provide a git diff that applies the renames in the provided files.\n";
+    } else {
+        output += "At the end, provide a git diff that applies the renames.\n";
+    }
+
+    std::string error;
+    auto sources = collect_file_args(v);
+    for (auto const& file : sources.files) {
+        output += std::format("\nFile: {}\n```{}\n", file.filename().string(), infer_lang(file));
+        output += number_lines(trim_context_nl(read_file(file), opts.head_lines), opts.numbered);
+        output += "\n```\n";
+    }
+    for (auto arg : sources.missing) {
+        error += std::format("Warning: File not found or is not a regular file: {}\n", std::string(arg));
+    }
+
+    r.out = std::move(output);
+    r.err = std::move(error);
+}
+
+static void render_help_symbols(std::ostream& os) {
+    os << file_usage_help("symbols") << R"EOF(
+Builds a prompt that reviews symbol names.
+If file paths are given, it reads those files; otherwise it reads stdin.
+Example: `prompt symbols $(fzf)`
+
+Options:
+)EOF" << file_options_help("the embedded context");
+}
+
+// This file is the prompt: it implements it and registers it at static-init time
+// (no central list — see sdk/prompt_registry.hpp).
+bool const registered =
+    prompt::register_prompt("symbols",
+                            "Builds a prompt that reviews symbol names. If file paths are given, it reads those files; "
+                            "otherwise it reads stdin. Example: `prompt symbols $(fzf)`",
+                            &execute_symbols, &render_help_symbols);
+
+} // namespace prompt::prompts

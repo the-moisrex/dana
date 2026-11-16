@@ -1,0 +1,102 @@
+#include "../sdk/prompt_registry.hpp"
+#include <ostream>
+#include <string>
+
+namespace prompt::prompts {
+
+static void render_help_plan(std::ostream& os);
+
+// The plan-mode instructions. Deliberately data-free: it takes no arguments and
+// embeds nothing, so `prompt .files a.cpp .plan` adds the code exactly once
+// (from `.files`) and then these instructions.
+static void execute_plan(view const& v, result& r) {
+    if (!v.args.empty()) {
+        throw usage_error{"prompt plan: takes no arguments — it only prints the plan-mode instructions.\n"
+                          "Chain it after a file prompt, e.g. `prompt .files a.cpp .plan`.\n" +
+                          help_text(render_help_plan)};
+    }
+
+    r.out =
+        R"HELP(You are in PLAN MODE. Your goal is to produce a detailed, decision-complete
+implementation plan before writing any code.
+
+Work through these phases in order. Ask the user questions at any point when
+something is unclear or you need more context.
+
+## Phase 1: Understand
+
+- Ask the user to describe the goal and paste any relevant code, configs,
+  error messages, or file contents.
+- Do not guess what the code looks like. If you need to see specific files,
+  ask the user to paste them.
+- Summarize what you understand so far and confirm with the user.
+
+## Phase 2: Clarify
+
+- Ask specific, targeted questions about requirements, constraints, edge
+  cases, and success criteria.
+- Identify any missing context: Which languages, frameworks, or tools are
+  in use? What are the compatibility targets?
+- Resolve ambiguities before moving on.
+
+## Phase 3: Explore
+
+- Analyze the code the user provided. Identify patterns, conventions,
+  naming styles, and existing abstractions.
+- Note any related areas that may be affected but were not provided.
+  Ask the user to paste those if needed.
+- Identify risks, dependencies, and potential breaking changes.
+
+## Phase 4: Design
+
+- Consider at least two viable approaches. Briefly explain the tradeoffs
+  of each.
+- Choose one approach and justify the choice.
+- State any assumptions you are making.
+
+## Phase 5: Plan
+
+Produce a structured plan with these sections:
+
+- **Goal** - What we are building and why
+- **Success criteria** - How we will know it is done
+- **Approach** - The chosen design and why
+- **Alternatives considered** - Other options and why they were not chosen
+- **Implementation steps** - Concrete, ordered steps with enough detail to
+  execute without further questions
+- **Files to change** - Specific files and what changes they need
+- **Risks** - What could go wrong and how to mitigate it
+- **Test plan** - How to verify correctness
+- **Assumptions** - What you are assuming (and what needs confirmation)
+
+## Rules
+
+- Do NOT write any code or make changes yet.
+- Ask the user to paste code rather than assuming you can access files.
+- Be specific: reference file names, function names, and line numbers when
+  discussing existing code.
+- If a step in the plan is unclear, flag it instead of guessing.
+- Keep the plan concise enough to scan quickly but detailed enough to
+  execute without further questions.
+)HELP";
+}
+
+static void render_help_plan(std::ostream& os) {
+    os << R"EOF(Usage: prompt plan
+
+Generates a structured plan mode prompt for an AI assistant. The AI is instructed to ask clarifying questions, analyze the code in the prompt, and produce a detailed implementation plan before writing any code.
+
+This prompt carries no data and takes no arguments: chain it after a file prompt, e.g. `prompt .files a.cpp .plan`. Designed for chat mode where the AI cannot access files directly.
+)EOF";
+}
+
+// This file is the prompt: it implements it and registers it at static-init time
+// (no central list — see sdk/prompt_registry.hpp).
+bool const registered =
+    prompt::register_prompt("plan",
+                            "Generates a structured plan mode prompt for an AI assistant. The AI is instructed "
+                            "to ask clarifying questions, analyze the code in the prompt, and produce a detailed "
+                            "implementation plan before writing any code.",
+                            &execute_plan, &render_help_plan);
+
+} // namespace prompt::prompts
