@@ -1,0 +1,26 @@
+CompileFlags:
+    Add:
+        [
+            -std=c++26,
+            -I./,
+            -W,
+            -Wall,
+            -Wextra,
+            -Wpedantic,
+            -Wno-unused-function,
+            -Wno-unused-template,
+            -Wno-infinite-recursion,
+            -Werror=implicit-function-declaration,
+            -Wshadow,
+            -Wno-shadow-field-in-constructor-modified,
+            -Wno-shadow-ivar,
+            -Wuninitialized,
+            -Wunused-label,
+            -Wunused-lambda-capture,
+        ]
+    CompilationDatabase: ./build-clang
+Index:
+    Background: Build
+    StandardLibrary: Yes
+Hover:
+    ShowAKA: Yes

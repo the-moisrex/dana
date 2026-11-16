@@ -10,7 +10,7 @@
         {
             "name": "dev",
             "inherits": "default",
-            "binaryDir": "${sourceDir}/build-asan",
+            "binaryDir": "${sourceDir}/build-debug",
             "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
         }
     ],
