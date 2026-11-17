@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -83,4 +83,4 @@ Options:
       &execute_cppman,
       &render_help_cppman);
 
-} // namespace dana::prompts
+} // namespace dana

@@ -11,7 +11,7 @@
 #include <string_view>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -153,4 +153,4 @@ Options:
       &execute_git_worktree_diff,
       &render_help_git_worktree_diff);
 
-} // namespace dana::prompts
+} // namespace dana

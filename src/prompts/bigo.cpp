@@ -3,7 +3,7 @@
 #include <ostream>
 #include <string>
 
-namespace dana::prompts {
+namespace dana {
 
     static void render_help_bigo(std::ostream& os);
 
@@ -44,4 +44,4 @@ Asks the AI to calculate the Big O time and space complexity of the algorithms i
       &execute_bigo,
       &render_help_bigo);
 
-} // namespace dana::prompts
+} // namespace dana

@@ -2,7 +2,7 @@
 
 #include <string>
 
-namespace dana::prompts {
+namespace dana {
 
     static void execute_farsi([[maybe_unused]] view const& v, result& r) {
         r.out = "Translate to Farsi; no explanations, no comments, no extra text, just the translation.\n\n";
@@ -23,4 +23,4 @@ Options:
     // (no central list — see sdk/prompt_registry.hpp).
     bool const registered = dana::register_prompt("farsi", "Translate to Farsi.", &execute_farsi, &render_help_farsi);
 
-} // namespace dana::prompts
+} // namespace dana

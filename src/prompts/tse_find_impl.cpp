@@ -15,7 +15,7 @@
 #include <system_error>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -897,4 +897,4 @@ print(command)
         os << kHelpText;
     }
 
-} // namespace dana::prompts
+} // namespace dana

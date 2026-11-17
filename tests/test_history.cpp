@@ -80,8 +80,7 @@ namespace {
         return s;
     }
 
-    recorder make_recorder(std::vector<std::string> argv  = {"prompt", ".note", "hi"},
-                                    terminal::id             where = {}) {
+    recorder make_recorder(std::vector<std::string> argv = {"prompt", ".note", "hi"}, terminal::id where = {}) {
         recorder::info info;
         info.argv     = std::move(argv);
         info.cwd      = "/tmp/work";
@@ -182,9 +181,7 @@ namespace {
         check_eq(second.input, "hello\n\nand more from stdin\n", "a differing barrier input is stored");
 
         check_eq(final_output(*run), "an answer\n", "the final output is the emitted segment");
-        check_eq(barrier_input(*run, 2),
-                 "hello\n\nand more from stdin\n",
-                 "the stored barrier input is returned");
+        check_eq(barrier_input(*run, 2), "hello\n\nand more from stdin\n", "the stored barrier input is returned");
         // A segment with no stored input replays the recorded merges.
         check_eq(barrier_input(*run, 1), "", "the first segment sees an empty context");
 

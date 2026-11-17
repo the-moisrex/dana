@@ -12,7 +12,7 @@
 #include <utility>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -219,4 +219,4 @@ Options:
       &execute_verify,
       &render_help_verify);
 
-} // namespace dana::prompts
+} // namespace dana

@@ -14,7 +14,7 @@
 #include <system_error>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -30,97 +30,6 @@ namespace dana::prompts {
             return out;
         }
 
-        std::string_view infer_lang(std::string_view base) {
-            auto             dot = base.rfind('.');
-            std::string_view ext = (dot == std::string_view::npos) ? base : base.substr(dot + 1);
-            if (base == "Dockerfile") {
-                return "dockerfile";
-            }
-            if (base == "Makefile" || base == "makefile" || base == "GNUmakefile") {
-                return "makefile";
-            }
-            if (base == "CMakeLists.txt") {
-                return "cmake";
-            }
-            if (ext == "c" || ext == "h") {
-                return "c";
-            }
-            if (ext == "cc" || ext == "cp" || ext == "cpp" || ext == "cxx" || ext == "c++" || ext == "hpp" ||
-                ext == "hxx" || ext == "hh" || ext == "h++")
-            {
-                return "cpp";
-            }
-            if (ext == "rs") {
-                return "rust";
-            }
-            if (ext == "py" || ext == "pyi") {
-                return "python";
-            }
-            if (ext == "sh" || ext == "bash") {
-                return "bash";
-            }
-            if (ext == "js" || ext == "cjs" || ext == "mjs") {
-                return "javascript";
-            }
-            if (ext == "ts" || ext == "mts" || ext == "cts") {
-                return "typescript";
-            }
-            if (ext == "jsx") {
-                return "jsx";
-            }
-            if (ext == "tsx") {
-                return "tsx";
-            }
-            if (ext == "java") {
-                return "java";
-            }
-            if (ext == "go") {
-                return "go";
-            }
-            if (ext == "rb") {
-                return "ruby";
-            }
-            if (ext == "json" || ext == "stock" || ext == "tse") {
-                return "json";
-            }
-            if (ext == "jsonc") {
-                return "jsonc";
-            }
-            if (ext == "yaml" || ext == "yml") {
-                return "yaml";
-            }
-            if (ext == "toml") {
-                return "toml";
-            }
-            if (ext == "md") {
-                return "markdown";
-            }
-            if (ext == "txt" || ext == "log") {
-                return "text";
-            }
-            if (ext == "diff" || ext == "patch") {
-                return "diff";
-            }
-            if (ext == "html" || ext == "htm") {
-                return "html";
-            }
-            if (ext == "css") {
-                return "css";
-            }
-            if (ext == "xml") {
-                return "xml";
-            }
-            if (ext == "svg") {
-                return "svg";
-            }
-            if (ext == "ini" || ext == "cfg" || ext == "conf") {
-                return "ini";
-            }
-            if (ext == "sql") {
-                return "sql";
-            }
-            return "text";
-        }
 
     } // namespace
 
@@ -134,7 +43,7 @@ namespace dana::prompts {
             throw soft_error{"prompt git.diff: Error: Not inside a git repository.\n"};
         }
 
-        auto              files  = positional_args(v);
+        auto const        files  = positional_args(v);
         file_filter const filter = file_filter::from(v.prior, v.env);
 
         std::filesystem::path git_root = v.env.git_root;
@@ -198,20 +107,20 @@ namespace dana::prompts {
                 // <<< adds one trailing newline, so split the stripped list on \n.
                 std::size_t start  = 0;
                 while (start <= untracked_stripped.size()) {
-                    std::size_t nl       = untracked_stripped.find('\n', start);
-                    std::string filepath = (nl == std::string::npos) ? untracked_stripped.substr(start)
-                                                                     : untracked_stripped.substr(start, nl - start);
-                    std::filesystem::path full = git_root / filepath;
-                    std::error_code       ec;
+                    std::size_t const nl = untracked_stripped.find('\n', start);
+                    std::string const filepath =
+                      (nl == std::string::npos) ? untracked_stripped.substr(start)
+                                                : untracked_stripped.substr(start, nl - start);
+                    std::filesystem::path const full = git_root / filepath;
+                    std::error_code             ec;
                     if (
                       !filepath.empty() && std::filesystem::is_regular_file(full, ec) && !ec && !filter.excluded(full))
                     {
-                        std::string      name     = std::filesystem::path(filepath).filename().string();
-                        std::string_view lang     = infer_lang(name);
-                        std::string      content  = read_file(full);
-                        output                   += std::format("File: {} (new)\n", filepath);
-                        output                   += '\n';
-                        output                   += std::format("```{}\n", lang);
+                        auto const        lang     = infer_lang(std::string_view{filepath.data(), filepath.size()});
+                        std::string const content  = read_file(full);
+                        output                    += std::format("File: {} (new)\n", filepath);
+                        output                    += '\n';
+                        output                    += std::format("```{}\n", lang);
                         output += number_lines(trim_context_nl(content, opts.head_lines), opts.numbered);
                         output += "```\n\n";
                     }
@@ -250,4 +159,4 @@ Options:
       &execute_git_diff,
       &render_help_git_diff);
 
-} // namespace dana::prompts
+} // namespace dana

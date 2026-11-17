@@ -3,7 +3,7 @@
 #include <ostream>
 #include <string>
 
-namespace dana::prompts {
+namespace dana {
 
     // The TSE/IFB session schedule. Reference data with no instructions of its own,
     // so it is useful standalone or chained onto a data prompt
@@ -54,4 +54,4 @@ Examples:
       &execute_tse_times,
       &render_help_tse_times);
 
-} // namespace dana::prompts
+} // namespace dana

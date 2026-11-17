@@ -5,7 +5,7 @@
 #include <regex>
 #include <string>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -97,4 +97,4 @@ Options:
       &execute_cpp,
       &render_help_cpp);
 
-} // namespace dana::prompts
+} // namespace dana

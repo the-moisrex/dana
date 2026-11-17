@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -192,4 +192,4 @@ Options:
       &execute_clang_tidy,
       &render_help_clang_tidy);
 
-} // namespace dana::prompts
+} // namespace dana

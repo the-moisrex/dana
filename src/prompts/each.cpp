@@ -31,7 +31,7 @@
 #include <unistd.h>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     static void render_help_each(std::ostream& os);
 
@@ -929,4 +929,4 @@ Examples:
       nullptr,
       true);
 
-} // namespace dana::prompts
+} // namespace dana

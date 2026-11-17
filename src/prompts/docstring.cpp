@@ -3,7 +3,7 @@
 #include <ostream>
 #include <string>
 
-namespace dana::prompts {
+namespace dana {
 
     static void render_help_docstring(std::ostream& os);
 
@@ -48,4 +48,4 @@ Asks the AI to add or improve docstrings for functions, classes, and methods in 
       &execute_docstring,
       &render_help_docstring);
 
-} // namespace dana::prompts
+} // namespace dana

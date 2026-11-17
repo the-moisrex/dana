@@ -11,7 +11,7 @@
 #include <string_view>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -98,4 +98,4 @@ Options:
       nullptr,
       &declare_regression);
 
-} // namespace dana::prompts
+} // namespace dana

@@ -13,7 +13,7 @@
 #include <unordered_set>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -252,4 +252,4 @@ Options:
       true,
       &k_run_tool);
 
-} // namespace dana::prompts
+} // namespace dana

@@ -4,7 +4,7 @@
 #include <ostream>
 #include <string>
 
-namespace dana::prompts {
+namespace dana {
 
     static void render_help_tse(std::ostream& os);
 
@@ -91,4 +91,4 @@ already contain a Codal block still render it; new ones contain market data only
       nullptr,
       &tse_data::declare_identifier);
 
-} // namespace dana::prompts
+} // namespace dana

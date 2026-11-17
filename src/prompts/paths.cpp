@@ -13,7 +13,7 @@
 #include <utility>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -312,4 +312,4 @@ Options:
       &execute_paths,
       &render_help_paths);
 
-} // namespace dana::prompts
+} // namespace dana

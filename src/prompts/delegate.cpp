@@ -10,7 +10,7 @@
 #include <system_error>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -189,4 +189,4 @@ Options:
       &execute_delegate,
       &render_help_delegate);
 
-} // namespace dana::prompts
+} // namespace dana

@@ -14,7 +14,7 @@
 #include <unistd.h>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -373,4 +373,4 @@ namespace dana::prompts {
       &execute_ai_said,
       &render_help_ai_said);
 
-} // namespace dana::prompts
+} // namespace dana

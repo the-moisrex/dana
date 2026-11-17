@@ -10,7 +10,7 @@
 #include <string_view>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     static void render_help_tse_intraday(std::ostream& os);
     static void render_help_tse_intraday_analysis(std::ostream& os);
@@ -267,4 +267,4 @@ Options:
       &execute_tse_intraday_analysis,
       &render_help_tse_intraday_analysis);
 
-} // namespace dana::prompts
+} // namespace dana

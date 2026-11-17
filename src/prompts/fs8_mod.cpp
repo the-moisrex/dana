@@ -6,7 +6,7 @@
 #include <string_view>
 #include <system_error>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -350,4 +350,4 @@ Options:
       &execute_fs8_mod,
       &render_help_fs8_mod);
 
-} // namespace dana::prompts
+} // namespace dana

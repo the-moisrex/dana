@@ -9,7 +9,7 @@
 #include <string>
 #include <string_view>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -111,4 +111,4 @@ Examples:
       nullptr,
       false);
 
-} // namespace dana::prompts
+} // namespace dana

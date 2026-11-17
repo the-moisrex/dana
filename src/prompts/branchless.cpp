@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <string>
 
-namespace dana::prompts {
+namespace dana {
 
     static void execute_branchless(view const& v, result& r) {
         auto opts = file_options_or_throw(v);
@@ -73,4 +73,4 @@ Options:
       &execute_branchless,
       &render_help_branchless);
 
-} // namespace dana::prompts
+} // namespace dana

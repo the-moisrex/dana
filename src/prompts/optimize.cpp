@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     static void execute_optimize_prompt(view const& v, result& r) {
         auto opts = file_options_or_throw(v);
@@ -56,4 +56,4 @@ Options:
       &execute_optimize_prompt,
       &render_help_optimize_prompt);
 
-} // namespace dana::prompts
+} // namespace dana

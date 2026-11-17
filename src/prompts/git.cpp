@@ -11,7 +11,7 @@
 #include <system_error>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -138,4 +138,4 @@ Options:
       &execute_git,
       &render_help_git);
 
-} // namespace dana::prompts
+} // namespace dana

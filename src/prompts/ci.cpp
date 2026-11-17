@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -154,4 +154,4 @@ Options:
       &execute_ci,
       &render_help_ci);
 
-} // namespace dana::prompts
+} // namespace dana

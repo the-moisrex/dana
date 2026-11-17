@@ -3,7 +3,7 @@
 
 #include <string>
 
-namespace dana::prompts {
+namespace dana {
 
     static void execute_cpp_minimal_allocations(view const& v, result& r) {
         r.out = R"PROMPT(Reduce the number of heap allocations in this code to the practical minimum.
@@ -34,4 +34,4 @@ Options:
       &execute_cpp_minimal_allocations,
       &render_help_cpp_minimal_allocations);
 
-} // namespace dana::prompts
+} // namespace dana

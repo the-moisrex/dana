@@ -9,7 +9,7 @@
 #include <string_view>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -103,4 +103,4 @@ Examples:
     bool const registered_files_exclude =
       dana::register_file_filter("files.exclude", kSummary, &execute_files_exclude, &render_help_files_exclude);
 
-} // namespace dana::prompts
+} // namespace dana

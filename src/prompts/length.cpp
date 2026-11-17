@@ -15,7 +15,7 @@
 #include <utility>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -632,4 +632,4 @@ Examples:
       &render_help_length,
       &complete_length);
 
-} // namespace dana::prompts
+} // namespace dana

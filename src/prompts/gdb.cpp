@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     static void execute_gdb(view const& v, result& r) {
         auto opts = file_options_or_throw(v);
@@ -98,4 +98,4 @@ Options:
       &execute_gdb,
       &render_help_gdb);
 
-} // namespace dana::prompts
+} // namespace dana

@@ -4,7 +4,7 @@
 #include <string>
 #include <string_view>
 
-namespace dana::prompts {
+namespace dana {
 
     static void execute_cpp_modernize([[maybe_unused]] view const& v, result& r) {
         r.out = R"PROMPT(Modernize this C++ code to the C++ Core Guidelines and C++26.
@@ -34,4 +34,4 @@ Options:
       &execute_cpp_modernize,
       &render_help_cpp_modernize);
 
-} // namespace dana::prompts
+} // namespace dana

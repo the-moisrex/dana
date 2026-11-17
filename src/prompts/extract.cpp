@@ -15,7 +15,7 @@
 #include <utility>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     static void render_help_extract(std::ostream& os);
 
@@ -195,4 +195,4 @@ Examples:
       &render_help_extract,
       &extract::complete_selector);
 
-} // namespace dana::prompts
+} // namespace dana

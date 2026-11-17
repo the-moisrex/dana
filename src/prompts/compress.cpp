@@ -23,7 +23,7 @@
 #include <system_error>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -580,4 +580,4 @@ See also: `.compress` (the command the AI composes), `.compress.list`, and
       &render_help_compress_delegate,
       &complete_compress);
 
-} // namespace dana::prompts
+} // namespace dana

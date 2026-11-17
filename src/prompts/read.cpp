@@ -20,7 +20,7 @@
 #include <utility>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -333,4 +333,4 @@ Options:
       true,
       &k_read_tool);
 
-} // namespace dana::prompts
+} // namespace dana

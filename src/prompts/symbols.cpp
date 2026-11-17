@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <string>
 
-namespace dana::prompts {
+namespace dana {
 
     static void execute_symbols(view const& v, result& r) {
         auto opts = file_options_or_throw(v);
@@ -59,4 +59,4 @@ Options:
       &execute_symbols,
       &render_help_symbols);
 
-} // namespace dana::prompts
+} // namespace dana

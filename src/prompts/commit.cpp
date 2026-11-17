@@ -15,7 +15,7 @@
 #include <utility>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -214,4 +214,4 @@ Options:
       &execute_commit,
       &render_help_commit);
 
-} // namespace dana::prompts
+} // namespace dana

@@ -19,7 +19,11 @@ namespace dana {
         bool dedup                          = true;
     };
 
-    std::string_view infer_lang(std::filesystem::path const& file);
+    [[nodiscard]] std::string_view infer_lang(std::string_view name) noexcept;
+
+    // Path overload. Note: filename().string() may allocate; prefer the string_view overload in hot loops.
+    [[nodiscard]] std::string_view infer_lang(std::filesystem::path const& file);
+
 
     // The content truncated to the first N lines (each keeping its newline) when a
     // --head cap is present, or unchanged when it is absent. A cap of 0 keeps a

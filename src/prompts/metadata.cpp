@@ -5,7 +5,7 @@
 #include <string>
 #include <string_view>
 
-namespace dana::prompts {
+namespace dana {
 
     static void execute_metadata(view const& v, result& r) {
         // metadata.sh calls init_prompt (validating --head, whose value is never
@@ -77,4 +77,4 @@ Options:
       &render_help_metadata,
       &complete_metadata);
 
-} // namespace dana::prompts
+} // namespace dana

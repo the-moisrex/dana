@@ -11,7 +11,7 @@
 #include <utility>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
     namespace {
 
         constexpr std::string_view kFilesGrepSummary =
@@ -217,4 +217,4 @@ namespace dana::prompts {
     bool const registered_read_grep =
       register_file_prompt("read.grep", kReadGrepSummary, &execute_read_grep, &render_help_read_grep);
 
-} // namespace dana::prompts
+} // namespace dana

@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     static void execute_stupid(view const& v, result& r) {
         auto opts = file_options_or_throw(v);
@@ -47,4 +47,4 @@ Options:
     bool const registered =
       dana::register_prompt("stupid", "Find the stupid mistakes in this code.", &execute_stupid, &render_help_stupid);
 
-} // namespace dana::prompts
+} // namespace dana

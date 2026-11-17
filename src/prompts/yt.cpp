@@ -12,7 +12,7 @@
 #include <string_view>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -245,4 +245,4 @@ Options:
       &execute_yt,
       &render_help_yt);
 
-} // namespace dana::prompts
+} // namespace dana

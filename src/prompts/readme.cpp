@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     static void execute_readme(view const& v, result& r) {
         auto opts = file_options_or_throw(v);
@@ -81,4 +81,4 @@ Options:
       &execute_readme,
       &render_help_readme);
 
-} // namespace dana::prompts
+} // namespace dana

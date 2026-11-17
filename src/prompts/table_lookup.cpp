@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     static void execute_table_lookup(view const& v, result& r) {
         auto opts = file_options_or_throw(v);
@@ -74,4 +74,4 @@ Options:
       &execute_table_lookup,
       &render_help_table_lookup);
 
-} // namespace dana::prompts
+} // namespace dana

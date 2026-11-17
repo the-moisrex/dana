@@ -4,7 +4,7 @@
 #include <ostream>
 #include <string>
 
-namespace dana::prompts {
+namespace dana {
 
     static void render_help_clear(std::ostream& os);
 
@@ -47,4 +47,4 @@ Examples:
       nullptr,
       false);
 
-} // namespace dana::prompts
+} // namespace dana

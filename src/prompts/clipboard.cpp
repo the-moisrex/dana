@@ -14,7 +14,7 @@
 #include <string>
 #include <string_view>
 
-namespace dana::prompts {
+namespace dana {
 
     static void render_help_clipboard(std::ostream& os);
     static void render_help_cp(std::ostream& os);
@@ -168,4 +168,4 @@ Examples:
       nullptr,
       false);
 
-} // namespace dana::prompts
+} // namespace dana

@@ -3,7 +3,7 @@
 #include <ostream>
 #include <string>
 
-namespace dana::prompts {
+namespace dana {
 
     static void render_help_tse_analyze(std::ostream& os);
 
@@ -134,4 +134,4 @@ Options:
       &execute_tse_analyze,
       &render_help_tse_analyze);
 
-} // namespace dana::prompts
+} // namespace dana

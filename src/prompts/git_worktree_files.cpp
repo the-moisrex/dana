@@ -14,7 +14,7 @@
 #include <unistd.h>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -277,9 +277,9 @@ namespace dana::prompts {
                 continue;
             }
 
-            auto        rel  = fs::relative_path(*resolved, git_root);
-            auto        lang = infer_lang(resolved->filename().string());
-            std::string raw  = read_file(*resolved);
+            auto const rel  = fs::relative_path(*resolved, git_root);
+            auto const lang = infer_lang(resolved->filename());
+            auto const raw  = read_file(*resolved);
             if (strip_trailing_newlines(raw).empty()) {
                 continue;
             }
@@ -325,4 +325,4 @@ Options:
       &execute_git_worktree_files,
       &render_help_git_worktree_files);
 
-} // namespace dana::prompts
+} // namespace dana

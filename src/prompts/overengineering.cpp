@@ -11,7 +11,7 @@
 #include <string_view>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     static void render_help_overengineering(std::ostream& os);
 
@@ -271,4 +271,4 @@ Options:
       &render_help_overengineering,
       &complete_overengineering);
 
-} // namespace dana::prompts
+} // namespace dana

@@ -3,7 +3,7 @@
 #include <ostream>
 #include <string>
 
-namespace dana::prompts {
+namespace dana {
 
     static void render_help_tse_rigor(std::ostream& os);
 
@@ -78,4 +78,4 @@ Examples:
       &execute_tse_rigor,
       &render_help_tse_rigor);
 
-} // namespace dana::prompts
+} // namespace dana

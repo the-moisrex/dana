@@ -4,7 +4,7 @@
 
 #include <string>
 
-namespace dana::prompts {
+namespace dana {
 
     static void execute_note(view const& v, result& r) {
         std::optional<std::size_t>    head_lines;
@@ -74,4 +74,4 @@ Options:
     bool const registered =
       dana::register_prompt("note", "Add a note to the prompt.", &execute_note, &render_help_note);
 
-} // namespace dana::prompts
+} // namespace dana

@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -146,4 +146,4 @@ Options:
       &execute_gh_issue,
       &render_help_gh_issue);
 
-} // namespace dana::prompts
+} // namespace dana

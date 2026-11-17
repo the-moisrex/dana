@@ -10,7 +10,7 @@
 #include <string_view>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -186,4 +186,4 @@ If stdin is a single URL, it tries to fetch subtitles/text first.
       &execute_summarize,
       &render_help_summarize);
 
-} // namespace dana::prompts
+} // namespace dana

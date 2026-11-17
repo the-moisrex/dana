@@ -4,7 +4,7 @@
 #include <string>
 #include <string_view>
 
-namespace dana::prompts {
+namespace dana {
 
     static void execute_simplify([[maybe_unused]] dana::view const& v, dana::result& r) {
         r.out = R"PROMPT(Simplify the code while preserving its existing behavior.
@@ -28,4 +28,4 @@ Options:
       &execute_simplify,
       &render_help_simplify);
 
-} // namespace dana::prompts
+} // namespace dana

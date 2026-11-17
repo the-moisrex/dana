@@ -16,7 +16,7 @@
 #include <utility>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -400,4 +400,4 @@ Arguments:
       &execute_repo,
       &render_help_repo);
 
-} // namespace dana::prompts
+} // namespace dana

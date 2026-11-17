@@ -11,7 +11,7 @@
 #include <string_view>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     static void render_help_expect(std::ostream& os);
 
@@ -97,4 +97,4 @@ Options:
       &render_help_expect,
       &extract::complete_selector);
 
-} // namespace dana::prompts
+} // namespace dana

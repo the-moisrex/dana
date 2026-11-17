@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     static void execute_review(view const& v, result& r) {
         auto opts = file_options_or_throw(v);
@@ -49,4 +49,4 @@ Options:
       &execute_review,
       &render_help_review);
 
-} // namespace dana::prompts
+} // namespace dana

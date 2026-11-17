@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -142,4 +142,4 @@ Options:
       &execute_de_export,
       &render_help_de_export);
 
-} // namespace dana::prompts
+} // namespace dana

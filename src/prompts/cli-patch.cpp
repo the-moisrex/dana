@@ -4,7 +4,7 @@
 #include <ostream>
 #include <string>
 
-namespace dana::prompts {
+namespace dana {
 
     static void execute_cli_patch([[maybe_unused]] view const& v, result& r) {
         r.out =
@@ -37,4 +37,4 @@ Options:
       &execute_cli_patch,
       &render_help_cli_patch);
 
-} // namespace dana::prompts
+} // namespace dana

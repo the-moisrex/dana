@@ -6,7 +6,7 @@
 #include <string_view>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -425,4 +425,4 @@ namespace dana::prompts {
       &render_help_opportunities,
       &complete_opportunities);
 
-} // namespace dana::prompts
+} // namespace dana

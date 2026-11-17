@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     static void execute_tests(view const& v, result& r) {
         auto opts = file_options_or_throw(v);
@@ -51,4 +51,4 @@ Options:
       &execute_tests,
       &render_help_tests);
 
-} // namespace dana::prompts
+} // namespace dana

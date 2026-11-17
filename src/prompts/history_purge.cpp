@@ -16,7 +16,7 @@
 #include <string_view>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -175,17 +175,15 @@ namespace dana::prompts {
                         removed_bytes += sizes[rank];
                     }
                 }
-                out += std::format("prompt history.purge: removed {} runs ({})\n",
-                                   removed,
-                                   human_bytes(removed_bytes));
+                out += std::format("prompt history.purge: removed {} runs ({})\n", removed, human_bytes(removed_bytes));
             }
             for (auto const rank : victims) {
                 out += std::format("  {}\n", files[rank].filename().string());
             }
-            out   += std::format("kept {} runs ({})\n", files.size() - victims.size(), human_bytes(total));
-            out    = trim_context(out, opts.head);
-            r.out  = std::move(out);
-            r.no_clipboard = true;
+            out            += std::format("kept {} runs ({})\n", files.size() - victims.size(), human_bytes(total));
+            out             = trim_context(out, opts.head);
+            r.out           = std::move(out);
+            r.no_clipboard  = true;
         }
 
         void complete_purge(completion_request const& request, std::ostream& out) {
@@ -245,4 +243,4 @@ Examples:
       false,
       false);
 
-} // namespace dana::prompts
+} // namespace dana

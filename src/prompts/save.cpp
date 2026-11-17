@@ -24,7 +24,7 @@
 #include <system_error>
 #include <unistd.h>
 
-namespace dana::prompts {
+namespace dana {
 
     static void render_help_save(std::ostream& os);
     static void render_help_flush(std::ostream& os);
@@ -546,4 +546,4 @@ Examples:
       &preflight_flush,
       &declare_save);
 
-} // namespace dana::prompts
+} // namespace dana

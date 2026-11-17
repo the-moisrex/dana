@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     static void execute_list_prompts(view const& v, result& r) {
         // list-prompts.sh runs init_prompt --no-files, so parse_arguments validates
@@ -76,4 +76,4 @@ See also: prompt list (short descriptions, one line per prompt).
       &execute_list_prompts,
       &render_help_list_prompts);
 
-} // namespace dana::prompts
+} // namespace dana

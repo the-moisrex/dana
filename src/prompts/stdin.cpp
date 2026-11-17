@@ -4,7 +4,7 @@
 
 #include <string>
 
-namespace dana::prompts {
+namespace dana {
 
     static void execute_stdin(view const& v, result& r) {
         auto head_lines = head_lines_or_throw(v);
@@ -38,4 +38,4 @@ Options:
       &execute_stdin,
       &render_help_stdin);
 
-} // namespace dana::prompts
+} // namespace dana

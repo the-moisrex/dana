@@ -13,7 +13,7 @@
 #include <unistd.h>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -257,9 +257,9 @@ namespace dana::prompts {
                 continue;
             }
 
-            auto        rel  = fs::relative_path(file, git_root);
-            auto        lang = infer_lang(file.filename().string());
-            std::string raw  = read_file(file);
+            auto const rel  = fs::relative_path(file, git_root);
+            auto const lang = infer_lang(file.filename());
+            auto const raw  = read_file(file);
 
             // [ -n "$content" ] where content = $(cat) with trailing newlines stripped.
             if (strip_trailing_newlines(raw).empty()) {
@@ -303,4 +303,4 @@ Options:
       &execute_git_files,
       &render_help_git_files);
 
-} // namespace dana::prompts
+} // namespace dana

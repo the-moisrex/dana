@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <string>
 
-namespace dana::prompts {
+namespace dana {
 
     static void execute_perf(view const& v, result& r) {
         auto opts = file_options_or_throw(v);
@@ -43,4 +43,4 @@ Options:
     bool const registered =
       dana::register_prompt("perf", "Review this for performance issues.", &execute_perf, &render_help_perf);
 
-} // namespace dana::prompts
+} // namespace dana

@@ -7,40 +7,40 @@
 #include <string>
 #include <string_view>
 
-namespace dana::prompts {
+using dana::result;
+using dana::view;
 
-    namespace {
+namespace {
 
-        // The fenced-block form the native prompts use for embedded context.
-        std::string embed_text(
-          std::string_view           content,
-          std::string_view           lang,
-          std::string_view           label,
-          std::optional<std::size_t> head_lines,
-          bool                       numbered = false) {
-            std::string out;
-            out += std::format("\nFile: {}\n", std::string(label));
-            out += std::format("```{}\n", std::string(lang));
-            out += number_lines(trim_context_nl(content, head_lines), numbered);
-            out += "```\n";
-            return out;
+
+    // The fenced-block form the native prompts use for embedded context.
+    std::string embed_text(
+      std::string_view           content,
+      std::string_view           lang,
+      std::string_view           label,
+      std::optional<std::size_t> head_lines,
+      bool                       numbered = false) {
+        std::string out;
+        out += std::format("\nFile: {}\n", std::string(label));
+        out += std::format("```{}\n", std::string(lang));
+        out += dana::number_lines(dana::trim_context_nl(content, head_lines), numbered);
+        out += "```\n";
+        return out;
+    }
+
+    std::string embed_block(std::filesystem::path const& path, dana::file_options opts) {
+        if (!std::filesystem::is_regular_file(path)) {
+            return {};
         }
+        return embed_text(
+          dana::read_file(path),
+          dana::infer_lang(path),
+          path.filename().string(),
+          opts.head_lines,
+          opts.numbered);
+    }
 
-        std::string embed_block(std::filesystem::path const& path, file_options opts) {
-            if (!std::filesystem::is_regular_file(path)) {
-                return {};
-            }
-            return embed_text(
-              read_file(path),
-              infer_lang(path),
-              path.filename().string(),
-              opts.head_lines,
-              opts.numbered);
-        }
-
-    } // namespace
-
-    static void execute_new(view const& v, result& r) {
+    void execute_new(view const& v, result& r) {
         auto opts = file_options_or_throw(v);
 
         std::string output;
@@ -110,8 +110,8 @@ Return:
         r.err = std::move(error);
     }
 
-    static void render_help_new(std::ostream& os) {
-        os << file_usage_help("new", "[FILE...]", "echo \"what the prompt should do\"") << R"EOF(
+    void render_help_new(std::ostream& os) {
+        os << dana::file_usage_help("new", "[FILE...]", "echo \"what the prompt should do\"") << R"EOF(
 Builds a prompt that asks an AI to write a new native (C++) prompt for the `prompts/` dispatcher following its conventions.
 
 Always embeds the SDK headers and an example prompt so the AI has enough
@@ -121,16 +121,16 @@ Provide the desired prompt behavior on stdin and/or extra reference
 files as arguments.
 
 Options:
-)EOF" << file_options_help("each embedded context file");
+)EOF" << dana::file_options_help("each embedded context file");
     }
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = dana::register_prompt(
+    [[maybe_unused]] bool const registered = dana::register_prompt(
       "new",
       "Builds a prompt that asks an AI to write a new native (C++) prompt "
       "for the `prompts/` dispatcher following its conventions.",
       &execute_new,
       &render_help_new);
 
-} // namespace dana::prompts
+} // namespace

@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <string>
 
-namespace dana::prompts {
+namespace dana {
 
     static void execute_api(view const& v, result& r) {
         auto opts = file_options_or_throw(v);
@@ -41,4 +41,4 @@ Options:
     // (no central list — see sdk/prompt_registry.hpp).
     bool const registered = dana::register_prompt("api", "Review this API design.", &execute_api, &render_help_api);
 
-} // namespace dana::prompts
+} // namespace dana

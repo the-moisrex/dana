@@ -12,7 +12,7 @@
 #include <system_error>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -151,4 +151,4 @@ Options:
       &execute_agents,
       &render_help_agents);
 
-} // namespace dana::prompts
+} // namespace dana

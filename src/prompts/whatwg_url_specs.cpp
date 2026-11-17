@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     static void execute_whatwg_url_specs(view const& v, result& r) {
         auto head_lines = head_lines_or_throw(v);
@@ -81,4 +81,4 @@ Options:
       &execute_whatwg_url_specs,
       &render_help_whatwg_url_specs);
 
-} // namespace dana::prompts
+} // namespace dana

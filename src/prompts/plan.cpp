@@ -3,7 +3,7 @@
 #include <ostream>
 #include <string>
 
-namespace dana::prompts {
+namespace dana {
 
     static void render_help_plan(std::ostream& os);
 
@@ -102,4 +102,4 @@ This prompt carries no data and takes no arguments: chain it after a file prompt
       &execute_plan,
       &render_help_plan);
 
-} // namespace dana::prompts
+} // namespace dana

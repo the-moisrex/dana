@@ -6,7 +6,7 @@
 #include <vector>
 
 using namespace dana;
-namespace tse_data = dana::prompts::tse_data;
+namespace tse_data = dana::tse_data;
 
 namespace {
 

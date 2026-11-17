@@ -8,7 +8,7 @@
 #include <string_view>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     static void execute_diagram(view const& v, result& r) {
         // diagram.sh runs init_prompt (which already validated --head) before its
@@ -99,4 +99,4 @@ Options:
       &render_help_diagram,
       &complete_diagram);
 
-} // namespace dana::prompts
+} // namespace dana

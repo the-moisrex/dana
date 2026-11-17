@@ -1,5 +1,8 @@
 #include "embed.hpp"
 
+#include <climits>
+#include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <format>
 #include <fstream>
@@ -8,94 +11,121 @@
 #include <system_error>
 #include <vector>
 
-namespace dana {
+namespace {
 
-    std::string_view infer_lang(std::filesystem::path const& file) {
-        auto ext = file.extension().string();
-        if (ext == ".c" || ext == ".h") {
-            return "c";
+    // Packs up to 8 bytes into a little-endian integer so extensions can be switched on.
+    constexpr std::uint64_t pack(std::string_view const src) noexcept try {
+        std::uint64_t key = 0;
+        for (std::size_t i = 0; i < src.size(); ++i) {
+            key |= static_cast<std::uint64_t>(static_cast<unsigned char>(src.at(i))) << (CHAR_BIT * i);
         }
-        if (ext == ".cc" || ext == ".cpp" || ext == ".cxx" || ext == ".c++" || ext == ".hpp" || ext == ".hh" ||
-            ext == ".hxx" || ext == ".ixx")
-        {
-            return "cpp";
+        return key;
+    } catch (...) {
+        return std::numeric_limits<std::uint64_t>::max();
+    }
+
+    // `ext` is without the leading dot. Returns "" when unknown.
+    constexpr std::string_view lang_from_extension(std::string_view const ext) noexcept {
+        if (ext.size() > std::size("dockerfile")) {
+            return ext == "dockerfile" ? "dockerfile" : "";
         }
-        if (ext == ".rs") {
-            return "rust";
+
+        switch (pack(ext)) {
+            case pack("c"):
+            case pack("h"): return "c";
+            case pack("cc"):
+            case pack("cp"):
+            case pack("cpp"):
+            case pack("cxx"):
+            case pack("c++"):
+            case pack("hpp"):
+            case pack("hxx"):
+            case pack("hh"):
+            case pack("h++"):
+            case pack("ixx"): return "cpp";
+            case pack("rs"): return "rust";
+            case pack("py"):
+            case pack("pyi"): return "python";
+            case pack("sh"):
+            case pack("bash"): return "bash";
+            case pack("js"):
+            case pack("cjs"):
+            case pack("mjs"): return "javascript";
+            case pack("ts"):
+            case pack("mts"):
+            case pack("cts"): return "typescript";
+            case pack("jsx"): return "jsx";
+            case pack("tsx"): return "tsx";
+            case pack("java"): return "java";
+            case pack("kt"):
+            case pack("kts"): return "kotlin";
+            case pack("go"): return "go";
+            case pack("rb"): return "ruby";
+            case pack("lua"): return "lua";
+            case pack("json"):
+            case pack("stock"):
+            case pack("tse"): return "json";
+            case pack("jsonc"): return "jsonc";
+            case pack("yaml"):
+            case pack("yml"): return "yaml";
+            case pack("toml"): return "toml";
+            case pack("md"): return "markdown";
+            case pack("txt"):
+            case pack("log"): return "text";
+            case pack("sql"): return "sql";
+            case pack("csv"): return "csv";
+            case pack("tsv"): return "tsv";
+            case pack("html"):
+            case pack("htm"): return "html";
+            case pack("css"): return "css";
+            case pack("xml"): return "xml";
+            case pack("svg"): return "svg";
+            case pack("ini"):
+            case pack("cfg"):
+            case pack("conf"): return "ini";
+            case pack("diff"):
+            case pack("patch"): return "diff";
+            default: return "";
         }
-        if (ext == ".py" || ext == ".pyi") {
-            return "python";
-        }
-        if (ext == ".sh" || ext == ".bash") {
-            return "bash";
-        }
-        if (ext == ".js" || ext == ".cjs" || ext == ".mjs") {
-            return "javascript";
-        }
-        if (ext == ".ts" || ext == ".mts" || ext == ".cts") {
-            return "typescript";
-        }
-        if (ext == ".jsx") {
-            return "jsx";
-        }
-        if (ext == ".tsx") {
-            return "tsx";
-        }
-        if (ext == ".java") {
-            return "java";
-        }
-        if (ext == ".kt" || ext == ".kts") {
-            return "kotlin";
-        }
-        if (ext == ".go") {
-            return "go";
-        }
-        if (ext == ".rb") {
-            return "ruby";
-        }
-        if (ext == ".lua") {
-            return "lua";
-        }
-        if (ext == ".json" || ext == ".stock" || ext == ".tse") {
-            return "json";
-        }
-        if (ext == ".yaml" || ext == ".yml") {
-            return "yaml";
-        }
-        if (ext == ".toml") {
-            return "toml";
-        }
-        if (ext == ".md") {
-            return "markdown";
-        }
-        if (ext == ".txt" || ext == ".log") {
-            return "text";
-        }
-        if (ext == ".sql") {
-            return "sql";
-        }
-        if (ext == ".csv") {
-            return "csv";
-        }
-        if (ext == ".tsv") {
-            return "tsv";
-        }
-        if (ext == ".html" || ext == ".htm") {
-            return "html";
-        }
-        if (ext == ".css") {
-            return "css";
-        }
-        if (ext == ".dockerfile" || file.filename() == "Dockerfile") {
+    }
+
+    // Whole-filename matches (no extension involved). Returns "" when unknown.
+    constexpr std::string_view lang_from_filename(std::string_view const name) noexcept {
+        if (name == "Dockerfile") {
             return "dockerfile";
         }
-        if (file.filename() == "Makefile" || file.filename() == "GNUmakefile") {
+        if (name == "Makefile" || name == "makefile" || name == "GNUmakefile") {
             return "makefile";
         }
-        if (file.filename() == "CMakeLists.txt") {
+        if (name == "CMakeLists.txt") {
             return "cmake";
         }
+        return "";
+    }
+
+} // namespace
+
+namespace dana {
+
+    // Infers the language id from a file name. Returns "text" if unknown.
+    std::string_view infer_lang(std::string_view const name) noexcept try {
+        if (auto const lang = lang_from_filename(name); !lang.empty()) {
+            return lang;
+        }
+        if (auto const dot = name.rfind('.'); dot != std::string_view::npos && dot + 1 < name.size()) {
+            if (auto const lang = lang_from_extension(name.substr(dot + 1)); !lang.empty()) {
+                return lang;
+            }
+        }
         return "text";
+    } catch (...) {
+        return "text";
+    }
+
+    // Path overload. Note: filename().string() may allocate; prefer the string_view overload in hot loops.
+    std::string_view infer_lang(std::filesystem::path const& file) {
+        auto const str = file.filename().string();
+        return infer_lang(std::string_view{str.data(), str.size()});
     }
 
     std::string trim_context(std::string_view content, std::optional<std::size_t> head_lines) {
@@ -104,9 +134,9 @@ namespace dana {
         }
 
         // sed's `1,0p` prints line 1, so a 0 cap keeps a single line.
-        std::size_t limit = *head_lines == 0 ? 1 : *head_lines;
-        std::size_t lines = 0;
-        std::size_t pos   = 0;
+        std::size_t const limit = *head_lines == 0 ? 1 : *head_lines;
+        std::size_t       lines = 0;
+        std::size_t       pos   = 0;
         while (pos < content.size() && lines < limit) {
             pos = content.find('\n', pos);
             if (pos == std::string_view::npos) {
@@ -195,12 +225,12 @@ namespace dana {
             return std::string(text);
         }
 
-        bool ends_with_newline = text.back() == '\n';
+        bool const ends_with_newline = text.back() == '\n';
 
         std::vector<std::string_view> lines;
         std::size_t                   start = 0;
         while (start < text.size()) {
-            std::size_t end = text.find('\n', start);
+            std::size_t const end = text.find('\n', start);
             if (end == std::string_view::npos) {
                 lines.push_back(text.substr(start));
                 break;

@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     static void render_help_man(std::ostream& os);
 
@@ -77,4 +77,4 @@ Options:
       &execute_man,
       &render_help_man);
 
-} // namespace dana::prompts
+} // namespace dana

@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     static void execute_gtest_case(view const& v, result& r) {
         auto head_lines = head_lines_or_throw(v, false);
@@ -88,4 +88,4 @@ Options:
       &execute_gtest_case,
       &render_help_gtest_case);
 
-} // namespace dana::prompts
+} // namespace dana

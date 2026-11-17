@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     static void execute_list(view const& v, result& r) {
         // This prompt embeds no files, so --head is validated (and stripped) but
@@ -86,4 +86,4 @@ Options:
       &execute_list,
       &render_help_list);
 
-} // namespace dana::prompts
+} // namespace dana

@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     static void execute_migrate(view const& v, result& r) {
         auto opts = file_options_or_throw(v);
@@ -61,4 +61,4 @@ Options:
       &execute_migrate,
       &render_help_migrate);
 
-} // namespace dana::prompts
+} // namespace dana

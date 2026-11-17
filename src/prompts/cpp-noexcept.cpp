@@ -6,7 +6,7 @@
 #include <string>
 #include <string_view>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -75,4 +75,4 @@ Options:
     bool const registered =
       dana::register_prompt("cpp.noexcept", kSummary, &execute_cpp_noexcept, &render_help_cpp_noexcept);
 
-} // namespace dana::prompts
+} // namespace dana

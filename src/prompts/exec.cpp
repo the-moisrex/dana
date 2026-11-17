@@ -19,7 +19,7 @@
 #include <string_view>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     static void render_help_exec(std::ostream& os);
 
@@ -278,4 +278,4 @@ Examples:
       &render_help_exec,
       &extract::complete_selector);
 
-} // namespace dana::prompts
+} // namespace dana

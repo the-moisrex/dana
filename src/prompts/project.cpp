@@ -10,7 +10,7 @@
 #include <string>
 #include <string_view>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -92,4 +92,4 @@ Options:
       &execute_project,
       &render_help_project);
 
-} // namespace dana::prompts
+} // namespace dana

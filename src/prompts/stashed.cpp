@@ -14,7 +14,7 @@
 #include <string_view>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     static void render_help_stashed(std::ostream& os);
 
@@ -237,4 +237,4 @@ store.
       nullptr,
       true);
 
-} // namespace dana::prompts
+} // namespace dana

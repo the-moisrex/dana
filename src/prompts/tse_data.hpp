@@ -27,7 +27,7 @@
 #include <unistd.h>
 #include <vector>
 
-namespace dana::prompts::tse_data {
+namespace dana::tse_data {
 
     // The four lines `tse snapshot` prints (fetched, stale, note, instrument).
     struct snapshot_info {
@@ -549,4 +549,4 @@ namespace dana::prompts::tse_data {
         }
     }
 
-} // namespace dana::prompts::tse_data
+} // namespace dana::tse_data

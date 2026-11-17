@@ -1,7 +1,7 @@
 #include "../sdk/prompt_registry.hpp"
 #include "tse_find_impl.hpp"
 
-namespace dana::prompts {
+namespace dana {
 
     static void execute_tse_find(view const& v, result& r) {
         execute_tse_find_impl(v, r);
@@ -25,4 +25,4 @@ namespace dana::prompts {
       &execute_tse_find,
       &render_help_tse_find);
 
-} // namespace dana::prompts
+} // namespace dana

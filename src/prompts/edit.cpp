@@ -33,7 +33,7 @@
 #    include <windows.h>
 #endif
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -1286,4 +1286,4 @@ Options:
       true,
       &k_edit_tool);
 
-} // namespace dana::prompts
+} // namespace dana

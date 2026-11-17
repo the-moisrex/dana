@@ -7,7 +7,7 @@
 #include <string>
 #include <string_view>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -119,4 +119,4 @@ See also: `.skill` (load and manage cached skills), `.delegate` (generate a
       &execute_skill_gen,
       &render_help_skill_gen);
 
-} // namespace dana::prompts
+} // namespace dana

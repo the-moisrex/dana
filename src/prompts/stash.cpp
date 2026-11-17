@@ -23,7 +23,7 @@
 #include <system_error>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     static void render_help_stash(std::ostream& os);
     static void render_help_stash_list(std::ostream& os);
@@ -656,4 +656,4 @@ Options:
       false,
       false);
 
-} // namespace dana::prompts
+} // namespace dana

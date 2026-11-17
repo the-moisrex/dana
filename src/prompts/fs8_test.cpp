@@ -6,7 +6,7 @@
 #include <string_view>
 #include <system_error>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -343,4 +343,4 @@ Options:
       &execute_fs8_test,
       &render_help_fs8_test);
 
-} // namespace dana::prompts
+} // namespace dana

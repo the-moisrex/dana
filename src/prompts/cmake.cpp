@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -160,4 +160,4 @@ Options:
       &execute_cmake,
       &render_help_cmake);
 
-} // namespace dana::prompts
+} // namespace dana

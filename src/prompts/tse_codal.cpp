@@ -11,7 +11,7 @@
 #include <string_view>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     static void render_help_tse_codal(std::ostream& os);
 
@@ -198,4 +198,4 @@ The data comes from `tse.codal snapshot`; run that tool directly for `search`,
       nullptr,
       &tse_data::declare_identifier);
 
-} // namespace dana::prompts
+} // namespace dana

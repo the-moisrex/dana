@@ -17,7 +17,7 @@
 #include <system_error>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -703,4 +703,4 @@ Examples:
       &render_help_skill,
       &complete_skill);
 
-} // namespace dana::prompts
+} // namespace dana

@@ -3,7 +3,7 @@
 #include <ostream>
 #include <string>
 
-namespace dana::prompts {
+namespace dana {
 
     static void render_help_tse_analyze_history(std::ostream& os);
 
@@ -129,4 +129,4 @@ Options:
       &execute_tse_analyze_history,
       &render_help_tse_analyze_history);
 
-} // namespace dana::prompts
+} // namespace dana

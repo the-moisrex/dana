@@ -10,7 +10,7 @@
 #include <string_view>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -100,4 +100,4 @@ Options:
       nullptr,
       &declare_debug);
 
-} // namespace dana::prompts
+} // namespace dana

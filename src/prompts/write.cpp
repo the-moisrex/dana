@@ -15,7 +15,7 @@
 #include <system_error>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     static void render_help_write(std::ostream& os);
 
@@ -182,4 +182,4 @@ Examples:
       true,
       &k_write_tool);
 
-} // namespace dana::prompts
+} // namespace dana

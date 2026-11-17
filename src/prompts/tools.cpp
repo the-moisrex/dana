@@ -14,21 +14,21 @@
 #include <string_view>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
-        enum class format : std::uint8_t {
+        enum struct [[nodiscard]] format : std::uint8_t {
             markdown,
             json,
             names
         };
-        enum class audience : std::uint8_t {
+        enum struct [[nodiscard]] audience : std::uint8_t {
             human,
             chat
         };
 
-        struct tools_options {
+        struct [[nodiscard]] tools_options {
             format                       how             = format::markdown;
             audience                     who             = audience::human;
             bool                         format_explicit = false;
@@ -41,7 +41,7 @@ namespace dana::prompts {
             std::vector<std::string> exclude;
         };
 
-        std::optional<prompt_category> parse_category(std::string_view name) {
+        std::optional<prompt_category> parse_category(std::string_view const name) {
             if (name == "core") {
                 return prompt_category::core;
             }
@@ -367,4 +367,4 @@ See also: `.list` (short descriptions), `.list-prompts` (full help),
       &execute_tools,
       &render_help_tools);
 
-} // namespace dana::prompts
+} // namespace dana

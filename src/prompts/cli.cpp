@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     static void render_help_cli(std::ostream& os);
 
@@ -90,4 +90,4 @@ Options:
       true,
       &k_cli_tool);
 
-} // namespace dana::prompts
+} // namespace dana

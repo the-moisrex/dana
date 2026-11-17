@@ -12,7 +12,7 @@
 #include <string_view>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -154,4 +154,4 @@ See also: `.tools` (the catalog), `.exec` (run an argv command), `.extract`.
       false,
       true);
 
-} // namespace dana::prompts
+} // namespace dana

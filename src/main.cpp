@@ -695,18 +695,18 @@ Notes:
     // effort: an unwritable store can never fail a prompt run.
     dana::recorder history{
       dana::recorder::info{
-                                    .argv     = argv_strings(argv_span),
-                                    .cwd      = current_directory(),
-                                    .git_root = env.git_root,
-                                    .terminal = dana::terminal::current(),
-                                    .tty      = ::isatty(STDOUT_FILENO) != 0,
-                                    .inner    = inner_process,
-                                    .parent =
+                           .argv     = argv_strings(argv_span),
+                           .cwd      = current_directory(),
+                           .git_root = env.git_root,
+                           .terminal = dana::terminal::current(),
+                           .tty      = ::isatty(STDOUT_FILENO) != 0,
+                           .inner    = inner_process,
+                           .parent =
           [] {
               char const* raw = std::getenv("PROMPT_HISTORY_PARENT");
               return raw == nullptr ? std::string{} : std::string(raw);
           }(),
-                                    }
+                           }
     };
 
     // `.history.purge` protects the run that is being written right now.

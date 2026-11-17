@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     static void execute_spp(view const& v, result& r) {
         auto head_lines = head_lines_or_throw(v);
@@ -61,4 +61,4 @@ Options:
       &execute_spp,
       &render_help_spp);
 
-} // namespace dana::prompts
+} // namespace dana

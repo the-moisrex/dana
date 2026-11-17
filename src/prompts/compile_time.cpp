@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <string>
 
-namespace dana::prompts {
+namespace dana {
 
     static void execute_compile_time(view const& v, result& r) {
         auto opts = file_options_or_throw(v);
@@ -57,4 +57,4 @@ Options:
       &execute_compile_time,
       &render_help_compile_time);
 
-} // namespace dana::prompts
+} // namespace dana

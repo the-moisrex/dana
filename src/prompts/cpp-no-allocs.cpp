@@ -3,7 +3,7 @@
 
 #include <string>
 
-namespace dana::prompts {
+namespace dana {
 
     static void execute_cpp_no_allocations([[maybe_unused]] view const& v, result& r) {
         r.out = R"PROMPT(Rewrite this code so it performs no heap allocations at all. Every container,
@@ -38,4 +38,4 @@ Options:
       &execute_cpp_no_allocations,
       &render_help_cpp_no_allocations);
 
-} // namespace dana::prompts
+} // namespace dana

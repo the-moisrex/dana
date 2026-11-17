@@ -4,7 +4,7 @@
 
 #include <string>
 
-namespace dana::prompts {
+namespace dana {
 
     static void execute_cpp_reviewer(view const& v, result& r) {
         auto head_lines = head_lines_or_throw(v);
@@ -61,4 +61,4 @@ Options:
       &execute_cpp_reviewer,
       &render_help_cpp_reviewer);
 
-} // namespace dana::prompts
+} // namespace dana

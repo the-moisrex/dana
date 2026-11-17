@@ -12,7 +12,7 @@
 #include <unistd.h>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace fs_std = std::filesystem;
 
@@ -182,4 +182,4 @@ Options:
       true,
       &k_files_tool);
 
-} // namespace dana::prompts
+} // namespace dana

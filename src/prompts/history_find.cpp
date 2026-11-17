@@ -16,7 +16,7 @@
 #include <string_view>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -372,4 +372,4 @@ Examples:
       false,
       false);
 
-} // namespace dana::prompts
+} // namespace dana

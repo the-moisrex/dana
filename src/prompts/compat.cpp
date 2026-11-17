@@ -8,7 +8,7 @@
 #include <string>
 #include <string_view>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
         inline constexpr std::string_view help_summary = "Find places where the code violates backward-compatibility.";
@@ -73,4 +73,4 @@ Options:
 
     bool const registered = dana::register_prompt("compat", help_summary, &execute_compat, &render_help_compat);
 
-} // namespace dana::prompts
+} // namespace dana

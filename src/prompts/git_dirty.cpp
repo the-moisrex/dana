@@ -16,7 +16,7 @@
 #include <system_error>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -459,8 +459,8 @@ namespace dana::prompts {
             if (track && dedup && scope.seen(full)) {
                 return;
             }
-            std::string name    = full.filename().string();
-            std::string content = read_file(full);
+            auto const name    = full.filename();
+            auto const content = read_file(full);
             if (track) {
                 scope.mark(full);
             }
@@ -473,11 +473,11 @@ namespace dana::prompts {
 
         // Iterate a name-status list ("M\tpath" per line), splitting on the first
         // tab exactly like `IFS=$'\t' read -r status filepath`.
-        auto each_name_status = [&](std::string const& files, auto&& fn) {
+        auto const each_name_status = [&](std::string const& files, auto&& fn) {
             for (auto const& line : split_lines(files)) {
-                std::size_t tab      = line.find('\t');
-                std::string status   = line.substr(0, tab);
-                std::string filepath = (tab == std::string::npos) ? std::string{} : line.substr(tab + 1);
+                std::size_t const tab      = line.find('\t');
+                std::string const status   = line.substr(0, tab);
+                std::string const filepath = (tab == std::string::npos) ? std::string{} : line.substr(tab + 1);
                 fn(status, filepath);
             }
         };
@@ -600,4 +600,4 @@ EXAMPLES:
       &execute_git_dirty,
       &render_help_git_dirty);
 
-} // namespace dana::prompts
+} // namespace dana

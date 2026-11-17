@@ -12,7 +12,7 @@
 #include <string_view>
 #include <vector>
 
-namespace dana::prompts {
+namespace dana {
 
     namespace {
 
@@ -218,4 +218,4 @@ Examples:
       true,
       &k_grep_tool);
 
-} // namespace dana::prompts
+} // namespace dana
