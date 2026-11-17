@@ -117,8 +117,7 @@ namespace dana {
             }
         }
 
-        constexpr std::string_view kGlobSummary =
-          "List the files matching a glob pattern (like opencode's glob tool), sorted by path.";
+        constexpr std::string_view kGlobSummary = "List the files matching a glob pattern, sorted by path.";
 
         schema::tool glob_schema() {
             return schema::make_tool(
