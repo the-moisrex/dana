@@ -837,7 +837,7 @@ namespace dana::ai {
                 gemini_parser parser;
                 bool          stopped = false;
                 try {
-                    stream_chunks(request, [&](std::string_view chunk) {
+                    std::ignore = stream_chunks(request, [&](std::string_view chunk) {
                         if (stopped) {
                             return;
                         }

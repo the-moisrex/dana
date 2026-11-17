@@ -949,7 +949,7 @@ namespace dana::ai {
                     request.debug           = debug_;
                     apply_headers(request, headers);
                     sse_decoder decoder;
-                    stream_lines(request, [&](std::string_view line) {
+                    std::ignore = stream_lines(request, [&](std::string_view line) {
                         if (stopped) {
                             return;
                         }

@@ -1,6 +1,6 @@
 // md.extract — the standalone face of the extractor registry.
 //
-// It shares `prompt_lib` with the dispatcher, so `--select`/`--contract`/`--items`
+// It shares `dana_lib` with the dispatcher, so `--select`/`--contract`/`--items`
 // and `.extract`/`.expect`/`.each` can never disagree: the grammar, the parser
 // and the renderers are one implementation. The CLI keeps the flag-based
 // selection (`--kind`/`--lang`/`--heading`/…/`-n`) that predates the selector

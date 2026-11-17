@@ -394,7 +394,7 @@ namespace dana::ai {
                 std::string error_text;
                 sse_decoder decoder;
                 try {
-                    stream_lines(request, [&](std::string_view line) {
+                    std::ignore = stream_lines(request, [&](std::string_view line) {
                         for (auto const& payload : decoder.feed(line)) {
                             json event = json::parse(payload, nullptr, false);
                             if (event.is_discarded() || !event.is_object()) {

@@ -12,7 +12,7 @@
 
 namespace dana::process {
 
-    struct command_result {
+    struct [[nodiscard]] command_result {
         std::string stdout_data;
         std::string stderr_data;
         int         exit_code = 0;
@@ -20,7 +20,7 @@ namespace dana::process {
     };
 
     // How a child's stderr is handled.
-    enum class stderr_mode : std::uint8_t {
+    enum struct [[nodiscard]] stderr_mode : std::uint8_t {
         inherit,   // the child writes straight to our stderr — what a `$(...)`
                    // capture does (the tool's diagnostics appear as they run).
         capture,   // piped into command_result::stderr_data.
@@ -37,8 +37,7 @@ namespace dana::process {
     // argument containing spaces, quotes or newlines reaches the child intact).
     // Use command::shell() when the work genuinely needs /bin/bash semantics
     // (pipes, globs, $(...) substitution).
-    class command {
-      public:
+    struct [[nodiscard]] command {
         command() = default;
 
         command(std::initializer_list<std::string> argv) : argv_(argv) {}

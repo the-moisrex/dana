@@ -569,7 +569,7 @@ namespace dana::ai {
 
     } // namespace
 
-    // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
-    bool const grok_registered = register_provider(std::make_unique<grok_provider>());
 
 } // namespace dana::ai
+
+[[maybe_unused]] bool const grok_registered = dana::ai::register_provider(std::make_unique<dana::ai::grok_provider>());

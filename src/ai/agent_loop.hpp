@@ -19,7 +19,7 @@
 
 namespace dana::ai {
 
-    struct agent_loop_options {
+    struct [[nodiscard]] agent_loop_options {
         // Hard stop; a model that never stops calling tools cannot run forever.
         int max_turns                  = 25;
         // Per-turn call cap (0 = unlimited). Excess calls are dropped with a note.
@@ -33,7 +33,7 @@ namespace dana::ai {
         bool show_tools                = false;
     };
 
-    struct agent_loop_io {
+    struct [[nodiscard]] agent_loop_io {
         // One assistant turn. `status != 0` aborts the loop.
         std::function<turn_result(std::string const&)> turn;
         // Execute the calls in an answer. nullopt means "no calls": the loop is done.
@@ -42,7 +42,7 @@ namespace dana::ai {
         std::function<void(std::string_view)> status;
     };
 
-    struct agent_loop_result {
+    struct [[nodiscard]] agent_loop_result {
         // The last assistant answer (also on exhaustion).
         std::string answer;
         // Every answer and tool block, folded with the shared text rule.
@@ -55,8 +55,7 @@ namespace dana::ai {
         std::string error;
     };
 
-    [[nodiscard]] agent_loop_result
-    run_agent_loop(std::string initial, agent_loop_options const& options, agent_loop_io const& io);
+    agent_loop_result run_agent_loop(std::string initial, agent_loop_options const& options, agent_loop_io const& io);
 
     // Keep the first `head_lines` lines and at most `max_bytes` bytes, appending a
     // one-line note when anything was dropped. 0 disables either limit.

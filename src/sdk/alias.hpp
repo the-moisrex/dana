@@ -27,13 +27,12 @@ namespace dana::alias {
     namespace fs = std::filesystem;
 
     // One real root and the placeholder that stands in for it.
-    struct entry {
+    struct [[nodiscard]] entry {
         std::string real;
         std::string shown;
     };
 
-    class table {
-      public:
+    struct [[nodiscard]] table {
         // Map `real` (canonicalized) to `shown`, registering the path as it was
         // given too when the two spellings differ.
         void add(fs::path const& real, std::string_view shown);
@@ -92,7 +91,7 @@ namespace dana::alias {
     // The standard mapping: the git root and/or the working directory (one
     // placeholder when one contains the other), plus the sanitized spelling of each
     // root as a hide-only form.
-    [[nodiscard]] table for_environment(environment const& env);
+    table for_environment(environment const& env);
 
     // `keys::path_alias` codec: a length-prefixed list of (real, shown) pairs, so
     // any path bytes survive the fact store.

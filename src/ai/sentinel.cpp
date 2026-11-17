@@ -202,7 +202,7 @@ namespace dana::ai::sentinel {
         struct value;
 
         struct value {
-            enum class kind : unsigned char {
+            enum struct [[nodiscard]] kind : unsigned char {
                 none,
                 boolean,
                 integer,

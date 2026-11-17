@@ -9,13 +9,13 @@ namespace dana {
     // barrier: after every prompt before them, with the accumulated chain text as
     // their input, and their answer becomes the text later prompts/sinks see.
     // Contiguous sinks chain in argv order (each answer feeds the next).
-    enum class chain_role : unsigned char {
+    enum struct [[nodiscard]] chain_role : unsigned char {
         normal,
         sink,
     };
 
     // What a sink does when the batch feeding it failed.
-    enum class sink_failure : unsigned char {
+    enum struct [[nodiscard]] sink_failure : unsigned char {
         abort,   // stop before running this sink
         proceed, // run with the partial context
         skip,    // skip this sink and keep the prior context

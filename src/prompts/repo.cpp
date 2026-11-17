@@ -20,7 +20,7 @@ namespace dana {
 
     namespace {
 
-        enum class repo_format : std::uint8_t {
+        enum struct [[nodiscard]] repo_format : std::uint8_t {
             compact,
             tree,
             paths,

@@ -214,8 +214,8 @@ namespace dana::clipboard {
                   std::string(data),
                 };
                 cmd.timeout(std::chrono::seconds(5));
-                cmd.run();
-                return true;
+                auto const res = cmd.run();
+                return res.exit_code == 0;
             }
             default: return false;
         }

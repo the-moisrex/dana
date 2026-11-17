@@ -31,7 +31,7 @@ namespace dana {
 
     namespace {
 
-        enum class target_kind : std::uint8_t {
+        enum struct [[nodiscard]] target_kind : std::uint8_t {
             auto_detect,
             directory,
             file

@@ -1,91 +1,91 @@
 add_executable(test_ai test_ai.cpp)
-target_link_libraries(test_ai PRIVATE prompt_lib)
+target_link_libraries(test_ai PRIVATE dana_lib)
 target_include_directories(test_ai PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME ai COMMAND test_ai)
 
 # The offline `ai.debate` relay loop: framing, rounds, agreement and failures.
 add_executable(test_ai_debate test_ai_debate.cpp)
-target_link_libraries(test_ai_debate PRIVATE prompt_lib)
+target_link_libraries(test_ai_debate PRIVATE dana_lib)
 target_include_directories(test_ai_debate PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME ai_debate COMMAND test_ai_debate)
 
 # DeepSeek's proof-of-work: the custom hash's known vectors, the nonce search
 # and the x-ds-pow-response payload (offline, no site is contacted).
 add_executable(test_ai_pow test_ai_pow.cpp)
-target_link_libraries(test_ai_pow PRIVATE prompt_lib)
+target_link_libraries(test_ai_pow PRIVATE dana_lib)
 target_include_directories(test_ai_pow PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME ai_pow COMMAND test_ai_pow)
 
 # The provider-independent agentic loop behind `.ai.loop`: turn order, the
 # tool feedback prompt, exhaustion, failure and result truncation.
 add_executable(test_agent_loop test_agent_loop.cpp)
-target_link_libraries(test_agent_loop PRIVATE prompt_lib)
+target_link_libraries(test_agent_loop PRIVATE dana_lib)
 target_include_directories(test_agent_loop PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME agent_loop COMMAND test_agent_loop)
 
 add_executable(test_chaining test_chaining.cpp)
-target_link_libraries(test_chaining PRIVATE prompt_lib)
+target_link_libraries(test_chaining PRIVATE dana_lib)
 target_include_directories(test_chaining PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME chaining COMMAND test_chaining)
 
 add_executable(test_errors test_errors.cpp)
-target_link_libraries(test_errors PRIVATE prompt_lib)
+target_link_libraries(test_errors PRIVATE dana_lib)
 target_include_directories(test_errors PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME errors COMMAND test_errors)
 
 add_executable(test_prompt_file test_prompt_file.cpp)
-target_link_libraries(test_prompt_file PRIVATE prompt_lib)
+target_link_libraries(test_prompt_file PRIVATE dana_lib)
 target_include_directories(test_prompt_file PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME prompt_file COMMAND test_prompt_file)
 
 add_executable(test_function test_function.cpp)
-target_link_libraries(test_function PRIVATE prompt_lib)
+target_link_libraries(test_function PRIVATE dana_lib)
 target_include_directories(test_function PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME function COMMAND test_function)
 
 add_executable(test_fs test_fs.cpp)
-target_link_libraries(test_fs PRIVATE prompt_lib)
+target_link_libraries(test_fs PRIVATE dana_lib)
 target_include_directories(test_fs PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME fs COMMAND test_fs)
 
 add_executable(test_sanitize test_sanitize.cpp)
-target_link_libraries(test_sanitize PRIVATE prompt_lib)
+target_link_libraries(test_sanitize PRIVATE dana_lib)
 target_include_directories(test_sanitize PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME sanitize COMMAND test_sanitize)
 
 add_executable(test_sink test_sink.cpp)
-target_link_libraries(test_sink PRIVATE prompt_lib)
+target_link_libraries(test_sink PRIVATE dana_lib)
 target_include_directories(test_sink PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME sink COMMAND test_sink)
 
 add_executable(test_facts test_facts.cpp)
-target_link_libraries(test_facts PRIVATE prompt_lib)
+target_link_libraries(test_facts PRIVATE dana_lib)
 target_include_directories(test_facts PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME facts COMMAND test_facts)
 
 # The path-alias mechanism: boundary-aware hide/reveal, stable placeholders, the
 # workspace header, the fact codec and the standard environment mapping.
 add_executable(test_alias test_alias.cpp)
-target_link_libraries(test_alias PRIVATE prompt_lib)
+target_link_libraries(test_alias PRIVATE dana_lib)
 target_include_directories(test_alias PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME alias COMMAND test_alias)
 
 add_executable(test_compress test_compress.cpp)
-target_link_libraries(test_compress PRIVATE prompt_lib)
+target_link_libraries(test_compress PRIVATE dana_lib)
 target_include_directories(test_compress PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME compress COMMAND test_compress)
 
 # The tool-schema layer: the factories, the help-derived fallback and the
 # renderers/completion a prompt builds from a schema.
 add_executable(test_schema test_schema.cpp)
-target_link_libraries(test_schema PRIVATE prompt_lib)
+target_link_libraries(test_schema PRIVATE dana_lib)
 target_include_directories(test_schema PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME schema COMMAND test_schema)
 
 # The tool-call layer: `schema::parse` (JSON -> argv) and
 # `tool_call::extract` (finding calls in an AI answer).
 add_executable(test_tool_call test_tool_call.cpp)
-target_link_libraries(test_tool_call PRIVATE prompt_lib)
+target_link_libraries(test_tool_call PRIVATE dana_lib)
 target_include_directories(test_tool_call PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME tool_call COMMAND test_tool_call)
 
@@ -187,7 +187,7 @@ set_tests_properties(compress_directory PROPERTIES
 # The pasted-text → instrument policy, now next to the clipboard instead of
 # inline in the dispatcher's environment initializer.
 add_executable(test_clipboard test_clipboard.cpp)
-target_link_libraries(test_clipboard PRIVATE prompt_lib)
+target_link_libraries(test_clipboard PRIVATE dana_lib)
 target_include_directories(test_clipboard PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME clipboard_identifier COMMAND test_clipboard)
 
@@ -345,7 +345,7 @@ add_test(NAME clear_roundtrip
 # The stash store: names, scopes, the JSON round-trip, append merging,
 # sanitization, malformed files and the cross-process append lock.
 add_executable(test_stash test_stash.cpp)
-target_link_libraries(test_stash PRIVATE prompt_lib)
+target_link_libraries(test_stash PRIVATE dana_lib)
 target_include_directories(test_stash PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME stash COMMAND test_stash)
 
@@ -357,7 +357,7 @@ add_test(NAME stash_roundtrip
 # The history store: the marker format, the byte framing (a body that contains
 # a fake marker), the chain replay, truncation and the retention pass.
 add_executable(test_history test_history.cpp)
-target_link_libraries(test_history PRIVATE prompt_lib)
+target_link_libraries(test_history PRIVATE dana_lib)
 target_include_directories(test_history PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME history COMMAND test_history)
 
@@ -369,19 +369,19 @@ add_test(NAME history_roundtrip
 # `tse_data::run_tool`: a timeout, a non-zero exit and an empty dataset each
 # produce a message instead of the old silent empty soft_error.
 add_executable(test_tse_tool test_tse_tool.cpp)
-target_link_libraries(test_tse_tool PRIVATE prompt_lib)
+target_link_libraries(test_tse_tool PRIVATE dana_lib)
 target_include_directories(test_tse_tool PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME tse_tool COMMAND test_tse_tool)
 
 add_executable(test_embed test_embed.cpp)
-target_link_libraries(test_embed PRIVATE prompt_lib)
+target_link_libraries(test_embed PRIVATE dana_lib)
 target_include_directories(test_embed PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME embed COMMAND test_embed)
 
 # The one text-fold rule (`append_block`/`strip_newlines`) shared by the chain
 # context, the stdout accumulator, the clipboard builder and the history replay.
 add_executable(test_strings test_strings.cpp)
-target_link_libraries(test_strings PRIVATE prompt_lib)
+target_link_libraries(test_strings PRIVATE dana_lib)
 target_include_directories(test_strings PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME strings COMMAND test_strings)
 
@@ -396,7 +396,7 @@ add_test(NAME yt_roundtrip
     COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_yt.sh $<TARGET_FILE:prompt>)
 
 add_executable(test_completion test_completion.cpp)
-target_link_libraries(test_completion PRIVATE prompt_lib)
+target_link_libraries(test_completion PRIVATE dana_lib)
 target_include_directories(test_completion PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME completion COMMAND test_completion)
 
@@ -408,7 +408,7 @@ set_tests_properties(files_num PROPERTIES PASS_REGULAR_EXPRESSION "1 \\| one")
 
 # The chain-wide file record: parsing, canonical keys and the ordered union.
 add_executable(test_file_scope test_file_scope.cpp)
-target_link_libraries(test_file_scope PRIVATE prompt_lib)
+target_link_libraries(test_file_scope PRIVATE dana_lib)
 target_include_directories(test_file_scope PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME file_scope COMMAND test_file_scope)
 
@@ -420,7 +420,7 @@ add_test(NAME file_dedup
 # The chain-wide file selection filter: the pattern matching (basename, path,
 # directory, absolute), the scope resolution and the published union.
 add_executable(test_file_filter test_file_filter.cpp)
-target_link_libraries(test_file_filter PRIVATE prompt_lib)
+target_link_libraries(test_file_filter PRIVATE dana_lib)
 target_include_directories(test_file_filter PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME file_filter COMMAND test_file_filter)
 

@@ -98,7 +98,7 @@ namespace {
           [](std::initializer_list<std::string_view> args, std::string_view want, char const* what) {
               try {
                   auto fixture = make_ctx(args);
-                  file_options_or_throw(fixture.make());
+                  std::ignore  = file_options_or_throw(fixture.make());
                   std::fprintf(stderr, "FAIL: %s (no exception)\n", what);
                   ++failures;
               } catch (prompt_error const& e) {

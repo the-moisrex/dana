@@ -20,7 +20,7 @@ namespace dana::ai {
     inline constexpr std::string_view kToolCall   = "tool_call";
     inline constexpr std::string_view kAttachment = "attachment";
 
-    struct message {
+    struct [[nodiscard]] message {
         std::string role;
         std::string kind = std::string(kText);
         std::string text;
@@ -30,7 +30,7 @@ namespace dana::ai {
         std::string created;
     };
 
-    struct chat {
+    struct [[nodiscard]] chat {
         std::string          id;
         std::string          title;
         std::string          url;
@@ -40,7 +40,7 @@ namespace dana::ai {
         std::string          provider;
     };
 
-    struct chat_summary {
+    struct [[nodiscard]] chat_summary {
         std::string id;
         std::string title;
         std::string created;

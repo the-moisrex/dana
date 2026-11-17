@@ -7,34 +7,34 @@
 namespace dana {
 
     void facts::set(std::string_view key, std::string_view value) {
-        auto it = std::ranges::find_if(entries_, [key](entry const& e) {
+        auto it = std::ranges::find_if(m_entries, [key](entry const& e) {
             return e.key == key;
         });
-        if (it == entries_.end()) {
-            entries_.push_back(entry{.key = std::string(key), .value = std::string(value)});
+        if (it == m_entries.end()) {
+            m_entries.push_back(entry{.key = std::string(key), .value = std::string(value)});
         } else {
             it->value.assign(value);
         }
     }
 
     std::optional<std::string_view> facts::get(std::string_view key) const {
-        auto it = std::ranges::find_if(entries_, [key](entry const& e) {
+        auto it = std::ranges::find_if(m_entries, [key](entry const& e) {
             return e.key == key;
         });
-        if (it == entries_.end()) {
+        if (it == m_entries.end()) {
             return std::nullopt;
         }
         return it->value;
     }
 
     void facts::erase(std::string_view key) {
-        std::erase_if(entries_, [key](entry const& e) {
+        std::erase_if(m_entries, [key](entry const& e) {
             return e.key == key;
         });
     }
 
     void facts::merge(facts const& other, bool overwrite) {
-        for (auto const& item : other.entries_) {
+        for (auto const& item : other.m_entries) {
             if (overwrite) {
                 set(item.key, item.value);
                 continue;
@@ -47,9 +47,9 @@ namespace dana {
 
     std::string facts::encode() const {
         std::string out;
-        out.reserve(entries_.size() * 32);
-        codec::append_u32(out, entries_.size());
-        for (auto const& item : entries_) {
+        out.reserve(m_entries.size() * 32);
+        codec::append_u32(out, m_entries.size());
+        for (auto const& item : m_entries) {
             codec::append_u32(out, item.key.size());
             out += item.key;
             codec::append_u32(out, item.value.size());

@@ -22,7 +22,7 @@ namespace dana::ai::state {
     //: A saved conversation older than this is ignored by --continue.
     inline constexpr double kMaxAge = 7 * 24 * 3600;
 
-    struct conversation_record {
+    struct [[nodiscard]] conversation_record {
         std::string    conversation_id;
         std::string    model;
         double         updated = 0;

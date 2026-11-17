@@ -49,7 +49,7 @@ namespace dana::ai {
             return std::isspace(static_cast<unsigned char>(value)) != 0;
         }
 
-        enum class inline_style : unsigned char {
+        enum struct [[nodiscard]] inline_style : unsigned char {
             bold,
             italic,
             strike

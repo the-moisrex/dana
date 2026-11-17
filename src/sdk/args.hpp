@@ -79,7 +79,7 @@ namespace dana {
     // the former and warn about the latter; stdout and stderr are independent
     // streams, so visiting the two lists in separate passes keeps every byte the
     // bash scripts produce.
-    struct file_args {
+    struct [[nodiscard]] file_args {
         std::vector<std::filesystem::path> files;
         std::vector<std::string_view>      missing;
     };

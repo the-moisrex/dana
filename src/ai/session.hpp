@@ -14,12 +14,11 @@
 
 namespace dana::ai::session {
 
-    class session_error : public std::runtime_error {
-      public:
+    struct [[nodiscard]] session_error : std::runtime_error {
         using std::runtime_error::runtime_error;
     };
 
-    struct match {
+    struct [[nodiscard]] match {
         std::string    user_agent;
         std::string    cookie_header;
         std::string    browser;
@@ -31,7 +30,7 @@ namespace dana::ai::session {
         nlohmann::json raw     = nlohmann::json::object();
     };
 
-    struct options {
+    struct [[nodiscard]] options {
         std::vector<std::string> browser;
         std::string              profile;
         std::string              family;

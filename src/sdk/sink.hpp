@@ -15,7 +15,7 @@ namespace dana {
 
     // A sink invocation after the shared flags have been removed. `rest` is what
     // the sink's own implementation (or the tool it calls) should see.
-    struct sink_args {
+    struct [[nodiscard]] sink_args {
         sink_options                  options;
         std::vector<std::string_view> rest;
         std::string                   error; // empty on success

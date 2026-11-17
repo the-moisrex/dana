@@ -13,8 +13,7 @@ namespace dana {
     // status.
     //
     // The chain keeps running after a failure — the first non-zero status wins.
-    class prompt_error : public std::runtime_error {
-      public:
+    struct [[nodiscard]] prompt_error : std::runtime_error {
         // NOLINTNEXTLINE(performance-unnecessary-value-param) — by value on purpose: callers std::move the message in.
         prompt_error(int         exit_code,
                      std::string message,
@@ -24,37 +23,36 @@ namespace dana {
           // runtime_error's ctor takes a const& and copies; the message is
           // consumed there, partial_ still moves. NOLINT: no way to move into it.
           : std::runtime_error(std::move(message)), // NOLINT(performance-move-const-arg)
-            exit_code_(exit_code),
-            partial_(std::move(partial_output)),
-            no_clipboard_(no_clipboard),
-            stdin_consumed_(stdin_consumed) {}
+            m_exit_code(exit_code),
+            m_partial(std::move(partial_output)),
+            m_no_clipboard(no_clipboard),
+            m_stdin_consumed(stdin_consumed) {}
 
         [[nodiscard]] int exit_code() const {
-            return exit_code_;
+            return m_exit_code;
         }
 
         [[nodiscard]] std::string const& partial_output() const {
-            return partial_;
+            return m_partial;
         }
 
         [[nodiscard]] bool no_clipboard() const {
-            return no_clipboard_;
+            return m_no_clipboard;
         }
 
         [[nodiscard]] bool stdin_consumed() const {
-            return stdin_consumed_;
+            return m_stdin_consumed;
         }
 
       private:
-        int         exit_code_;
-        std::string partial_;
-        bool        no_clipboard_;
-        bool        stdin_consumed_;
+        int         m_exit_code;
+        std::string m_partial;
+        bool        m_no_clipboard;
+        bool        m_stdin_consumed;
     };
 
     // Argument/usage failures (bash `exit 2`).
-    class usage_error : public prompt_error {
-      public:
+    struct [[nodiscard]] usage_error : prompt_error {
         explicit usage_error(std::string message,
                              std::string partial_output = {},
                              bool        no_clipboard   = false,
@@ -63,8 +61,7 @@ namespace dana {
     };
 
     // Runtime failures (bash `exit 1`).
-    class soft_error : public prompt_error {
-      public:
+    struct [[nodiscard]] soft_error : prompt_error {
         explicit soft_error(std::string message,
                             std::string partial_output = {},
                             bool        no_clipboard   = false,

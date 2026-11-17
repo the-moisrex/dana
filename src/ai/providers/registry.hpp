@@ -10,7 +10,7 @@
 
 namespace dana::ai {
 
-    bool register_provider(std::unique_ptr<provider> value);
+    bool register_provider(std::unique_ptr<provider> value) noexcept;
 
     provider*              find_provider(std::string_view name);
     std::vector<provider*> all_providers();

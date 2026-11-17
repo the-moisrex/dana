@@ -12,7 +12,7 @@ namespace dana {
     // (`text::append_block`): trim the block on both sides, skip it when empty, and
     // separate consecutive blocks with one blank line. `known` holds the artifacts
     // of completed segments (last writer wins: the nearest successful segment).
-    struct chain_state {
+    struct [[nodiscard]] chain_state {
         std::string text;
         facts       known;
         bool        redacted   = false;

@@ -249,7 +249,7 @@ namespace dana::ai {
 
                 std::string answer;
                 try {
-                    stream_lines(request, [&](std::string_view line) {
+                    std::ignore = stream_lines(request, [&](std::string_view line) {
                         if (line.empty() || line.front() == ':') {
                             return;
                         }
@@ -373,18 +373,18 @@ namespace dana::ai {
 
     std::string openai_compat::base_url(std::string const& requested) {
         std::string explicit_url = trim(requested);
-        if (explicit_url.empty() && !info_.base_url_env.empty()) {
-            explicit_url = trim(env_value(info_.base_url_env));
+        if (explicit_url.empty() && !m_info.base_url_env.empty()) {
+            explicit_url = trim(env_value(m_info.base_url_env));
         }
-        std::string const url = explicit_url.empty() ? info_.default_base_url : explicit_url;
+        std::string const url = explicit_url.empty() ? m_info.default_base_url : explicit_url;
         if (url.empty()) {
-            throw std::runtime_error("no API endpoint configured; pass --base-url or set " + info_.base_url_env);
+            throw std::runtime_error("no API endpoint configured; pass --base-url or set " + m_info.base_url_env);
         }
         return normalise_base(url);
     }
 
     std::string openai_compat::api_key(std::string const& requested) {
-        return keys::resolve(info_.name, std::array<std::string, 1>{info_.key_env}, requested).key;
+        return keys::resolve(m_info.name, std::array<std::string, 1>{m_info.key_env}, requested).key;
     }
 
     std::vector<std::pair<std::string, std::string>> openai_compat::headers(
@@ -474,22 +474,22 @@ namespace dana::ai {
 
     std::string openai_compat::resolve_model(std::string const& requested, std::string const& /*base*/) {
         std::string wanted = trim(requested);
-        if (wanted.empty() && !info_.model_env.empty()) {
-            wanted = trim(env_value(info_.model_env));
+        if (wanted.empty() && !m_info.model_env.empty()) {
+            wanted = trim(env_value(m_info.model_env));
         }
         if (wanted.empty()) {
-            wanted = trim(info_.default_model);
+            wanted = trim(m_info.default_model);
         }
         if (!wanted.empty()) {
             return wanted;
         }
-        throw std::runtime_error("choose a model with -m/--model or " + info_.model_env + "=… (`ai." + info_.name +
+        throw std::runtime_error("choose a model with -m/--model or " + m_info.model_env + "=… (`ai." + m_info.name +
                                  " --list` shows what the endpoint offers)");
     }
 
     json openai_compat::session_descriptor(open_options const& options) {
         json report{
-          { "provider",    info_.name},
+          { "provider",   m_info.name},
           { "base_url",            ""},
           {    "model",            ""},
           {"reachable",         false},

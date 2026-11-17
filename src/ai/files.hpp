@@ -16,12 +16,11 @@ namespace dana::ai {
     //: Refuse anything larger than this up front (the sites' own caps are looser).
     inline constexpr std::size_t kMaxAttachmentSize = 100UL * 1024UL * 1024UL;
 
-    class file_error : public std::runtime_error {
-      public:
+    struct [[nodiscard]] file_error : std::runtime_error {
         using std::runtime_error::runtime_error;
     };
 
-    struct attachment {
+    struct [[nodiscard]] attachment {
         std::string path;
         std::string name;
         std::string data;

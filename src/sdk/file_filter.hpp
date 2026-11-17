@@ -24,8 +24,7 @@ namespace dana {
     //
     // The filter is read-only: a prompt builds one from `v.prior` and publishes
     // whatever it wants to change.
-    class file_filter {
-      public:
+    struct [[nodiscard]] file_filter {
         static file_filter from(facts const& prior, environment const& env);
 
         [[nodiscard]] bool empty() const {

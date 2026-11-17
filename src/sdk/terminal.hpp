@@ -18,7 +18,7 @@ namespace dana::terminal {
     // This is deliberately history-agnostic: the store scopes `.last`/`--here` by
     // it, but any future feature that wants "a place, not a global" (a per-terminal
     // lock, a session-scoped default, …) can reuse the same identity.
-    struct id {
+    struct [[nodiscard]] id {
         long long   sid = 0; // getsid(0); 0 when unknown
         std::string tty;     // controlling terminal path; empty when none
         std::string key;     // opaque override (PROMPT_TERMINAL_KEY); wins over both
@@ -37,7 +37,7 @@ namespace dana::terminal {
     // when both sides have one; otherwise the session ids must match (when both are
     // known, the ttys must not disagree); when a session id is missing the tty path
     // is compared instead. Two empty identities never match.
-    bool same(id const& a, id const& b);
+    bool same(id const& lhs, id const& rhs);
 
     // "sid 12345 on /dev/pts/3" / "session <key>" — for `--meta` and `--json`.
     std::string describe(id const& value);

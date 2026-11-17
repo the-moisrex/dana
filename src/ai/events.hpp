@@ -12,7 +12,7 @@
 
 namespace dana::ai {
 
-    enum class event_kind : unsigned char {
+    enum struct [[nodiscard]] event_kind : unsigned char {
         thinking,  // reasoning text (DeepSeek reasoning_content, ChatGPT thoughts, …)
         text,      // the visible answer
         tool_call, // a tool the *site* is running; display only

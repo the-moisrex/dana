@@ -19,7 +19,7 @@ namespace dana {
         constexpr std::string_view kReadGrepSummary =
           "Read files whose contents match a regular expression with numbered lines.";
 
-        enum class search_backend {
+        enum struct [[nodiscard]] search_backend {
             automatic,
             rg,
             grep

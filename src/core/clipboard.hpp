@@ -8,7 +8,7 @@
 
 namespace dana::clipboard {
 
-    enum class backend : std::uint8_t {
+    enum struct [[nodiscard]] backend : std::uint8_t {
         wayland,
         x11,
         kde,

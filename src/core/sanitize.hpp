@@ -11,7 +11,7 @@ namespace dana::sanitize {
 
     // The sanitize pipeline (strip_osc then clean_privacy) plus whether clean_privacy
     // actually rewrote anything.
-    struct result {
+    struct [[nodiscard]] result {
         std::string text;
         bool        redacted = false;
     };

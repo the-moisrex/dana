@@ -23,8 +23,7 @@ namespace dana {
     //
     // The dispatcher runs a batch containing an `emits_files` prompt sequentially,
     // so a later file prompt sees the earlier one's `keys::files` artifact.
-    class file_scope {
-      public:
+    struct [[nodiscard]] file_scope {
         explicit file_scope(facts const& prior);
 
         [[nodiscard]] bool        seen(std::filesystem::path const& path) const;

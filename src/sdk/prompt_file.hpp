@@ -40,7 +40,7 @@ namespace dana {
     // `expand = false` (`prompt --no-prompt-files …`) copies argv unchanged.
     inline constexpr std::size_t kMaxPromptFileDepth = 8;
 
-    struct expanded_argv {
+    struct [[nodiscard]] expanded_argv {
         std::vector<std::string> storage; // owns every token, argv[0] included
         std::string              error;   // non-empty: print it and exit 2
 
@@ -64,7 +64,7 @@ namespace dana {
     // One text's worth of tokens, plus the lexer's one possible failure. Shared by
     // `*.prompt` files and the `funcs` files that hold function definitions, so
     // both read the same dialect (spaces/newlines split, `#` comments, quotes).
-    struct tokenized_text {
+    struct [[nodiscard]] tokenized_text {
         std::vector<std::string> tokens;
         std::string              error; // "<label>:<line>: unterminated \""
     };

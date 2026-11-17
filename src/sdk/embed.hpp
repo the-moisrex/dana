@@ -11,7 +11,7 @@ namespace dana {
 
     // How to render an embedded file: `head_lines` caps the kept lines (--head) and
     // `numbered` prefixes each kept line with its line number (--num/--numbered).
-    struct file_options {
+    struct [[nodiscard]] file_options {
         std::optional<std::size_t> head_lines;
         bool                       numbered = false;
         // False when `--no-dedup` asks this prompt to embed a file even though an

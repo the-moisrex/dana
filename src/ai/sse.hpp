@@ -10,8 +10,7 @@
 
 namespace dana::ai {
 
-    class sse_decoder {
-      public:
+    struct [[nodiscard]] sse_decoder {
         // Feed one line (without its newline); returns the payloads completed by
         // that line (usually none or one).
         std::vector<std::string> feed(std::string_view line) {

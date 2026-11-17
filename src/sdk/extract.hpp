@@ -34,7 +34,7 @@ namespace dana::extract {
     // segment) sees; `source` is the raw body a following `/` stage parses. They
     // differ for a section (its heading is in `text`, not in `source`) and a
     // projected table (TSV in `text`, the Markdown table in `source`).
-    struct match {
+    struct [[nodiscard]] match {
         std::string                              text;
         std::string                              source;
         std::string                              kind;
@@ -66,7 +66,7 @@ namespace dana::extract {
 
     // One plan entry: `[bind=]step(/step)*`. An empty `bind` is the primary (its
     // result replaces the chain context); a non-empty one is published as that fact.
-    struct selection {
+    struct [[nodiscard]] selection {
         std::string       bind;
         std::vector<step> steps;
     };
@@ -78,7 +78,7 @@ namespace dana::extract {
     // The full instruction for a selector, and the noun phrase a combined contract
     // lists it as ("one fenced code block…"). Both empty when the extractor cannot
     // be the first stage of a contract.
-    struct contract_text {
+    struct [[nodiscard]] contract_text {
         std::string full;
         std::string clause;
     };
@@ -86,7 +86,7 @@ namespace dana::extract {
     using contract_fn = contract_text (*)(std::string_view qualifier);
     using complete_fn = void (*)(std::string_view prefix, std::ostream& os);
 
-    struct extractor {
+    struct [[nodiscard]] extractor {
         std::string_view name;
         std::string_view summary; // one line for help and completion
         run_fn           run;
@@ -106,7 +106,7 @@ namespace dana::extract {
     // `[bind=]step(/step)*`. A bare word that is not an extractor name is the
     // heading of the section to take (`section:<word>`). Throws usage_error on an
     // empty selector or a malformed `@N`.
-    [[nodiscard]] selection parse_selection(std::string_view raw);
+    selection parse_selection(std::string_view raw);
 
     // A whole `.expect`/`.delegate` plan: newline-separated `[bind=]selector`
     // entries (empty lines ignored). A malformed entry throws usage_error.

@@ -47,7 +47,7 @@ namespace dana::ai {
                     }
                 }
                 if (wanted.empty()) {
-                    wanted = info_.default_model;
+                    wanted = m_info.default_model;
                 }
                 if (!wanted.empty()) {
                     return wanted;

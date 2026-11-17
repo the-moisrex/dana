@@ -47,7 +47,7 @@ namespace dana::policy {
         }
 
       private:
-        enum class action : unsigned char {
+        enum struct [[nodiscard]] action : unsigned char {
             allow,
             ask,
             deny

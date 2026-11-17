@@ -116,7 +116,7 @@ namespace dana::ai {
             std::string base_url(std::string const& requested) override {
                 std::string explicit_url = trim(requested);
                 if (explicit_url.empty()) {
-                    explicit_url = trim(env_value(info_.base_url_env));
+                    explicit_url = trim(env_value(m_info.base_url_env));
                 }
                 if (!explicit_url.empty()) {
                     return normalise_base(explicit_url);
@@ -190,7 +190,7 @@ namespace dana::ai {
             std::string resolve_model(std::string const& requested, std::string const& base) override {
                 std::string wanted = trim(requested);
                 if (wanted.empty()) {
-                    wanted = trim(env_value(info_.model_env));
+                    wanted = trim(env_value(m_info.model_env));
                 }
                 if (!wanted.empty()) {
                     return wanted;
@@ -258,7 +258,7 @@ namespace dana::ai {
                     lowered.contains("timeout") || lowered.contains("unreachable"))
                 {
                     text += "\nCheck that LM Studio's server is running (`lms server start`) and that " + base +
-                            " is the right endpoint; --base-url and " + info_.base_url_env + " set it.";
+                            " is the right endpoint; --base-url and " + m_info.base_url_env + " set it.";
                 }
                 return text;
             }

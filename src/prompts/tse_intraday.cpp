@@ -235,7 +235,7 @@ Options:
 
     // This file registers two prompts: the data collector and its data-free lens
     // (the same split as `tse` / `tse.analyze`). Registration runs at static-init
-    // time, which is why `prompt_lib` must stay an OBJECT library (no central list
+    // time, which is why `dana_lib` must stay an OBJECT library (no central list
     // — see sdk/prompt_registry.hpp).
     [[maybe_unused]] bool const registered = dana::register_prompt(
       "tse.intraday",

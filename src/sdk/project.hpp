@@ -14,7 +14,7 @@ namespace dana::project {
     // The shape of a project, as enums rather than free-form strings: a compressor
     // branches on `build == build_system::cmake`, not on a string compare, and
     // `.project` prints the canonical name.
-    enum class language : std::uint8_t {
+    enum struct [[nodiscard]] language : std::uint8_t {
         unknown,
         c,
         cpp,
@@ -31,7 +31,7 @@ namespace dana::project {
         csharp,
     };
 
-    enum class build_system : std::uint8_t {
+    enum struct [[nodiscard]] build_system : std::uint8_t {
         none,
         cmake,
         ninja,
@@ -44,7 +44,7 @@ namespace dana::project {
         python,
     };
 
-    enum class package_manager : std::uint8_t {
+    enum struct [[nodiscard]] package_manager : std::uint8_t {
         unknown,
         npm,
         yarn,
@@ -66,7 +66,7 @@ namespace dana::project {
         brew,
     };
 
-    enum class test_framework : std::uint8_t {
+    enum struct [[nodiscard]] test_framework : std::uint8_t {
         unknown,
         gtest,
         catch2,

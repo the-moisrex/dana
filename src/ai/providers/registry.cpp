@@ -1,7 +1,9 @@
 #include "registry.hpp"
 
 #include <algorithm>
+#include <cstdio>
 #include <map>
+#include <print>
 #include <string>
 
 namespace dana::ai {
@@ -15,13 +17,16 @@ namespace dana::ai {
 
     } // namespace
 
-    bool register_provider(std::unique_ptr<provider> value) {
+    bool register_provider(std::unique_ptr<provider> value) noexcept try {
         if (!value) {
             return false;
         }
-        std::string name = value->info().name;
-        store()[name]    = std::move(value);
+        std::string const name = value->info().name;
+        store()[name]          = std::move(value);
         return true;
+    } catch (...) {
+        std::println(stderr, "Failed to register provider: {}", value->info().name);
+        return false;
     }
 
     provider* find_provider(std::string_view name) {

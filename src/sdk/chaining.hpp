@@ -10,7 +10,7 @@
 
 namespace dana {
 
-    struct prompt_invocation {
+    struct [[nodiscard]] prompt_invocation {
         std::string_view name;
         // Arguments before the body (a body-taking prompt's flags and selector).
         std::vector<std::string_view> args;
@@ -20,7 +20,7 @@ namespace dana {
         std::vector<std::string_view> body;
     };
 
-    struct chain_result {
+    struct [[nodiscard]] chain_result {
         std::vector<prompt_invocation> invocations;
         std::string                    error; // non-empty: the chain cannot be parsed (bad .end, missing .end)
     };
@@ -32,13 +32,13 @@ namespace dana {
     // A maximal run of ordinary prompts or sinks, in argv order. A normal run is
     // one batch (parallel when no stdin is pending); a sink run chains its sinks
     // in order, each answer becoming the next sink's context.
-    struct chain_run {
+    struct [[nodiscard]] chain_run {
         std::size_t begin = 0;
         std::size_t end   = 0;
         bool        sink  = false;
     };
 
-    struct chain_plan {
+    struct [[nodiscard]] chain_plan {
         std::vector<chain_run> runs;
         std::string            error; // non-empty: the chain cannot be executed
     };

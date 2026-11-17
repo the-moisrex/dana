@@ -82,27 +82,27 @@ namespace dana::terminal {
         return value;
     }
 
-    bool same(id const& a, id const& b) {
-        if (a.empty() || b.empty()) {
+    bool same(id const& lhs, id const& rhs) {
+        if (lhs.empty() || rhs.empty()) {
             return false;
         }
         // An opaque key replaces the system identity: both sides must carry the
         // same one (a half-set key is not comparable to a system identity).
-        if (!a.key.empty() || !b.key.empty()) {
-            return !a.key.empty() && a.key == b.key;
+        if (!lhs.key.empty() || !rhs.key.empty()) {
+            return !lhs.key.empty() && lhs.key == rhs.key;
         }
-        if (a.sid != 0 && b.sid != 0) {
-            if (a.sid != b.sid) {
+        if (lhs.sid != 0 && rhs.sid != 0) {
+            if (lhs.sid != rhs.sid) {
                 return false;
             }
             // A recycled session id must not resurrect another terminal's runs:
             // when both sides know their tty, it has to agree too.
-            return a.tty.empty() || b.tty.empty() || a.tty == b.tty;
+            return lhs.tty.empty() || rhs.tty.empty() || lhs.tty == rhs.tty;
         }
         // No session id on one side (an older run, an odd sandbox): the tty is all
         // that is left.
-        if (!a.tty.empty() && !b.tty.empty()) {
-            return a.tty == b.tty;
+        if (!lhs.tty.empty() && !rhs.tty.empty()) {
+            return lhs.tty == rhs.tty;
         }
         return false;
     }

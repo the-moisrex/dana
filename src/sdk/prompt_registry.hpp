@@ -40,7 +40,7 @@ namespace dana {
     using preflight_fn = void (*)(view const&);
     using declare_fn   = void (*)(declaration&);
 
-    struct prompt_descriptor {
+    struct [[nodiscard]] prompt_descriptor {
         std::string_view name;
         std::string_view help_summary;
         exec_fn          execute_fn;
@@ -170,7 +170,7 @@ namespace dana {
     inline bool register_file_filter(
       std::string_view name,
       std::string_view help_summary,
-      exec_fn          execute_fn,
+      exec_fn const    execute_fn,
       void (*render_help_fn)(std::ostream&),
       completion_fn       complete_fn = nullptr,
       preflight_fn        preflight   = nullptr,

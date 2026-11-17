@@ -113,7 +113,7 @@ namespace {
         record.resume          = {
           {"cursor", 7}
         };
-        state::save("openrouter", record, "scope-test");
+        std::ignore = state::save("openrouter", record, "scope-test");
 
         auto const loaded = state::load("openrouter");
         check(loaded.has_value(), "state load");

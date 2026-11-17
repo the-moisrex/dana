@@ -30,7 +30,7 @@ namespace dana::agent {
 
     // `.exec`'s CLI. Flags are read until the first non-flag token; after that
     // everything is the command, so `--version` reaches the program unchanged.
-    struct exec_spec {
+    struct [[nodiscard]] exec_spec {
         bool                     stdin_data = false;
         bool                     print_only = false;
         bool                     yes        = false;
@@ -39,7 +39,7 @@ namespace dana::agent {
         std::vector<std::string> command;
     };
 
-    [[nodiscard]] exec_spec parse_exec_args(std::span<std::string_view const> args);
+    exec_spec parse_exec_args(std::span<std::string_view const> args);
 
     // The statically-named `.exec` commands in a prompt chain (the tokens after
     // `prompt`), including nested `.each` bodies and `prompt` chains run through

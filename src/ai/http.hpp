@@ -17,8 +17,7 @@
 
 namespace dana::ai {
 
-    class http_error : public std::runtime_error {
-      public:
+    struct [[nodiscard]] http_error : std::runtime_error {
         http_error(long status, std::string body, std::string const& message)
           : std::runtime_error(message),
             status_(status),
@@ -37,7 +36,7 @@ namespace dana::ai {
         std::string body_;
     };
 
-    struct http_request {
+    struct [[nodiscard]] http_request {
         std::string                                      url;
         std::string                                      method = "GET";
         std::vector<std::pair<std::string, std::string>> headers;
@@ -56,7 +55,7 @@ namespace dana::ai {
         bool        debug         = false;
     };
 
-    struct http_response {
+    struct [[nodiscard]] http_response {
         long                                             status = 0;
         std::string                                      body;
         std::vector<std::pair<std::string, std::string>> headers;
@@ -92,7 +91,7 @@ namespace dana::ai {
 
     // Build a multipart/form-data body.  A field whose value has `filename` set is
     // a file part.
-    struct multipart_field {
+    struct [[nodiscard]] multipart_field {
         std::string name;
         std::string value;
         std::string filename;

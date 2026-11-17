@@ -100,9 +100,8 @@ namespace dana {
     //     keep the FIRST writer — order-independent;
     //   * artifacts (published by a finished segment) keep the LAST writer — the
     //     nearest successful segment, which is exactly what `.save` means.
-    class facts {
-      public:
-        struct entry {
+    struct [[nodiscard]] facts {
+        struct [[nodiscard]] entry {
             std::string key;
             std::string value;
         };
@@ -116,22 +115,22 @@ namespace dana {
         void erase(std::string_view key);
 
         [[nodiscard]] bool empty() const {
-            return entries_.empty();
+            return m_entries.empty();
         }
 
         [[nodiscard]] std::size_t size() const {
-            return entries_.size();
+            return m_entries.size();
         }
 
         // The ordered pairs, for a serializer (the stash store) and for `--facts`
         // displays. The vector is the store's own order: insertion order with a
         // re-set key staying in place.
         [[nodiscard]] std::vector<entry> const& entries() const {
-            return entries_;
+            return m_entries;
         }
 
         void clear() {
-            entries_.clear();
+            m_entries.clear();
         }
 
         // Merge `other` in. overwrite=false keeps an existing value (declarations,
@@ -144,7 +143,7 @@ namespace dana {
         static facts              decode(std::string_view blob);
 
       private:
-        std::vector<entry> entries_;
+        std::vector<entry> m_entries;
     };
 
 } // namespace dana

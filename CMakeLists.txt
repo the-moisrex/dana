@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.28)
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" PROMPT_VERSION)
 string(STRIP "${PROMPT_VERSION}" PROMPT_VERSION)
 
-project(prompt VERSION ${PROMPT_VERSION} LANGUAGES CXX)
+project(dana VERSION ${PROMPT_VERSION} LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -89,7 +89,7 @@ add_custom_command(
 # translation unit (see sdk/prompt_registry.hpp), and a static archive only
 # pulls in members that resolve some undefined symbol — the registrar of a
 # prompt nothing references would be dropped, silently unregistering it.
-add_library(prompt_lib OBJECT
+add_library(dana_lib OBJECT
     src/environment.cpp
     src/core/fs.cpp
     src/core/process.cpp
@@ -128,14 +128,14 @@ add_library(prompt_lib OBJECT
     ${AI_SRCS}
     ${PROMPT_SRCS}
 )
-target_sources(prompt_lib PRIVATE ${PROMPT_ASSET_HPP})
+target_sources(dana_lib PRIVATE ${PROMPT_ASSET_HPP})
 
-target_compile_features(prompt_lib PUBLIC cxx_std_26)
-target_include_directories(prompt_lib PUBLIC
+target_compile_features(dana_lib PUBLIC cxx_std_26)
+target_include_directories(dana_lib PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${PROMPT_ASSET_DIR}
 )
-target_link_libraries(prompt_lib PUBLIC
+target_link_libraries(dana_lib PUBLIC
     nlohmann_json::nlohmann_json
 )
 
@@ -146,30 +146,30 @@ find_path(PROMPT_CURL_INCLUDE_DIR NAMES curl/curl.h)
 find_library(PROMPT_CURL_IMPERSONATE_LIBRARY NAMES curl-impersonate)
 find_library(PROMPT_CURL_LIBRARY NAMES curl)
 if (PROMPT_CURL_IMPERSONATE_LIBRARY AND PROMPT_CURL_INCLUDE_DIR)
-    target_include_directories(prompt_lib PUBLIC ${PROMPT_CURL_INCLUDE_DIR})
-    target_link_libraries(prompt_lib PUBLIC ${PROMPT_CURL_IMPERSONATE_LIBRARY})
-    target_compile_definitions(prompt_lib PUBLIC PROMPT_HAVE_CURL_IMPERSONATE=1)
+    target_include_directories(dana_lib PUBLIC ${PROMPT_CURL_INCLUDE_DIR})
+    target_link_libraries(dana_lib PUBLIC ${PROMPT_CURL_IMPERSONATE_LIBRARY})
+    target_compile_definitions(dana_lib PUBLIC PROMPT_HAVE_CURL_IMPERSONATE=1)
 elseif (PROMPT_CURL_LIBRARY AND PROMPT_CURL_INCLUDE_DIR)
-    target_include_directories(prompt_lib PUBLIC ${PROMPT_CURL_INCLUDE_DIR})
-    target_link_libraries(prompt_lib PUBLIC ${PROMPT_CURL_LIBRARY})
+    target_include_directories(dana_lib PUBLIC ${PROMPT_CURL_INCLUDE_DIR})
+    target_link_libraries(dana_lib PUBLIC ${PROMPT_CURL_LIBRARY})
 else()
     message(WARNING "libcurl not found: the native ai.* providers will not build")
 endif()
 
 add_executable(prompt src/main.cpp)
-target_link_libraries(prompt PRIVATE prompt_lib)
+target_link_libraries(prompt PRIVATE dana_lib)
 target_compile_definitions(prompt PRIVATE PROMPT_VERSION="${PROMPT_VERSION}")
 
-# The extraction engine's standalone face. It shares `prompt_lib` (the parser,
+# The extraction engine's standalone face. It shares `dana_lib` (the parser,
 # the registry and the renderers), so `prompt` and `md.extract` can never drift.
 add_executable(md.extract src/md_extract_main.cpp)
-target_link_libraries(md.extract PRIVATE prompt_lib)
+target_link_libraries(md.extract PRIVATE dana_lib)
 
 # The native `ai.*` dispatcher: one binary, invoked through the `ai.chatgpt`,
 # `ai.debate`, … symlinks (argv[0] selects the provider/command).  Installed as
 # `ai.cli` because `bin/ai/` is still the Python ai.save package.
 add_executable(ai.cli src/ai_main.cpp)
-target_link_libraries(ai.cli PRIVATE prompt_lib)
+target_link_libraries(ai.cli PRIVATE dana_lib)
 
 if (CMAKE_BUILD_TYPE STREQUAL "Debug")
     enable_testing()

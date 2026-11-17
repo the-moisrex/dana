@@ -15,10 +15,9 @@ namespace dana::ai {
     nlohmann::json parse_params(std::vector<std::string> const& pairs);
 
     // The shared OpenAI-compatible engine (lms/openai/openrouter).
-    class openai_compat : public provider {
-      public:
+    struct [[nodiscard]] openai_compat : provider {
         [[nodiscard]] provider_info const& info() const override {
-            return info_;
+            return m_info;
         }
 
         std::unique_ptr<conversation>
@@ -38,9 +37,9 @@ namespace dana::ai {
         std::string              error_hint(std::string const& message, std::string const& base) override;
 
       protected:
-        explicit openai_compat(provider_info info) : info_(std::move(info)) {}
+        explicit openai_compat(provider_info info) : m_info(std::move(info)) {}
 
-        provider_info info_;
+        provider_info m_info;
     };
 
 } // namespace dana::ai

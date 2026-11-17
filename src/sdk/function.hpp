@@ -43,13 +43,13 @@ namespace dana {
     // before it is called.
     inline constexpr std::size_t kMaxFunctionDepth = 16;
 
-    struct function_param {
+    struct [[nodiscard]] function_param {
         std::string name;
         std::string default_value; // meaningful only when has_default
         bool        has_default = false;
     };
 
-    struct function_def {
+    struct [[nodiscard]] function_def {
         std::string                 name;
         std::vector<function_param> params;
         std::vector<std::string>    body;   // template tokens, substituted at the call
@@ -57,8 +57,7 @@ namespace dana {
     };
 
     // The functions visible to one invocation.
-    class function_table {
-      public:
+    struct [[nodiscard]] function_table {
         // `override_ok` allows a later global source to replace an earlier one
         // (project over user); a duplicate inside one source is always an error, as
         // is colliding with a compiled step or a reserved name (`func`, `end`,

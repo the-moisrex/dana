@@ -12,8 +12,7 @@
 namespace dana::ai::pow {
 
     // The challenge could not be solved within the nonce budget.
-    class error : public std::runtime_error {
-      public:
+    struct [[nodiscard]] error :  std::runtime_error {
         using std::runtime_error::runtime_error;
     };
 

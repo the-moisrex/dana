@@ -25,8 +25,8 @@ namespace dana {
     } // namespace
 
     std::string encode_outcome(segment_outcome const& outcome) {
-        std::string   facts_blob = outcome.published.encode();
-        std::uint32_t flags      = 0;
+        std::string const facts_blob = outcome.published.encode();
+        std::uint32_t     flags      = 0;
         if (outcome.no_clipboard) {
             flags |= wire_no_clipboard;
         }
@@ -86,7 +86,7 @@ namespace dana {
         }
 
         segment_outcome outcome;
-        auto            take = [&](std::uint32_t size, std::string& target) {
+        auto const      take = [&](std::uint32_t size, std::string& target) {
             if (blob.size() - offset < size) {
                 return false;
             }
@@ -175,7 +175,7 @@ namespace dana {
             }
         }
 
-        for (int fd : fds) {
+        for (int const fd : fds) {
             if (fd >= 0) {
                 ::close(fd);
             }

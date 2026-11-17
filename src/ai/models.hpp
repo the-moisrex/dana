@@ -20,12 +20,12 @@
 
 namespace dana::ai::models {
 
-    struct alias {
+    struct [[nodiscard]] alias {
         std::string_view from;
         std::string_view to;
     };
 
-    struct entry {
+    struct [[nodiscard]] entry {
         //: Canonical provider name (`dseek`, not `deepseek`).
         std::string_view                  provider;
         std::string_view                  default_model;

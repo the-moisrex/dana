@@ -143,8 +143,8 @@ namespace dana::signals {
         std::vector<std::string> items;
         std::size_t              start = 0;
         while (start < value.size()) {
-            std::size_t      end  = value.find('\n', start);
-            std::string_view line = value.substr(start, end == std::string_view::npos ? end : end - start);
+            std::size_t const end  = value.find('\n', start);
+            auto const        line = value.substr(start, end == std::string_view::npos ? end : end - start);
             if (!line.empty()) {
                 items.emplace_back(line);
             }

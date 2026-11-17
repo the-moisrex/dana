@@ -10,14 +10,13 @@
 #include <cstddef>
 #include <memory>
 #include <nlohmann/json.hpp>
-#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
 
 namespace dana::ai {
 
-    struct provider_info {
+    struct [[nodiscard]] provider_info {
         std::string              name;
         std::string              label;
         std::string              origin;
@@ -39,7 +38,7 @@ namespace dana::ai {
         std::string              default_base_url;
     };
 
-    struct model_record {
+    struct [[nodiscard]] model_record {
         std::string id;
         std::string name;
         std::string type;
@@ -49,7 +48,7 @@ namespace dana::ai {
         std::string completion_price;
     };
 
-    struct open_options {
+    struct [[nodiscard]] open_options {
         std::string    system;
         std::string    model;
         bool           debug   = false;
@@ -63,8 +62,7 @@ namespace dana::ai {
         std::vector<std::string> params;
     };
 
-    class conversation {
-      public:
+    struct [[nodiscard]] conversation {
         conversation(session::match match, std::string model, open_options options)
           : match_(std::move(match)),
             model_(std::move(model)),
@@ -122,8 +120,7 @@ namespace dana::ai {
         int            turns_   = 0;
     };
 
-    class provider {
-      public:
+    struct [[nodiscard]] provider {
         virtual ~provider() = default;
 
         [[nodiscard]] virtual provider_info const& info() const = 0;

@@ -17,7 +17,7 @@
 
 namespace dana::ai::keys {
 
-    struct resolved {
+    struct [[nodiscard]] resolved {
         std::string key;
         std::string source;
     };

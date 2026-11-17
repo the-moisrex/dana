@@ -21,7 +21,7 @@ namespace {
 
     std::string failure_of(std::vector<std::string> const& argv, std::chrono::milliseconds timeout) {
         try {
-            tse_data::run_tool("tse", "bin/tse", argv, timeout);
+            std::ignore = tse_data::run_tool("tse", "bin/tse", argv, timeout);
         } catch (soft_error const& e) {
             return e.what();
         }

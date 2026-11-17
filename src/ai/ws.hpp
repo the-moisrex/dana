@@ -17,19 +17,17 @@
 
 namespace dana::ai {
 
-    class ws_error : public std::runtime_error {
-      public:
+    struct [[nodiscard]] ws_error : std::runtime_error {
         using std::runtime_error::runtime_error;
     };
 
-    struct ws_message {
+    struct [[nodiscard]] ws_message {
         std::string data;
         bool        text  = true;
         bool        close = false;
     };
 
-    class websocket {
-      public:
+    struct [[nodiscard]] websocket {
         websocket() = default;
         ~websocket();
 
@@ -56,11 +54,11 @@ namespace dana::ai {
 
         void close();
 
-        [[nodiscard]] bool connected() const {
+        [[nodiscard]] bool connected() const noexcept {
             return easy_ != nullptr;
         }
 
-        void set_debug(bool value) {
+        void set_debug(bool const value) noexcept {
             debug_ = value;
         }
 

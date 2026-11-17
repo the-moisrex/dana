@@ -425,7 +425,7 @@ namespace dana::ai {
                     request.timeout_seconds = timeout_;
                     request.debug           = debug_;
                     apply_headers(request, values);
-                    stream_lines(request, [&](std::string_view line) {
+                    std::ignore = stream_lines(request, [&](std::string_view line) {
                         if (stopped || line.empty()) {
                             return;
                         }
@@ -560,7 +560,8 @@ namespace dana::ai {
                 std::string                        new_id = message_id;
                 std::string                        final_status;
                 bool                               finished = false;
-                stream_chunks(request, [&](std::string_view chunk) {
+
+                std::ignore = stream_chunks(request, [&](std::string_view chunk) {
                     if (finished) {
                         return;
                     }

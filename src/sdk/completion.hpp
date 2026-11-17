@@ -20,7 +20,7 @@
 
 namespace dana {
 
-    struct completion_request {
+    struct [[nodiscard]] completion_request {
         // The token being completed (may be empty).
         std::string_view prefix;
         // The prompt's arguments typed before the current token, in order.
@@ -138,7 +138,7 @@ namespace dana {
 
     // A name to offer in the line mode: a prompt or a function visible at this
     // point in the chain, with the description shown beside it.
-    struct name_candidate {
+    struct [[nodiscard]] name_candidate {
         std::string name;
         std::string description;
     };

@@ -28,15 +28,15 @@ namespace dana::schema {
 
     // The parameter types the CLI can express. Strings and value flags dominate;
     // booleans are value-less flags.
-    enum class type : std::uint8_t {
+    enum struct [[nodiscard]] type : std::uint8_t {
         boolean,
         string,
-        integer
+        integer,
     };
 
     [[nodiscard]] std::string_view to_string(type value);
 
-    struct parameter {
+    struct [[nodiscard]] parameter {
         std::string              name; // long flag without dashes ("head"); the flag is `--head`
         std::string              description;
         type                     kind        = type::boolean;
@@ -50,14 +50,14 @@ namespace dana::schema {
 
     // A documented positional operand (a FILE, a PATTERN, ...). Schemas keep these
     // for the AI-facing description; the CLI parse lives in the prompt itself.
-    struct operand {
+    struct [[nodiscard]] operand {
         std::string name;
         std::string description;
         bool        required = false;
         bool        variadic = false;
     };
 
-    struct tool {
+    struct [[nodiscard]] tool {
         std::string            name;
         std::string            summary;
         std::vector<parameter> parameters;
@@ -66,27 +66,25 @@ namespace dana::schema {
 
     // Factories: keep prompt files free of aggregate-initialization noise (and the
     // `-Wmissing-field-initializers` warnings that come with it).
-    [[nodiscard]] parameter bool_flag(std::string name, std::string description, std::string alias = {});
-    [[nodiscard]] parameter
+    parameter bool_flag(std::string name, std::string description, std::string alias = {});
+    parameter
     str_flag(std::string name, std::string description, std::string placeholder = "VALUE", std::string alias = {});
-    [[nodiscard]] parameter int_flag(std::string name, std::string description, std::string alias = {});
-    [[nodiscard]] parameter
+    parameter int_flag(std::string name, std::string description, std::string alias = {});
+    parameter
     enum_flag(std::string name, std::string description, std::vector<std::string> values, std::string alias = {});
     // A value flag that may be repeated (`--include a --include b`).
-    [[nodiscard]] parameter
+    parameter
     multi_flag(std::string name, std::string description, std::string placeholder = "VALUE", std::string alias = {});
-    [[nodiscard]] operand
-    argument(std::string name, std::string description, bool required = false, bool variadic = false);
-    [[nodiscard]] tool make_tool(
-      std::string            name,
-      std::string            summary,
-      std::vector<parameter> parameters,
-      std::vector<operand>   operands = {});
+    operand argument(std::string name, std::string description, bool required = false, bool variadic = false);
+    tool    make_tool(std::string            name,
+                      std::string            summary,
+                      std::vector<parameter> parameters,
+                      std::vector<operand>   operands = {});
 
     // Derive a tool from a prompt's help text: the `Options:` block supplies the
     // flags (a `N`/`MODE`-style placeholder means the flag takes a value). Used for
     // prompts that have not declared a schema; catalog-only, never executable.
-    [[nodiscard]] tool from_help(std::string_view name, std::string_view summary, std::string_view help);
+    tool from_help(std::string_view name, std::string_view summary, std::string_view help);
 
     // Renderers. `to_json` is implemented in `sdk/tool_call.cpp` (the JSON-aware
     // translation unit), so this header stays free of nlohmann.

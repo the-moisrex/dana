@@ -45,7 +45,7 @@ whole tree must stay clang-format clean.
   `static void render_help_<name>(std::ostream&)`, ending with
   `[[maybe_unused]] bool const registered = prompt::register_prompt("<name>", "<summary>", &execute_<name>, &render_help_<name>);`.
   CMake globs `src/prompts/*.cpp`, so no other file changes; registration runs at
-  static-init time, which is why `prompt_lib` must stay an OBJECT library.
+  static-init time, which is why `dana_lib` must stay an OBJECT library.
   The registry is a fixed array of `prompt_registry_capacity` (128) slots; a
   build that registers more aborts at startup (`register_prompt` prints and
   calls `std::abort`) rather than silently dropping a prompt, and

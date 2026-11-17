@@ -19,14 +19,14 @@ namespace dana {
 
     namespace {
 
-        enum class length_mode : std::uint8_t {
+        enum struct [[nodiscard]] length_mode : std::uint8_t {
             rough,
             exact,
             max,
             min
         };
 
-        enum class length_unit : std::uint8_t {
+        enum struct [[nodiscard]] length_unit : std::uint8_t {
             words,
             lines,
             sentences,
@@ -35,7 +35,7 @@ namespace dana {
             tokens
         };
 
-        enum class length_preset : std::uint8_t {
+        enum struct [[nodiscard]] length_preset : std::uint8_t {
             none,
             tiny,
             short_answer,
