@@ -68,7 +68,7 @@ Examples:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = dana::register_prompt(
+    [[maybe_unused]] bool const registered = dana::register_prompt(
       "tse.rigor",
       "A verification checklist that keeps Tehran Stock Exchange (TSE) and general market analysis or backtests "
       "honest: compute ratios from a table instead of prose, never cite uncomputed averages or levels, avoid "

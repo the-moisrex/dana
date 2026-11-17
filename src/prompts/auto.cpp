@@ -396,7 +396,7 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = dana::register_prompt(
+    [[maybe_unused]] bool const registered = dana::register_prompt(
       "auto",
       "Automatically chooses and executes the most appropriate prompt script based on the input. For "
       "example, if it detects YouTube URLs, it delegates to the 'yt' prompt. If it detects C++ files, "

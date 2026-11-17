@@ -40,7 +40,7 @@ Asks the AI to add or improve docstrings for functions, classes, and methods in 
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = dana::register_prompt(
+    [[maybe_unused]] bool const registered = dana::register_prompt(
       "docstring",
       "Asks the AI to add or improve docstrings for functions, classes, and methods in "
       "the code in the prompt. This prompt carries no data and takes no arguments: chain "

@@ -560,20 +560,20 @@ See also: `.compress` (the command the AI composes), `.compress.list`, and
 
     // `.compress` and its catalog lens `.compress.list` share one file: the lens is
     // the catalog face of the same subsystem.
-    bool const registered_compress = dana::register_file_prompt(
+    [[maybe_unused]] bool const registered_compress = dana::register_file_prompt(
       "compress",
       "Compress the given files (or the piped input) for AI consumption.",
       &execute_compress,
       &render_help_compress,
       &complete_compress);
 
-    bool const registered_compress_list = dana::register_prompt(
+    [[maybe_unused]] bool const registered_compress_list = dana::register_prompt(
       "compress.list",
       "List the project shape and every registered compressor with its one-line summary.",
       &execute_compress_list,
       &render_help_compress_list);
 
-    bool const registered_compress_delegate = dana::register_prompt(
+    [[maybe_unused]] bool const registered_compress_delegate = dana::register_prompt(
       "compress.delegate",
       "Ask an AI how to compress the given files and emit a ready-to-run `prompt .compress` command.",
       &execute_compress_delegate,

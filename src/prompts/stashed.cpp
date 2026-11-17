@@ -223,7 +223,7 @@ store.
 )EOF";
     }
 
-    bool const registered_stashed = register_sink(
+    [[maybe_unused]] bool const registered_stashed = register_sink(
       "stashed",
       "Restore a saved chain snapshot (context, facts and flags) so this invocation continues it.",
       &execute_stashed,

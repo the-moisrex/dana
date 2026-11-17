@@ -180,7 +180,7 @@ The data comes from `tse.codal snapshot`; run that tool directly for `search`,
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = dana::register_prompt(
+    [[maybe_unused]] bool const registered = dana::register_prompt(
       "tse.codal",
       "Fetch the raw Codal.ir dataset for an Iranian بورس instrument — recent announcements, extracted statement "
       "rows, monthly fund portfolio reports and derived ratios — as Markdown, with no analysis instructions attached. "

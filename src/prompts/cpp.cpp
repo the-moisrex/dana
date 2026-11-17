@@ -90,7 +90,7 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = dana::register_prompt(
+    [[maybe_unused]] bool const registered = dana::register_prompt(
       "cpp",
       "Builds a prompt for generating or editing C++ code. If C++ compiler errors are detected on "
       "stdin, it automatically simplifies the prompt to focus on fixing the compilation issues.",

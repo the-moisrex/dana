@@ -139,20 +139,20 @@ namespace dana::extract {
 
     } // namespace
 
-    bool const registered_any = register_extractor(extractor{
+    [[maybe_unused]] bool const registered_any = register_extractor(extractor{
       .name     = "any",
       .summary  = "the four source kinds (code, table, section, frontmatter)",
       .run      = &run_any,
       .contract = &contract_any,
     });
 
-    bool const registered_auto = register_extractor(extractor{
+    [[maybe_unused]] bool const registered_auto = register_extractor(extractor{
       .name    = "auto",
       .summary = "the only table, code block or section in the document",
       .run     = &run_auto,
     });
 
-    bool const registered_none = register_extractor(extractor{
+    [[maybe_unused]] bool const registered_none = register_extractor(extractor{
       .name     = "none",
       .summary  = "select nothing (and ask for plain prose)",
       .run      = &run_none,

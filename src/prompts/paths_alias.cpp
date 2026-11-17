@@ -95,7 +95,7 @@ Examples:
     } // namespace
 
     // This file registers two silent sinks: `.paths.hide` and `.paths.reveal`.
-    bool const registered_paths_hide = dana::register_sink(
+    [[maybe_unused]] bool const registered_paths_hide = dana::register_sink(
       "paths.hide",
       "Replace real workspace paths in the chain context with a stable placeholder directory.",
       &execute_paths_hide,
@@ -103,7 +103,7 @@ Examples:
       nullptr,
       false);
 
-    bool const registered_paths_reveal = dana::register_sink(
+    [[maybe_unused]] bool const registered_paths_reveal = dana::register_sink(
       "paths.reveal",
       "Translate the placeholder workspace paths in the chain context back to real paths.",
       &execute_paths_reveal,

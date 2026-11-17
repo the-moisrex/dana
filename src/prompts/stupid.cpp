@@ -44,7 +44,7 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered =
+    [[maybe_unused]] bool const registered =
       dana::register_prompt("stupid", "Find the stupid mistakes in this code.", &execute_stupid, &render_help_stupid);
 
 } // namespace dana

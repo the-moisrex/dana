@@ -367,7 +367,7 @@ namespace dana {
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = dana::register_prompt(
+    [[maybe_unused]] bool const registered = dana::register_prompt(
       "ai-said",
       "Collect multiple AI chat outputs via the clipboard and combine them into a single prompt.",
       &execute_ai_said,

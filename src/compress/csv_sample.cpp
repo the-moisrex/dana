@@ -152,7 +152,7 @@ namespace dana::compress {
 
     } // namespace
 
-    bool const registered_csv = register_compressor(compressor{
+    [[maybe_unused]] bool const registered_csv = register_compressor(compressor{
       .name     = "csv.sample",
       .summary  = "Replace a large CSV/TSV block with its header and a few sample rows.",
       .applies  = &applies_csv,

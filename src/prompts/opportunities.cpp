@@ -417,7 +417,7 @@ namespace dana {
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = dana::register_prompt(
+    [[maybe_unused]] bool const registered = dana::register_prompt(
       "opportunities",
       "Find opportunities in a specific category such as money, tech, cpp, career, or business. Use "
       "the category `all` for a brief overview of every category.",

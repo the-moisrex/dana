@@ -45,7 +45,7 @@ Options:
 )EOF" << file_options_help("the file", true);
     }
 
-    bool const registered =
+    [[maybe_unused]] bool const registered =
       dana::register_prompt("cat", "Append one file's contents as plain prompt text.", &execute_cat, &render_help_cat);
 
 } // namespace dana

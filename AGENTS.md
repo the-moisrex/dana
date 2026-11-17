@@ -43,7 +43,7 @@ whole tree must stay clang-format clean.
 - **One file = one prompt.** A prompt is `src/prompts/<name>.cpp` implementing
   `static void execute_<name>(prompt::view const& v, prompt::result& r)` and
   `static void render_help_<name>(std::ostream&)`, ending with
-  `bool const registered = prompt::register_prompt("<name>", "<summary>", &execute_<name>, &render_help_<name>);`.
+  `[[maybe_unused]] bool const registered = prompt::register_prompt("<name>", "<summary>", &execute_<name>, &render_help_<name>);`.
   CMake globs `src/prompts/*.cpp`, so no other file changes; registration runs at
   static-init time, which is why `prompt_lib` must stay an OBJECT library.
   The registry is a fixed array of `prompt_registry_capacity` (128) slots; a

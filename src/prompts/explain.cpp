@@ -39,7 +39,7 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered =
+    [[maybe_unused]] bool const registered =
       dana::register_prompt("explain", "Explain this clearly and concretely.", &execute_explain, &render_help_explain);
 
 } // namespace dana

@@ -62,7 +62,7 @@ The dispatcher in `prompts/` implements one file per prompt; match the style, st
 
 Requirements for the generated prompt:
 - Implement `static void execute_<name>(prompt::view const& v, prompt::result& r)` and `static void render_help_<name>(std::ostream&)`, then register the prompt at the end of the file:
-    bool const registered = prompt::register_prompt("<name>", "<summary>", &execute_<name>, &render_help_<name>);
+    [[maybe_unused]] bool const registered = prompt::register_prompt("<name>", "<summary>", &execute_<name>, &render_help_<name>);
   CMake globs src/prompts/*.cpp, so the file registers itself and no other file changes.
 - "<summary>" is the first paragraph of render_help_<name>'s help (verbatim), and it is what `prompt list` prints; it must read as a complete standalone summary.
 - The prompt is invoked as `prompt <name> ...`, so the help's Usage line must say `Usage: prompt <name>`.

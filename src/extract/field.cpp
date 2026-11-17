@@ -51,7 +51,7 @@ namespace dana::extract {
 
     } // namespace
 
-    bool const registered_field = register_extractor(extractor{
+    [[maybe_unused]] bool const registered_field = register_extractor(extractor{
       .name     = "field",
       .summary  = "a `label: value` line; field:label reads that value",
       .run      = &run_field,

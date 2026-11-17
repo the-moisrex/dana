@@ -207,7 +207,7 @@ Options:
 )EOF";
     }
 
-    bool const registered = dana::register_prompt(
+    [[maybe_unused]] bool const registered = dana::register_prompt(
       "commit",
       "Asks the AI to write a Git commit message based on current changes. It prioritizes staged "
       "changes (git diff --cached). If no changes are staged, it evaluates all unstaged and untracked changes.",

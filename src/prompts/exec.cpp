@@ -271,7 +271,7 @@ Examples:
 )EOF";
     }
 
-    bool const registered = dana::register_sink(
+    [[maybe_unused]] bool const registered = dana::register_sink(
       "exec",
       "Run a command or an AI-generated `prompt` chain and continue the chain with its output.",
       &execute_exec,

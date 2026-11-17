@@ -32,7 +32,7 @@ Options:
 )EOF" << file_options_help("the embedded context");
     }
 
-    bool const registered = dana::register_prompt(
+    [[maybe_unused]] bool const registered = dana::register_prompt(
       "cpp.no-allocations",
       "Ask the AI to rewrite this code so it performs no heap allocations.",
       &execute_cpp_no_allocations,

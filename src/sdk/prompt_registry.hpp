@@ -109,7 +109,7 @@ namespace dana {
     // Every prompt registers itself: each src/prompts/<name>.cpp ends with one
     // call like
     //
-    //     bool const registered = prompt::register_prompt(
+    //     [[maybe_unused]] bool const registered = prompt::register_prompt(
     //         "api", "Review this API design.", &execute_api, &render_help_api);
     //
     // which runs at static-init time, before main. Nothing centralises the list,

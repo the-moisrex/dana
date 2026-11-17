@@ -146,21 +146,21 @@ Examples:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = dana::register_prompt(
+    [[maybe_unused]] bool const registered = dana::register_prompt(
       "clipboard",
       "Read from the clipboard and embed the content as context for the AI.",
       &execute_clipboard,
       &render_help_clipboard);
 
     // `.c.p` is the short paste alias; it reuses the same executor.
-    bool const registered_cp = dana::register_prompt(
+    [[maybe_unused]] bool const registered_cp = dana::register_prompt(
       "c.p",
       "Paste alias for `.clipboard`: read the clipboard and embed the content as context.",
       &execute_cp,
       &render_help_cp);
 
     // `.c.c` is the copy sink: the chain context goes to the clipboard unchanged.
-    bool const registered_cc = dana::register_sink(
+    [[maybe_unused]] bool const registered_cc = dana::register_sink(
       "c.c",
       "Copy the accumulated chain context to the system clipboard, then pass the context through unchanged.",
       &execute_cc,

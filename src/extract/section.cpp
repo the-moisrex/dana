@@ -50,7 +50,7 @@ namespace dana::extract {
 
     } // namespace
 
-    bool const registered_section = register_extractor(extractor{
+    [[maybe_unused]] bool const registered_section = register_extractor(extractor{
       .name     = "section",
       .summary  = "a heading and everything under it; section:heading matches the heading",
       .run      = &run_section,

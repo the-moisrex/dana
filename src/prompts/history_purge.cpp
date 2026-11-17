@@ -230,7 +230,7 @@ Examples:
         execute_purge(v, r);
     }
 
-    bool const registered_history_purge = dana::register_prompt(
+    [[maybe_unused]] bool const registered_history_purge = dana::register_prompt(
       "history.purge",
       "Delete recorded prompt runs by age, count or total size (with --dry-run).",
       &execute_history_purge_entry,

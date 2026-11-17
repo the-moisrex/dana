@@ -52,7 +52,7 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = dana::register_prompt(
+    [[maybe_unused]] bool const registered = dana::register_prompt(
       "symbols",
       "Builds a prompt that reviews symbol names. If file paths are given, it reads those files; "
       "otherwise it reads stdin. Example: `prompt symbols $(fzf)`",

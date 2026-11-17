@@ -57,7 +57,7 @@ namespace dana::extract {
 
     } // namespace
 
-    bool const registered_code = register_extractor(extractor{
+    [[maybe_unused]] bool const registered_code = register_extractor(extractor{
       .name     = "code",
       .summary  = "fenced ``` / ~~~ blocks; code:lang filters by language family",
       .run      = &run_code,

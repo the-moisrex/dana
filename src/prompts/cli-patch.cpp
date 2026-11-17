@@ -30,7 +30,7 @@ Options:
 )EOF" << file_options_help("the embedded files", true);
     }
 
-    bool const registered = dana::register_prompt(
+    [[maybe_unused]] bool const registered = dana::register_prompt(
       "cli.patch",
       "Generate a paste-ready CLI script that applies repository changes "
       "directly instead of applying a patch or git diff.",

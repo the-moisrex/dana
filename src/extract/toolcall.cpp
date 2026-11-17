@@ -43,7 +43,7 @@ namespace dana::extract {
 
     } // namespace
 
-    bool const registered_toolcall = register_extractor(extractor{
+    [[maybe_unused]] bool const registered_toolcall = register_extractor(extractor{
       .name     = "toolcall",
       .summary  = "a tool call from an AI answer (a fenced json block with a `tool` key)",
       .run      = &run_toolcall,

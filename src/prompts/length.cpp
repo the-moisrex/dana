@@ -625,7 +625,7 @@ Examples:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = dana::register_prompt(
+    [[maybe_unused]] bool const registered = dana::register_prompt(
       "length",
       "Set the answer length (or shape) the AI should target, roughly or exactly.",
       &execute_length,

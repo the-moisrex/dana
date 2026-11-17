@@ -694,7 +694,7 @@ Examples:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = dana::register_prompt(
+    [[maybe_unused]] bool const registered = dana::register_prompt(
       "skill",
       "Loads a cached skill and outputs its content as an AI prompt. If the skill is not cached, it is "
       "downloaded automatically. Piped stdin and file arguments are embedded as context. It also "

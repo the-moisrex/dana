@@ -142,7 +142,7 @@ See also: `.tools` (the catalog), `.exec` (run an argv command), `.extract`.
 )EOF";
     }
 
-    bool const registered = dana::register_sink(
+    [[maybe_unused]] bool const registered = dana::register_sink(
       "tools.run",
       "Run the tool calls in the chain context (from an AI answer) and continue with their results.",
       &execute_tools_run,

@@ -145,7 +145,7 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = dana::register_prompt(
+    [[maybe_unused]] bool const registered = dana::register_prompt(
       "git.worktree.diff",
       "Shows Git diffs for files changed since the upstream branch. By default, compares against the "
       "upstream tracking branch (or origin/main). Explicit FILE arguments restrict the diff to only "

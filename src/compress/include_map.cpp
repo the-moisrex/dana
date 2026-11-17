@@ -282,7 +282,7 @@ namespace dana::compress::include_map {
 
     } // namespace
 
-    bool const registered_include_map = register_compressor(compressor{
+    [[maybe_unused]] bool const registered_include_map = register_compressor(compressor{
       .name     = "include.map",
       .summary  = "Replace a C/C++ file with its includes and a symbol index of the project headers they name.",
       .applies  = &applies_include_map,

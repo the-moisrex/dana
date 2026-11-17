@@ -46,7 +46,7 @@ Examples:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = dana::register_prompt(
+    [[maybe_unused]] bool const registered = dana::register_prompt(
       "tse.times",
       "The pre-open and continuous-trading session times for every Tehran Stock Exchange (TSE) and Iran Fara Bourse "
       "(IFB) instrument category, plus the Sat–Wed trading week. Reference data for reasoning about trading hours; "

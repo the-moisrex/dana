@@ -72,7 +72,7 @@ Options:
 )EOF" << file_options_help("the embedded C++ code");
     }
 
-    bool const registered =
+    [[maybe_unused]] bool const registered =
       dana::register_prompt("cpp.noexcept", kSummary, &execute_cpp_noexcept, &render_help_cpp_noexcept);
 
 } // namespace dana

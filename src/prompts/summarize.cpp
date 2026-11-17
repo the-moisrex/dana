@@ -179,7 +179,7 @@ If stdin is a single URL, it tries to fetch subtitles/text first.
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = dana::register_prompt(
+    [[maybe_unused]] bool const registered = dana::register_prompt(
       "summarize",
       "Builds a prompt that summarizes stdin. If stdin is a single URL, it tries to "
       "fetch subtitles/text first.",

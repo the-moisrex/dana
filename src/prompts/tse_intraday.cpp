@@ -237,7 +237,7 @@ Options:
     // (the same split as `tse` / `tse.analyze`). Registration runs at static-init
     // time, which is why `prompt_lib` must stay an OBJECT library (no central list
     // — see sdk/prompt_registry.hpp).
-    bool const registered = dana::register_prompt(
+    [[maybe_unused]] bool const registered = dana::register_prompt(
       "tse.intraday",
       "Fetch per-minute OHLCV bars with `tse.intraday` — rebuilt from the per-trade tape with each bar's VWAP, the "
       "official daily row, each session's high/low times, opening ranges, value area and largest prints, the daily "
@@ -257,7 +257,7 @@ Options:
       nullptr,
       &tse_data::declare_identifier);
 
-    bool const registered_analysis = dana::register_prompt(
+    [[maybe_unused]] bool const registered_analysis = dana::register_prompt(
       "tse.intraday.analysis",
       "Print the same-day intraday trading instructions for the dataset collected by `tse.intraday` — read the bars, "
       "VWAP and official row, each session's structure and value area, today's price limits, the context/breadth/index "

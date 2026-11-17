@@ -66,7 +66,7 @@ namespace dana::extract {
 
     } // namespace
 
-    bool const registered_command = register_extractor(extractor{
+    [[maybe_unused]] bool const registered_command = register_extractor(extractor{
       .name     = "command",
       .summary  = "a code block viewed as the command on its first line; command:program filters by basename",
       .run      = &run_command,

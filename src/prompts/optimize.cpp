@@ -50,7 +50,7 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = dana::register_prompt(
+    [[maybe_unused]] bool const registered = dana::register_prompt(
       "optimize-prompt",
       "Ask the AI to analyze and improve an input prompt.",
       &execute_optimize_prompt,

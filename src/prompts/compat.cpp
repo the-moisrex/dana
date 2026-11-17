@@ -71,6 +71,7 @@ Options:
 )EOF" << file_options_help("the embedded context");
     }
 
-    bool const registered = dana::register_prompt("compat", help_summary, &execute_compat, &render_help_compat);
+    [[maybe_unused]] bool const registered =
+      dana::register_prompt("compat", help_summary, &execute_compat, &render_help_compat);
 
 } // namespace dana

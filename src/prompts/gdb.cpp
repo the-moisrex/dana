@@ -91,7 +91,7 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = dana::register_prompt(
+    [[maybe_unused]] bool const registered = dana::register_prompt(
       "gdb",
       "Generates a prompt asking the LLM to write a GDB script that helps debug the specified "
       "code (e.g., tracking variables in loops, pretty-printing).",

@@ -86,7 +86,7 @@ Options:
 )EOF";
     }
 
-    bool const registered_project = dana::register_prompt(
+    [[maybe_unused]] bool const registered_project = dana::register_prompt(
       "project",
       "Detects the project shape and publishes the `project.*` facts.",
       &execute_project,

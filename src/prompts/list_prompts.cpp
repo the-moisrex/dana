@@ -69,7 +69,7 @@ See also: prompt list (short descriptions, one line per prompt).
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = dana::register_prompt(
+    [[maybe_unused]] bool const registered = dana::register_prompt(
       "list-prompts",
       "Print the full help text of every available prompt, one after another. Bash prompts are shown "
       "via their --help output; .txt/.md prompts are printed in full.",

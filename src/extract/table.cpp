@@ -165,7 +165,7 @@ namespace dana::extract {
 
     } // namespace
 
-    bool const registered_table = register_extractor(extractor{
+    [[maybe_unused]] bool const registered_table = register_extractor(extractor{
       .name     = "table",
       .summary  = "GFM tables; table:col1,col2 projects named columns",
       .run      = &run_table,

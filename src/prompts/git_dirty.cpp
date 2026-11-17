@@ -593,7 +593,7 @@ EXAMPLES:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = dana::register_file_prompt(
+    [[maybe_unused]] bool const registered = dana::register_file_prompt(
       "git-dirty",
       "Show uncommitted/changed files in the current Git repository. By default it lists all staged "
       "and unstaged changes (--all --files); the options below switch to diffs or full file contents.",

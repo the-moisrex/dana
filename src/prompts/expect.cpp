@@ -89,7 +89,7 @@ Options:
 )EOF";
     }
 
-    bool const registered = dana::register_prompt(
+    [[maybe_unused]] bool const registered = dana::register_prompt(
       "expect",
       "State the exact response shape the AI should return and publish it for the following "
       "extraction stage.",

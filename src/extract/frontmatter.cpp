@@ -34,7 +34,7 @@ namespace dana::extract {
 
     } // namespace
 
-    bool const registered_frontmatter = register_extractor(extractor{
+    [[maybe_unused]] bool const registered_frontmatter = register_extractor(extractor{
       .name     = "frontmatter",
       .summary  = "the leading --- / +++ block",
       .run      = &run_frontmatter,

@@ -13,7 +13,7 @@ namespace dana {
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = dana::register_prompt(
+    [[maybe_unused]] bool const registered = dana::register_prompt(
       "tse.find",
       "Turn a plain-language market request (\"what to buy tomorrow\", \"oversold stocks with heavy volume\", "
       "\"undervalued banks\") into a `tse.find` screening command for the Tehran Stock Exchange, or review a "

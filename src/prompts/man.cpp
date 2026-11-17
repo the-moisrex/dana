@@ -70,7 +70,7 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = dana::register_prompt(
+    [[maybe_unused]] bool const registered = dana::register_prompt(
       "man",
       "Fetches the manual page for the given command(s) and appends it as a Markdown code "
       "block. This is essentially a shorthand for `prompt cli man -P cat <page>`.",

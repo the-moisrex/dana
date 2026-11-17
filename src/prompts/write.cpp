@@ -169,7 +169,7 @@ Examples:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = dana::register_sink(
+    [[maybe_unused]] bool const registered = dana::register_sink(
       "write",
       "Write the accumulated chain context (or --content) to FILE, overwriting it if it exists.",
       &execute_write,

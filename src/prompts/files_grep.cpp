@@ -212,9 +212,9 @@ namespace dana {
         render_matching_help(os, "read.grep", kReadGrepSummary, true);
     }
 
-    bool const registered_files_grep =
+    [[maybe_unused]] bool const registered_files_grep =
       register_file_prompt("files.grep", kFilesGrepSummary, &execute_files_grep, &render_help_files_grep);
-    bool const registered_read_grep =
+    [[maybe_unused]] bool const registered_read_grep =
       register_file_prompt("read.grep", kReadGrepSummary, &execute_read_grep, &render_help_read_grep);
 
 } // namespace dana

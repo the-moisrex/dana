@@ -100,7 +100,7 @@ Examples:
 
     } // namespace
 
-    bool const registered_files_exclude =
+    [[maybe_unused]] bool const registered_files_exclude =
       dana::register_file_filter("files.exclude", kSummary, &execute_files_exclude, &render_help_files_exclude);
 
 } // namespace dana

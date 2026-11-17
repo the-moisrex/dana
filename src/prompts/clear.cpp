@@ -39,7 +39,7 @@ Examples:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = dana::register_sink(
+    [[maybe_unused]] bool const registered = dana::register_sink(
       "clear",
       "Reset the accumulated chain context so later prompts and sinks start a new, independent section.",
       &execute_clear,

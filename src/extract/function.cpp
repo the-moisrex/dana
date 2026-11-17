@@ -233,7 +233,7 @@ namespace dana::extract {
 
     } // namespace
 
-    bool const registered_function = register_extractor(extractor{
+    [[maybe_unused]] bool const registered_function = register_extractor(extractor{
       .name     = "function",
       .summary  = "a function definition out of a code block; function:main, function:* for all",
       .run      = &run_function,

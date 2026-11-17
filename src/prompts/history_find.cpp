@@ -359,7 +359,7 @@ Examples:
         completion::write_values(out, request.prefix, names);
     }
 
-    bool const registered_history_find = dana::register_prompt(
+    [[maybe_unused]] bool const registered_history_find = dana::register_prompt(
       "history.find",
       "Search recorded prompt runs — segment text and command lines — case-insensitively or by regex.",
       &execute_history_find_entry,

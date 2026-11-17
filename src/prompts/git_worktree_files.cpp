@@ -317,7 +317,7 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = dana::register_file_prompt(
+    [[maybe_unused]] bool const registered = dana::register_file_prompt(
       "git.worktree.files",
       "Embeds files changed since the upstream branch as Markdown code blocks. By default, compares "
       "against the upstream tracking branch (or origin/main). Explicit FILE arguments restrict "

@@ -213,7 +213,7 @@ Options:
 )EOF";
     }
 
-    bool const registered = dana::register_file_prompt(
+    [[maybe_unused]] bool const registered = dana::register_file_prompt(
       "verify",
       "Verify uncommitted changes in the current Git repository for correctness.",
       &execute_verify,

@@ -189,7 +189,7 @@ Examples:
     // (no central list — see sdk/prompt_registry.hpp). The summary is a
     // static-storage string_view; `register_prompt` keeps the view, so never pass a
     // temporary std::string here.
-    bool const registered_glob = dana::register_prompt(
+    [[maybe_unused]] bool const registered_glob = dana::register_prompt(
       "glob",
       kGlobSummary,
       &execute_glob,

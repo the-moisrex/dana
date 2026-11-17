@@ -82,7 +82,7 @@ namespace dana::compress::cpp_symbols {
         return o;
     }
 
-    bool const registered = register_compressor(compressor{
+    [[maybe_unused]] bool const registered = register_compressor(compressor{
       .name     = "cpp.symbols",
       .summary  = "Replace a C/C++ file with its declarations, doc comments and an include map.",
       .applies  = &applies_cpp,

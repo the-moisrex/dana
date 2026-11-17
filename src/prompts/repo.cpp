@@ -393,7 +393,7 @@ Arguments:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = dana::register_prompt(
+    [[maybe_unused]] bool const registered = dana::register_prompt(
       "repo",
       "Displays the repository's file structure using only git-tracked files. Useful for giving an AI "
       "a high-level view of the codebase.",

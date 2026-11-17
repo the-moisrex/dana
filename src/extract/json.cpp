@@ -145,7 +145,7 @@ namespace dana::extract {
 
     } // namespace
 
-    bool const registered_json = register_extractor(extractor{
+    [[maybe_unused]] bool const registered_json = register_extractor(extractor{
       .name     = "json",
       .summary  = "a JSON value at a path; json:$.a.b reads it from the block or the document",
       .run      = &run_json,

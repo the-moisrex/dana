@@ -28,7 +28,7 @@ Options:
 )EOF" << file_options_help("the embedded context");
     }
 
-    bool const registered = dana::register_prompt(
+    [[maybe_unused]] bool const registered = dana::register_prompt(
       "cpp.minimal-allocations",
       "Ask the AI to rewrite this code to use as few heap allocations as possible.",
       &execute_cpp_minimal_allocations,

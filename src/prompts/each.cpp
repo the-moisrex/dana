@@ -917,7 +917,7 @@ Examples:
 )EOF";
     }
 
-    bool const registered = dana::register_sink(
+    [[maybe_unused]] bool const registered = dana::register_sink(
       "each",
       "Loop a chain body over the rows of a table, code block or section, running each item as a child prompt in "
       "parallel.",

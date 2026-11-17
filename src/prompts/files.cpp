@@ -168,7 +168,7 @@ Options:
         schema::argument("FILE", "File or directory to embed", false, true),
       });
 
-    bool const registered = dana::register_file_prompt(
+    [[maybe_unused]] bool const registered = dana::register_file_prompt(
       "files",
       "Appends the given fuzzily found files or directory contents as Markdown code blocks. "
       "If you're inside a Git repository, file headings are printed relative to the repository root. "

@@ -523,7 +523,7 @@ Examples:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = dana::register_sink(
+    [[maybe_unused]] bool const registered = dana::register_sink(
       "save",
       "Save the accumulated chain context to a file, then pass the context through unchanged to later sinks.",
       &execute_save,
@@ -535,7 +535,7 @@ Examples:
 
     // `.flush` shares this file because it is the same write path plus the
     // context reset declared through result::clear.
-    bool const registered_flush = dana::register_sink(
+    [[maybe_unused]] bool const registered_flush = dana::register_sink(
       "flush",
       "Save the accumulated chain context to a file, then clear it so later prompts and sinks start a new, "
       "independent section.",

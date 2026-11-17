@@ -94,7 +94,7 @@ This prompt carries no data and takes no arguments: chain it after a file prompt
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = dana::register_prompt(
+    [[maybe_unused]] bool const registered = dana::register_prompt(
       "plan",
       "Generates a structured plan mode prompt for an AI assistant. The AI is instructed "
       "to ask clarifying questions, analyze the code in the prompt, and produce a detailed "

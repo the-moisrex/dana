@@ -102,7 +102,7 @@ Examples:
 
     } // namespace
 
-    bool const registered_files_scope =
+    [[maybe_unused]] bool const registered_files_scope =
       dana::register_file_filter("files.scope", kSummary, &execute_files_scope, &render_help_files_scope);
 
 } // namespace dana

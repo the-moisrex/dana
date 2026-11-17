@@ -186,7 +186,7 @@ Examples:
 )EOF";
     }
 
-    bool const registered = dana::register_sink(
+    [[maybe_unused]] bool const registered = dana::register_sink(
       "extract",
       "Take tables, code blocks, sections, commands or labelled values out of the chain context, using the shape the "
       "AI "

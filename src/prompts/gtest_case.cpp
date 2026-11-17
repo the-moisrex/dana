@@ -81,7 +81,7 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = dana::register_prompt(
+    [[maybe_unused]] bool const registered = dana::register_prompt(
       "gtest-case",
       "Builds a debugging prompt and embeds the original source for Google Test cases. By default, test "
       "names are prefix matches.",

@@ -608,7 +608,7 @@ Options:
 )EOF";
     }
 
-    bool const registered_stash = register_sink(
+    [[maybe_unused]] bool const registered_stash = register_sink(
       "stash",
       "Save the whole chain state (context, facts and flags) so a later invocation can continue it with `.stashed`.",
       &execute_stash,
@@ -617,7 +617,7 @@ Options:
       false,
       &preflight_stash);
 
-    bool const registered_stash_list = register_prompt(
+    [[maybe_unused]] bool const registered_stash_list = register_prompt(
       "stash.list",
       "List the saved chain snapshots, newest first.",
       &execute_stash_list,
@@ -630,7 +630,7 @@ Options:
       false,
       false);
 
-    bool const registered_stash_show = register_prompt(
+    [[maybe_unused]] bool const registered_stash_show = register_prompt(
       "stash.show",
       "Print one saved chain snapshot's context.",
       &execute_stash_show,
@@ -643,7 +643,7 @@ Options:
       false,
       false);
 
-    bool const registered_stash_drop = register_prompt(
+    [[maybe_unused]] bool const registered_stash_drop = register_prompt(
       "stash.drop",
       "Remove a saved chain snapshot.",
       &execute_stash_drop,

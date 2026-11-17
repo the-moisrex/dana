@@ -361,7 +361,7 @@ See also: `.list` (short descriptions), `.list-prompts` (full help),
 )EOF";
     }
 
-    bool const registered_tools = dana::register_prompt(
+    [[maybe_unused]] bool const registered_tools = dana::register_prompt(
       "tools",
       "Describe the prompt catalog as tool schemas (markdown, JSON Schema or names).",
       &execute_tools,

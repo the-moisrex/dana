@@ -75,7 +75,7 @@ Options:
         schema::argument("COMMAND", "Command and arguments to run", true, true),
       });
 
-    bool const registered = dana::register_prompt(
+    [[maybe_unused]] bool const registered = dana::register_prompt(
       "cli",
       "Executes the given CLI command and appends its output as a Markdown code block. Useful for "
       "appending the output of arbitrary commands to your prompt chain.",

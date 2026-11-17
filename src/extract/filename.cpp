@@ -102,7 +102,7 @@ namespace dana::extract {
 
     } // namespace
 
-    bool const registered_filename = register_extractor(extractor{
+    [[maybe_unused]] bool const registered_filename = register_extractor(extractor{
       .name     = "filename",
       .summary  = "the file name the answer proposes (a `filename:` line, a bare name or a one-line block)",
       .run      = &run_filename,

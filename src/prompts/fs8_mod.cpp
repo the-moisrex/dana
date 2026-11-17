@@ -343,7 +343,7 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = dana::register_prompt(
+    [[maybe_unused]] bool const registered = dana::register_prompt(
       "fs8.mod",
       "Builds a prompt for writing a new pipeline mod for the foresight project. Must be run from "
       "inside the foresight git repo (or a subdirectory of it).",

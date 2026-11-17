@@ -39,6 +39,7 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = dana::register_prompt("api", "Review this API design.", &execute_api, &render_help_api);
+    [[maybe_unused]] bool const registered =
+      dana::register_prompt("api", "Review this API design.", &execute_api, &render_help_api);
 
 } // namespace dana

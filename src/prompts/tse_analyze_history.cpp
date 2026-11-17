@@ -119,7 +119,7 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered_analyze_history = dana::register_prompt(
+    [[maybe_unused]] bool const registered_analyze_history = dana::register_prompt(
       "tse.analyze.history",
       "Print the historical base-rate instructions for the TSETMC dataset collected by `tse` — established "
       "uptrends, mid-trend corrections and sideways consolidations, every qualifying episode enumerated "

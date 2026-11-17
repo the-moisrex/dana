@@ -74,7 +74,7 @@ Options:
 
     // This file is the prompt: it implements it and registers it at static-init time
     // (no central list — see sdk/prompt_registry.hpp).
-    bool const registered = dana::register_prompt(
+    [[maybe_unused]] bool const registered = dana::register_prompt(
       "readme",
       "Generates or improves a README.md for the provided code or project description. If code "
       "files are provided, analyzes them to generate accurate documentation.",

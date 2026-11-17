@@ -1385,70 +1385,70 @@ namespace {
 
 namespace {
 
-    bool const registered_ai_chatgpt = dana::register_sink(
+    [[maybe_unused]] bool const registered_ai_chatgpt = dana::register_sink(
       "ai.chatgpt",
       "Send the accumulated chain context to ChatGPT and use its answer as the next context.",
       &execute_ai_chatgpt,
       &render_help_ai_chatgpt,
       &complete_ai_chatgpt);
 
-    bool const registered_ai_claude = dana::register_sink(
+    [[maybe_unused]] bool const registered_ai_claude = dana::register_sink(
       "ai.claude",
       "Send the accumulated chain context to Claude and use its answer as the next context.",
       &execute_ai_claude,
       &render_help_ai_claude,
       &complete_ai_claude);
 
-    bool const registered_ai_dseek = dana::register_sink(
+    [[maybe_unused]] bool const registered_ai_dseek = dana::register_sink(
       "ai.dseek",
       "Send the accumulated chain context to DeepSeek and use its answer as the next context.",
       &execute_ai_dseek,
       &render_help_ai_dseek,
       &complete_ai_dseek);
 
-    bool const registered_ai_gap = dana::register_sink(
+    [[maybe_unused]] bool const registered_ai_gap = dana::register_sink(
       "ai.gap",
       "Send the accumulated chain context to GapGPT and use its answer as the next context.",
       &execute_ai_gap,
       &render_help_ai_gap,
       &complete_ai_gap);
 
-    bool const registered_ai_gemini = dana::register_sink(
+    [[maybe_unused]] bool const registered_ai_gemini = dana::register_sink(
       "ai.gemini",
       "Send the accumulated chain context to Gemini and use its answer as the next context.",
       &execute_ai_gemini,
       &render_help_ai_gemini,
       &complete_ai_gemini);
 
-    bool const registered_ai_grok = dana::register_sink(
+    [[maybe_unused]] bool const registered_ai_grok = dana::register_sink(
       "ai.grok",
       "Send the accumulated chain context to Grok and use its answer as the next context.",
       &execute_ai_grok,
       &render_help_ai_grok,
       &complete_ai_grok);
 
-    bool const registered_ai_kimi = dana::register_sink(
+    [[maybe_unused]] bool const registered_ai_kimi = dana::register_sink(
       "ai.kimi",
       "Send the accumulated chain context to Kimi and use its answer as the next context.",
       &execute_ai_kimi,
       &render_help_ai_kimi,
       &complete_ai_kimi);
 
-    bool const registered_ai_perplexity = dana::register_sink(
+    [[maybe_unused]] bool const registered_ai_perplexity = dana::register_sink(
       "ai.perplexity",
       "Send the accumulated chain context to Perplexity and use its answer as the next context.",
       &execute_ai_perplexity,
       &render_help_ai_perplexity,
       &complete_ai_perplexity);
 
-    bool const registered_ai_lms = dana::register_sink(
+    [[maybe_unused]] bool const registered_ai_lms = dana::register_sink(
       "ai.lms",
       "Send the accumulated chain context to a local LM Studio model and use its answer as the next context.",
       &execute_ai_lms,
       &render_help_ai_lms,
       &complete_ai_lms);
 
-    bool const registered_ai_openai = dana::register_sink(
+    [[maybe_unused]] bool const registered_ai_openai = dana::register_sink(
       "ai.openai",
       "Send the accumulated chain context to the OpenAI API (or any OpenAI-compatible endpoint) and use its answer as "
       "the next context.",
@@ -1456,21 +1456,21 @@ namespace {
       &render_help_ai_openai,
       &complete_ai_openai);
 
-    bool const registered_ai_openrouter = dana::register_sink(
+    [[maybe_unused]] bool const registered_ai_openrouter = dana::register_sink(
       "ai.openrouter",
       "Send the accumulated chain context to OpenRouter and use its answer as the next context.",
       &execute_ai_openrouter,
       &render_help_ai_openrouter,
       &complete_ai_openrouter);
 
-    bool const registered_ai_debate = dana::register_sink(
+    [[maybe_unused]] bool const registered_ai_debate = dana::register_sink(
       "ai.debate",
       "Ask two or more AIs the same question and let them verify each other's answers, round after round.",
       &execute_ai_debate,
       &render_help_ai_debate,
       &complete_ai_debate);
 
-    bool const registered_ai_reply = dana::register_sink(
+    [[maybe_unused]] bool const registered_ai_reply = dana::register_sink(
       "ai.reply",
       "Reply in the last AI chat from this terminal and use its answer as the next context.",
       &execute_ai_reply,
@@ -1479,84 +1479,84 @@ namespace {
 
     // The agentic loop: `.ai.loop` plus one alias per provider, so the provider is
     // part of the prompt name and the model sees the same tools either way.
-    bool const registered_ai_loop = dana::register_sink(
+    [[maybe_unused]] bool const registered_ai_loop = dana::register_sink(
       "ai.loop",
       "Let the AI read and edit files and run commands, turn after turn, until the task is done.",
       &execute_ai_loop,
       &render_help_ai_loop,
       &complete_ai_loop);
 
-    bool const registered_ai_chatgpt_loop = dana::register_sink(
+    [[maybe_unused]] bool const registered_ai_chatgpt_loop = dana::register_sink(
       "ai.chatgpt.loop",
       "Agentic tool loop on ChatGPT: it reads and edits files and runs commands until done.",
       &execute_ai_loop,
       &render_help_ai_loop,
       &complete_ai_loop);
 
-    bool const registered_ai_claude_loop = dana::register_sink(
+    [[maybe_unused]] bool const registered_ai_claude_loop = dana::register_sink(
       "ai.claude.loop",
       "Agentic tool loop on Claude: it reads and edits files and runs commands until done.",
       &execute_ai_loop,
       &render_help_ai_loop,
       &complete_ai_loop);
 
-    bool const registered_ai_dseek_loop = dana::register_sink(
+    [[maybe_unused]] bool const registered_ai_dseek_loop = dana::register_sink(
       "ai.dseek.loop",
       "Agentic tool loop on DeepSeek: it reads and edits files and runs commands until done.",
       &execute_ai_loop,
       &render_help_ai_loop,
       &complete_ai_loop);
 
-    bool const registered_ai_gap_loop = dana::register_sink(
+    [[maybe_unused]] bool const registered_ai_gap_loop = dana::register_sink(
       "ai.gap.loop",
       "Agentic tool loop on GapGPT: it reads and edits files and runs commands until done.",
       &execute_ai_loop,
       &render_help_ai_loop,
       &complete_ai_loop);
 
-    bool const registered_ai_gemini_loop = dana::register_sink(
+    [[maybe_unused]] bool const registered_ai_gemini_loop = dana::register_sink(
       "ai.gemini.loop",
       "Agentic tool loop on Gemini: it reads and edits files and runs commands until done.",
       &execute_ai_loop,
       &render_help_ai_loop,
       &complete_ai_loop);
 
-    bool const registered_ai_grok_loop = dana::register_sink(
+    [[maybe_unused]] bool const registered_ai_grok_loop = dana::register_sink(
       "ai.grok.loop",
       "Agentic tool loop on Grok: it reads and edits files and runs commands until done.",
       &execute_ai_loop,
       &render_help_ai_loop,
       &complete_ai_loop);
 
-    bool const registered_ai_kimi_loop = dana::register_sink(
+    [[maybe_unused]] bool const registered_ai_kimi_loop = dana::register_sink(
       "ai.kimi.loop",
       "Agentic tool loop on Kimi: it reads and edits files and runs commands until done.",
       &execute_ai_loop,
       &render_help_ai_loop,
       &complete_ai_loop);
 
-    bool const registered_ai_perplexity_loop = dana::register_sink(
+    [[maybe_unused]] bool const registered_ai_perplexity_loop = dana::register_sink(
       "ai.perplexity.loop",
       "Agentic tool loop on Perplexity: it reads and edits files and runs commands until done.",
       &execute_ai_loop,
       &render_help_ai_loop,
       &complete_ai_loop);
 
-    bool const registered_ai_lms_loop = dana::register_sink(
+    [[maybe_unused]] bool const registered_ai_lms_loop = dana::register_sink(
       "ai.lms.loop",
       "Agentic tool loop on a local LM Studio model: it reads and edits files and runs commands.",
       &execute_ai_loop,
       &render_help_ai_loop,
       &complete_ai_loop);
 
-    bool const registered_ai_openai_loop = dana::register_sink(
+    [[maybe_unused]] bool const registered_ai_openai_loop = dana::register_sink(
       "ai.openai.loop",
       "Agentic tool loop on the OpenAI API: it reads and edits files and runs commands until done.",
       &execute_ai_loop,
       &render_help_ai_loop,
       &complete_ai_loop);
 
-    bool const registered_ai_openrouter_loop = dana::register_sink(
+    [[maybe_unused]] bool const registered_ai_openrouter_loop = dana::register_sink(
       "ai.openrouter.loop",
       "Agentic tool loop on OpenRouter: it reads and edits files and runs commands until done.",
       &execute_ai_loop,

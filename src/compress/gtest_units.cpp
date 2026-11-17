@@ -300,7 +300,7 @@ namespace dana::compress {
 
     } // namespace
 
-    bool const registered_gtest = register_compressor(compressor{
+    [[maybe_unused]] bool const registered_gtest = register_compressor(compressor{
       .name     = "gtest.units",
       .summary  = "Replace a Google Test file with its failed test bodies and a sample of the rest.",
       .applies  = &applies_gtest,

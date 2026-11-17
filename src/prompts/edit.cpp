@@ -1271,7 +1271,7 @@ Options:
       },
       {schema::argument("path", "The file to edit.", true)});
 
-    bool const registered = dana::register_prompt(
+    [[maybe_unused]] bool const registered = dana::register_prompt(
       "edit",
       "Find exact text in a file and replace it; --old/--new or --old-file/--new-file, "
       "--all for every occurrence, --diff to show the change.",

@@ -22,7 +22,7 @@ Options:
 )EOF" << dana::file_options_help("the embedded context");
     }
 
-    bool const registered = dana::register_prompt(
+    [[maybe_unused]] bool const registered = dana::register_prompt(
       "simplify",
       "Simplify code while preserving its existing behavior and public interfaces.",
       &execute_simplify,
