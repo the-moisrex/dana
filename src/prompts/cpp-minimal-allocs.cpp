@@ -5,7 +5,7 @@
 
 namespace dana {
 
-    static void execute_cpp_minimal_allocations(view const& v, result& r) {
+    static void execute_cpp_minimal_allocations([[maybe_unused]] view const& v, result& r) {
         r.out = R"PROMPT(Reduce the number of heap allocations in this code to the practical minimum.
 Rewrite each allocation site so it is either eliminated or amortised:
 - reserve containers and strings once up front instead of growing them;

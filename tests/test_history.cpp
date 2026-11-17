@@ -92,8 +92,8 @@ namespace {
     }
 
     void test_parsers() {
-        using parse_duration;
-        using parse_size;
+        using dana::parse_duration;
+        using dana::parse_size;
 
         check(parse_duration("7d") == std::chrono::seconds{7 * 86'400}, "duration: days");
         check(parse_duration("12h") == std::chrono::seconds{12 * 3600}, "duration: hours");

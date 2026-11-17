@@ -159,14 +159,14 @@ namespace {
         facts                           declared;
         {
             declaration d{.args = foolad, .env = env, .prior = declared, .declared = declared};
-            prompts::tse_data::declare_identifier(d);
+            tse_data::declare_identifier(d);
         }
         check(declared.get(keys::tse_symbol) == "foolad", "tse declare: the symbol is published for siblings");
 
         stdin_source in;
         {
             view const sibling{.name = "tse.codal", .args = none, .text = {}, .prior = declared, .env = env, .in = in};
-            auto       id = prompts::tse_data::prior_identifier(sibling);
+            auto       id = tse_data::prior_identifier(sibling);
             check(id && *id == "foolad", "tse declare: a sibling with no identifier borrows the declared one");
         }
 
@@ -175,7 +175,7 @@ namespace {
         std::array<std::string_view, 1> khodro = {"khodro"};
         {
             declaration d{.args = khodro, .env = env, .prior = declared, .declared = declared};
-            prompts::tse_data::declare_identifier(d);
+            tse_data::declare_identifier(d);
         }
         check(declared.get(keys::tse_symbol) == "foolad", "tse declare: the first declaration wins");
 
@@ -184,7 +184,7 @@ namespace {
         std::array<std::string_view, 3> flagged = {"--top", "3", "khodro"};
         {
             declaration d{.args = flagged, .env = env, .prior = fresh, .declared = fresh};
-            prompts::tse_data::declare_identifier(d);
+            tse_data::declare_identifier(d);
         }
         check(fresh.get(keys::tse_symbol) == "khodro", "tse declare: flag values are skipped");
 
@@ -193,7 +193,7 @@ namespace {
         std::array<std::string_view, 1> file = {"stocks/14050717_فولاد_IRO1FOLD0009.stock"};
         {
             declaration d{.args = file, .env = env, .prior = snapshot, .declared = snapshot};
-            prompts::tse_data::declare_identifier(d);
+            tse_data::declare_identifier(d);
         }
         check(!snapshot.get(keys::tse_symbol), "tse declare: a .stock snapshot is not borrowed as a symbol");
     }
@@ -276,14 +276,14 @@ namespace {
     }
 
     void test_tse_save_stem() {
-        prompts::tse_data::config cfg;
+        tse_data::config cfg;
         cfg.symbol = "khodro";
-        check(prompts::tse_data::save_stem(cfg) == "tse-khodro", "tse save stem uses the symbol");
-        check(prompts::tse_data::save_stem("فولاد") == "tse-فولاد", "tse save stem keeps Persian symbols");
+        check(tse_data::save_stem(cfg) == "tse-khodro", "tse save stem uses the symbol");
+        check(tse_data::save_stem("فولاد") == "tse-فولاد", "tse save stem keeps Persian symbols");
 
         cfg.cache_mode = true;
         cfg.snapshot_files.emplace_back("stocks/14050717_فولاد_IRO1FOLD0009.stock");
-        check(prompts::tse_data::save_stem(cfg) == "14050717_فولاد_IRO1FOLD0009",
+        check(tse_data::save_stem(cfg) == "14050717_فولاد_IRO1FOLD0009",
               "tse snapshot save stem uses the snapshot name");
     }
 

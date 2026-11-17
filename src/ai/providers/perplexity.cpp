@@ -818,8 +818,10 @@ namespace dana::ai {
                 std::vector<multipart_field> fields;
                 if (result.contains("fields") && result["fields"].is_object()) {
                     for (auto const& [name, value] : result["fields"].items()) {
-                        fields.push_back(
-                          {.name = name, .value = value.is_string() ? value.get<std::string>() : value.dump()});
+                        fields.push_back({.name         = name,
+                                          .value        = value.is_string() ? value.get<std::string>() : value.dump(),
+                                          .filename     = {},
+                                          .content_type = {}});
                     }
                 }
                 fields.push_back(

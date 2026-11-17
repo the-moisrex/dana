@@ -14,9 +14,7 @@ namespace dana {
 
     } // namespace
 
-    static void execute_cpp_noexcept(view const& v, result& r) {
-        auto opts = file_options_or_throw(v);
-
+    static void execute_cpp_noexcept([[maybe_unused]] view const& v, result& r) {
         r.out = R"PROMPT(Make the following C++ code truly noexcept wherever it reasonably can be.
 
 For each function, judge whether it can honestly promise not to throw. When it
