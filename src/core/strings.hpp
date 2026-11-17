@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -43,7 +44,7 @@ namespace dana::text {
     // the bash code path it ports produced `fallback` (e.g. bash arithmetic
     // treats a bare word as an unset variable → 0).
     std::size_t to_size(std::string_view s, std::size_t fallback = 0);
-    long long   to_ll(std::string_view s, long long fallback = 0);
+    std::int64_t   to_ll(std::string_view s, std::int64_t fallback = 0);
 
     // Escape every regex metacharacter (for interpolating $HOME/$USER into patterns).
     std::string regex_escape(std::string_view s);

@@ -204,10 +204,10 @@ namespace dana::ai {
                 return found.get<std::string>();
             }
             if (found.is_number_integer()) {
-                return std::to_string(found.get<long long>());
+                return std::to_string(found.get<std::int64_t>());
             }
             if (found.is_number_unsigned()) {
-                return std::to_string(found.get<unsigned long long>());
+                return std::to_string(found.get<std::uint64_t>());
             }
             return {};
         }
@@ -558,9 +558,9 @@ namespace dana::ai {
                 socket_.connect(owner_.ws_url(), headers, owner_.origin(), 20);
             }
 
-            long long send_event(std::string const& event, json const& data) {
+            std::int64_t send_event(std::string const& event, json const& data) {
                 static thread_local std::mt19937 rng{std::random_device{}()};
-                auto const                       rid = static_cast<long long>(rng() % 100'000'000ULL);
+                auto const                       rid = static_cast<std::int64_t>(rng() % 100'000'000ULL);
                 json const                       envelope{
                   {  "event",         event},
                   {    "rid",           rid},
@@ -627,7 +627,7 @@ namespace dana::ai {
                   {"enable_user_memory", false},
                 };
 
-                std::optional<long long> rid;
+                std::optional<std::int64_t> rid;
                 std::string              failure;
                 for (int index = 0; index < kConnectAttempts; ++index) {
                     try {
@@ -643,7 +643,7 @@ namespace dana::ai {
                              "gap");
                         if (index + 1 < kConnectAttempts) {
                             std::this_thread::sleep_for(
-                              std::chrono::milliseconds(static_cast<long long>(kConnectBackoff[index] * 1000)));
+                              std::chrono::milliseconds(static_cast<std::int64_t>(kConnectBackoff[index] * 1000)));
                         }
                     }
                 }
@@ -664,7 +664,7 @@ namespace dana::ai {
                 }
             }
 
-            std::pair<bool, std::string> read_turn(long long rid, std::string& answer, event_sink const& sink) {
+            std::pair<bool, std::string> read_turn(std::int64_t rid, std::string& answer, event_sink const& sink) {
                 using clock          = std::chrono::steady_clock;
                 auto const started   = clock::now();
                 auto       deadline  = started + std::chrono::seconds(timeout_);
@@ -743,7 +743,7 @@ namespace dana::ai {
 
                     if (!acked) {
                         if (event == "ack_new_message" && current.contains("rid") &&
-                            current["rid"].is_number_integer() && current["rid"].get<long long>() == rid)
+                            current["rid"].is_number_integer() && current["rid"].get<std::int64_t>() == rid)
                         {
                             std::string const status = text_of(data, "status");
                             if (status != "ok") {

@@ -241,7 +241,7 @@ namespace dana::agent {
                 } else {
                     value = arg.substr(std::string_view("--timeout=").size());
                 }
-                unsigned long long seconds = 0;
+                std::uint64_t seconds = 0;
                 auto const*        begin   = value.data();
                 auto const*        end     = value.data() + value.size();
                 auto [ptr, ec]             = std::from_chars(begin, end, seconds);

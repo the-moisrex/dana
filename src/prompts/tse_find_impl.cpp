@@ -345,11 +345,11 @@ print(command)
             });
         }
 
-        std::size_t parse_head_value(std::string_view text) {
-            std::string        copy(text);
-            unsigned long long parsed = std::strtoull(copy.c_str(), nullptr, 10);
-            parsed                    = std::min(parsed, 0x7fff'ffff'ffff'ffffULL);
-            return static_cast<std::size_t>(parsed);
+        std::size_t parse_head_value(std::string_view const text) {
+            std::string const copy(text);
+            std::uint64_t     parsed = std::strtoull(copy.c_str(), nullptr, 10);
+            parsed                   = std::min<std::size_t>(parsed, 0x7fff'ffff'ffff'ffffULL);
+            return parsed;
         }
 
         bool ends_with(std::string_view text, std::string_view suffix) {

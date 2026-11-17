@@ -37,7 +37,7 @@ namespace dana {
             if (::stat(path.c_str(), &st) != 0) {
                 return {};
             }
-            return std::to_string(st.st_dev) + ":" + std::to_string(static_cast<long long>(st.st_ino));
+            return std::to_string(st.st_dev) + ":" + std::to_string(static_cast<std::int64_t>(st.st_ino));
         }
 
     } // namespace

@@ -75,10 +75,10 @@ namespace dana::ai {
                 return value.get<std::string>();
             }
             if (value.is_number_integer()) {
-                return std::to_string(value.get<long long>());
+                return std::to_string(value.get<std::int64_t>());
             }
             if (value.is_number_unsigned()) {
-                return std::to_string(value.get<unsigned long long>());
+                return std::to_string(value.get<std::uint64_t>());
             }
             if (value.is_number_float()) {
                 return std::format("{}", value.get<double>());
@@ -99,10 +99,10 @@ namespace dana::ai {
                 return value.get<std::string>();
             }
             if (value.is_number_integer()) {
-                return std::to_string(value.get<long long>());
+                return std::to_string(value.get<std::int64_t>());
             }
             if (value.is_number_unsigned()) {
-                return std::to_string(value.get<unsigned long long>());
+                return std::to_string(value.get<std::uint64_t>());
             }
             return {};
         }
@@ -119,10 +119,10 @@ namespace dana::ai {
                 return value.get<bool>() ? "True" : "False";
             }
             if (value.is_number_integer()) {
-                return std::to_string(value.get<long long>());
+                return std::to_string(value.get<std::int64_t>());
             }
             if (value.is_number_unsigned()) {
-                return std::to_string(value.get<unsigned long long>());
+                return std::to_string(value.get<std::uint64_t>());
             }
             if (value.is_number_float()) {
                 return std::format("{}", value.get<double>());
@@ -138,10 +138,10 @@ namespace dana::ai {
                 return value.get<bool>();
             }
             if (value.is_number_integer()) {
-                return value.get<long long>() != 0;
+                return value.get<std::int64_t>() != 0;
             }
             if (value.is_number_unsigned()) {
-                return value.get<unsigned long long>() != 0;
+                return value.get<std::uint64_t>() != 0;
             }
             if (value.is_number_float()) {
                 return value.get<double>() != 0.0;
@@ -175,16 +175,16 @@ namespace dana::ai {
         }
 
         // Python's `a // b` (floor division).
-        long long floor_div(long long value, long long divisor) {
-            long long quotient = value / divisor;
+        std::int64_t floor_div(std::int64_t value, std::int64_t divisor) {
+            std::int64_t quotient = value / divisor;
             if ((value % divisor != 0) && ((value < 0) != (divisor < 0))) {
                 --quotient;
             }
             return quotient;
         }
 
-        std::pair<long long, std::string> local_timezone() {
-            long long const offset = floor_div(static_cast<long long>(::timezone), 60);
+        std::pair<std::int64_t, std::string> local_timezone() {
+            std::int64_t const offset = floor_div(static_cast<std::int64_t>(::timezone), 60);
             std::string     zone   = tzname[0] != nullptr ? tzname[0] : "UTC";
             return {offset, zone};
         }
@@ -664,7 +664,7 @@ namespace dana::ai {
                   info_.origin + path,
                   json{
                     {                "file_name",                           file.name},
-                    {                "file_size", static_cast<long long>(file.size())},
+                    {                "file_size", static_cast<std::int64_t>(file.size())},
                     {                "mime_type",                           file.mime},
                     {"client_resolved_mime_type",                           file.mime},
                     {   "mime_resolution_source",                            "client"},
@@ -704,7 +704,7 @@ namespace dana::ai {
                   {   "id",                             file_id},
                   { "name",                           file.name},
                   { "mime",                           file.mime},
-                  { "size", static_cast<long long>(file.size())},
+                  { "size", static_cast<std::int64_t>(file.size())},
                   {"image",     file.mime.starts_with("image/")}
                 };
             }

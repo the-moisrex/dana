@@ -21,10 +21,10 @@ namespace dana::schema {
                 return value.get<std::string>();
             }
             if (value.is_number_integer()) {
-                return std::to_string(value.get<long long>());
+                return std::to_string(value.get<std::int64_t>());
             }
             if (value.is_number_unsigned()) {
-                return std::to_string(value.get<unsigned long long>());
+                return std::to_string(value.get<std::uint64_t>());
             }
             if (value.is_boolean()) {
                 return value.get<bool>() ? "true" : "false";

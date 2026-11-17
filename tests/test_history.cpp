@@ -47,7 +47,7 @@ namespace {
 
     std::filesystem::path scratch() {
         auto const      dir = std::filesystem::temp_directory_path() /
-                              std::format("prompt-history-test-{}", static_cast<long long>(::getpid()));
+                              std::format("prompt-history-test-{}", static_cast<std::int64_t>(::getpid()));
         std::error_code ec;
         std::filesystem::remove_all(dir, ec);
         return dir;

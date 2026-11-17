@@ -39,7 +39,7 @@ namespace dana {
     struct [[nodiscard]] stored_run {
         std::filesystem::path       path;
         std::string                 id;
-        long long                   ts = 0;
+        std::int64_t                   ts = 0;
         std::string                 started;
         std::vector<std::string>    argv;
         std::string                 cwd;
@@ -171,7 +171,7 @@ namespace dana {
     };
 
     // Sanitize the digits-only/format helpers the prompts share with `.list`.
-    std::string format_time(long long epoch_seconds);
+    std::string format_time(std::int64_t epoch_seconds);
     std::string human_bytes(std::uintmax_t bytes);
 
 } // namespace dana

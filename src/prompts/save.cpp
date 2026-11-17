@@ -224,7 +224,7 @@ namespace dana {
             std::filesystem::path probe;
             int                   fd = -1;
             for (int attempt = 0; attempt < 100; ++attempt) {
-                probe = directory / (".prompt-save-check-" + std::to_string(static_cast<long long>(::getpid())) + "-" +
+                probe = directory / (".prompt-save-check-" + std::to_string(static_cast<std::int64_t>(::getpid())) + "-" +
                                      std::to_string(counter.fetch_add(1)));
                 fd    = ::open(probe.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
                 if (fd >= 0 || errno != EEXIST) {
@@ -401,10 +401,10 @@ namespace dana {
             }
 
             std::filesystem::path temp  = target;
-            temp                       += ".tmp." + std::to_string(static_cast<long long>(::getpid()));
+            temp                       += ".tmp." + std::to_string(static_cast<std::int64_t>(::getpid()));
             for (unsigned int attempt = 0; std::filesystem::exists(temp, ec) && attempt < 100; ++attempt) {
                 temp  = target;
-                temp += ".tmp." + std::to_string(static_cast<long long>(::getpid())) + "." + std::to_string(attempt);
+                temp += ".tmp." + std::to_string(static_cast<std::int64_t>(::getpid())) + "." + std::to_string(attempt);
             }
 
             std::ofstream file(temp, std::ios::binary | std::ios::trunc);

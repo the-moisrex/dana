@@ -22,8 +22,8 @@ namespace dana::stash {
         std::string  name;
         std::string  created;
         std::string  updated;
-        long long    created_ts = 0;
-        long long    updated_ts = 0;
+        std::int64_t    created_ts = 0;
+        std::int64_t    updated_ts = 0;
         std::string  cwd;
         std::string  git_root;
         terminal::id terminal;
@@ -90,6 +90,6 @@ namespace dana::stash {
     // The timestamps a new snapshot carries (`YYYY-MM-DDTHH:MM:SS` local time and
     // epoch seconds), shared by the stash prompt and the store.
     std::string now_iso();
-    long long   now_ts();
+    std::int64_t   now_ts();
 
 } // namespace dana::stash

@@ -73,8 +73,8 @@ namespace dana {
         }
 
         // `wc -l < file`: number of newline bytes.
-        long long count_newlines(std::string const& content) {
-            long long n = 0;
+        std::int64_t count_newlines(std::string const& content) {
+            std::int64_t n = 0;
             for (char c : content) {
                 if (c == '\n') {
                     ++n;
@@ -110,7 +110,7 @@ namespace dana {
         // paths.sh parses its own args (no init_prompt): --context/--head are NOT
         // integer-validated, and --head is only consumed so it is not a path.
         std::string                mode          = "context";
-        long long                  context_lines = 10;
+        std::int64_t                  context_lines = 10;
         std::optional<std::size_t> head_lines;
         std::string                head_value;
         std::string                sed_error;
@@ -252,11 +252,11 @@ namespace dana {
 
             if (!line_num.empty()) {
                 std::string content = read_file(std::filesystem::path(resolved));
-                long long   total   = count_newlines(content);
-                long long   ln      = dana::text::to_ll(line_num, 0);
-                long long   start   = ln - context_lines;
-                start               = std::max<long long>(start, 1);
-                long long end       = ln + context_lines;
+                std::int64_t   total   = count_newlines(content);
+                std::int64_t   ln      = dana::text::to_ll(line_num, 0);
+                std::int64_t   start   = ln - context_lines;
+                start               = std::max<std::int64_t>(start, 1);
+                std::int64_t end       = ln + context_lines;
                 end                 = std::min(end, total);
                 auto lines          = to_sed_lines(content);
 
@@ -264,7 +264,7 @@ namespace dana {
                           std::to_string(start) + "\u2013" + std::to_string(end) + "):\n\n";
                 output += std::format("```{}\n", lang);
                 if (start <= end && start >= 1 && static_cast<std::size_t>(end) <= lines.size()) {
-                    for (long long i = start; i <= end; ++i) {
+                    for (std::int64_t i = start; i <= end; ++i) {
                         output += lines[static_cast<std::size_t>(i - 1)];
                         output += '\n';
                     }

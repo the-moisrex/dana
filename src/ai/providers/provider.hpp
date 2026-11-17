@@ -43,7 +43,7 @@ namespace dana::ai {
         std::string name;
         std::string type;
         std::string state;
-        long long   context = 0;
+        std::int64_t   context = 0;
         std::string prompt_price;
         std::string completion_price;
     };

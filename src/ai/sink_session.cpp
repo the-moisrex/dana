@@ -175,7 +175,7 @@ namespace dana::ai {
             record.model           = session.chat->model();
             record.history         = session.chat->history();
             record.resume          = session.chat->resume();
-            state::save(session.canonical, record, session.scope);
+            std::ignore            = state::save(session.canonical, record, session.scope);
         } catch (std::exception const&) {
             // A state write can never fail the turn.
             (void) 0;

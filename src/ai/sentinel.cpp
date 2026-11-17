@@ -216,7 +216,7 @@ namespace dana::ai::sentinel {
 
             kind                                type    = kind::none;
             bool                                boolean = false;
-            long long                           integer = 0;
+            std::int64_t                           integer = 0;
             double                              real    = 0.0;
             std::string                         text;
             std::shared_ptr<std::vector<value>> list;
@@ -248,7 +248,7 @@ namespace dana::ai::sentinel {
             return out;
         }
 
-        value make_integer(long long item) {
+        value make_integer(std::int64_t item) {
             value out;
             out.type    = value::kind::integer;
             out.integer = item;
@@ -298,10 +298,10 @@ namespace dana::ai::sentinel {
                 return make_boolean(input.get<bool>());
             }
             if (input.is_number_integer()) {
-                return make_integer(input.get<long long>());
+                return make_integer(input.get<std::int64_t>());
             }
             if (input.is_number_unsigned()) {
-                return make_integer(static_cast<long long>(input.get<unsigned long long>()));
+                return make_integer(static_cast<std::int64_t>(input.get<std::uint64_t>()));
             }
             if (input.is_number_float()) {
                 return make_real(input.get<double>());
@@ -546,7 +546,7 @@ namespace dana::ai::sentinel {
                     if (!head.is_number_integer()) {
                         continue;
                     }
-                    auto const found = memory_.find(head.get<long long>());
+                    auto const found = memory_.find(head.get<std::int64_t>());
                     if (found == memory_.end() || found->second.type != value::kind::op) {
                         continue;
                     }
@@ -570,7 +570,7 @@ namespace dana::ai::sentinel {
             }
 
           private:
-            static long long key_of(value const& key) {
+            static std::int64_t key_of(value const& key) {
                 if (key.type != value::kind::integer) {
                     throw missing_key{};
                 }
@@ -705,7 +705,7 @@ namespace dana::ai::sentinel {
             }
 
             void op_invoke(std::vector<value> const& args) {
-                long long const    target = key_of(arg(args, 0));
+                std::int64_t const    target = key_of(arg(args, 0));
                 value const&       callee = at(arg(args, 1));
                 std::vector<value> values;
                 for (std::size_t index = 2; index < args.size(); ++index) {
@@ -791,7 +791,7 @@ namespace dana::ai::sentinel {
               "UiState.isNavigationCollapsed.1",
             };
 
-            std::map<long long, value>            memory_;
+            std::map<std::int64_t, value>            memory_;
             json                                  program_;
             std::string                           result_;
             int                                   depth_ = 0;

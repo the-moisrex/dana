@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
 
 namespace dana::terminal {
@@ -19,9 +20,9 @@ namespace dana::terminal {
     // it, but any future feature that wants "a place, not a global" (a per-terminal
     // lock, a session-scoped default, …) can reuse the same identity.
     struct [[nodiscard]] id {
-        long long   sid = 0; // getsid(0); 0 when unknown
-        std::string tty;     // controlling terminal path; empty when none
-        std::string key;     // opaque override (PROMPT_TERMINAL_KEY); wins over both
+        std::int64_t sid = 0; // getsid(0); 0 when unknown
+        std::string  tty;     // controlling terminal path; empty when none
+        std::string  key;     // opaque override (PROMPT_TERMINAL_KEY); wins over both
 
         [[nodiscard]] bool empty() const {
             return sid == 0 && tty.empty() && key.empty();

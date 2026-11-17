@@ -46,7 +46,7 @@ namespace {
 
     std::filesystem::path scratch() {
         return std::filesystem::temp_directory_path() /
-               std::format("prompt-stash-test-{}", static_cast<long long>(::getpid()));
+               std::format("prompt-stash-test-{}", static_cast<std::int64_t>(::getpid()));
     }
 
     // A fresh store per case; the terminal key keeps the `--here` directory stable.

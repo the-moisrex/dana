@@ -53,7 +53,7 @@ namespace dana {
         };
 
         [[nodiscard]] std::size_t positive_number(std::string_view value, std::string_view option) {
-            unsigned long long number = 0;
+            std::uint64_t number = 0;
             auto const*        begin  = value.data();
             auto const*        end    = value.data() + value.size();
             auto [ptr, ec]            = std::from_chars(begin, end, number);

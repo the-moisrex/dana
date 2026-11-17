@@ -23,14 +23,14 @@ namespace dana::ai {
     std::string human_size(std::size_t count);
 
     //: The inline budget for a provider, honouring an explicit override.
-    std::size_t limit_for(std::size_t provider_limit, std::optional<long long> override);
+    std::size_t limit_for(std::size_t provider_limit, std::optional<std::int64_t> override);
 
     //: Whether the prompt should be uploaded as a file.  `mode` is nullopt
     //: (automatic), true (always) or false (never).
     bool should_attach(std::string_view         prompt,
                        std::size_t              inline_limit,
                        std::optional<bool>      mode,
-                       std::optional<long long> override);
+                       std::optional<std::int64_t> override);
 
     //: Write the prompt to a temporary UTF-8 .txt and return its path.
     std::filesystem::path write_prompt_file(std::string_view prompt);
@@ -54,6 +54,6 @@ namespace dana::ai {
       bool                     disabled,
       bool                     has_upload,
       bool                     auto_attach,
-      std::optional<long long> limit);
+      std::optional<std::int64_t> limit);
 
 } // namespace dana::ai

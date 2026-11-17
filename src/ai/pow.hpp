@@ -5,6 +5,7 @@
 // packed into the base64 `x-ds-pow-response` header.  The hash itself lives in
 // `crypto/keccak.hpp`.
 
+#include <cstdint>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -12,7 +13,7 @@
 namespace dana::ai::pow {
 
     // The challenge could not be solved within the nonce budget.
-    struct [[nodiscard]] error :  std::runtime_error {
+    struct [[nodiscard]] error : std::runtime_error {
         using std::runtime_error::runtime_error;
     };
 
@@ -22,10 +23,10 @@ namespace dana::ai::pow {
 
     // The nonce in `range(difficulty)` whose digest equals the hex `challenge`.
     // `workers` overrides the CPU count (0 = auto, `AI_POW_WORKERS` first).
-    long long solve_deepseek(
+    std::int64_t solve_deepseek(
       std::string const& salt,
-      long long          expire_at,
-      long long          difficulty,
+      std::int64_t       expire_at,
+      std::int64_t       difficulty,
       std::string const& challenge,
       int                workers = 0);
 
@@ -34,7 +35,7 @@ namespace dana::ai::pow {
       std::string const& salt,
       std::string const& challenge,
       std::string const& signature,
-      long long          answer,
+      std::int64_t       answer,
       std::string const& target_path);
 
 } // namespace dana::ai::pow

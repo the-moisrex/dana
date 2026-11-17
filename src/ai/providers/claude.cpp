@@ -528,7 +528,7 @@ namespace dana::ai {
                   {"file_uuid", record.value("file_uuid", "")},
                   {"file_name", record.value("file_name", file.name)},
                   {"file_type", record.value("media_type", file.mime)},
-                  {"file_size", record.value("size_bytes", static_cast<long long>(file.size()))},
+                  {"file_size", record.value("size_bytes", static_cast<std::int64_t>(file.size()))},
                   {"extracted_content", ""},
                   {"path", record.value("path", "")},
                   {"file_kind", record.value("file_kind", "blob")},

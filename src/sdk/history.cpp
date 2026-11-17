@@ -482,9 +482,9 @@ namespace dana {
             return std::nullopt;
         }
         std::size_t        i     = 0;
-        unsigned long long value = 0;
+        std::uint64_t value = 0;
         while (i < text.size() && std::isdigit(static_cast<unsigned char>(text[i])) != 0) {
-            value = (value * 10) + static_cast<unsigned long long>(text[i] - '0');
+            value = (value * 10) + static_cast<std::uint64_t>(text[i] - '0');
             ++i;
         }
         if (i == 0) {
@@ -494,7 +494,7 @@ namespace dana {
         std::ranges::transform(unit, unit.begin(), [](unsigned char c) {
             return static_cast<char>(std::tolower(c));
         });
-        unsigned long long multiplier = 86'400; // a bare number is days
+        std::uint64_t multiplier = 86'400; // a bare number is days
         if (unit.empty() || unit == "d") {
             multiplier = 86'400;
         } else if (unit == "s") {
@@ -508,7 +508,7 @@ namespace dana {
         } else {
             return std::nullopt;
         }
-        return std::chrono::seconds{static_cast<long long>(value * multiplier)};
+        return std::chrono::seconds{static_cast<std::int64_t>(value * multiplier)};
     }
 
     std::optional<std::uintmax_t> parse_size(std::string_view text) {
@@ -691,13 +691,13 @@ namespace dana {
         json meta{
           {  "format",                                                                      1},
           {      "id",                                                                    id_},
-          {      "ts", static_cast<long long>(std::chrono::system_clock::to_time_t(started_))},
+          {      "ts", static_cast<std::int64_t>(std::chrono::system_clock::to_time_t(started_))},
           { "started",                                                      now_iso(started_)},
           {    "argv",                                                             info_.argv},
           {     "cwd",                                                     info_.cwd.string()},
           {"git_root",                                                info_.git_root.string()},
           {     "tty",                                                              info_.tty},
-          {     "pid",                                     static_cast<long long>(::getpid())},
+          {     "pid",                                     static_cast<std::int64_t>(::getpid())},
           {"terminal",                                               std::move(terminal_meta)},
         };
         if (!info_.parent.empty()) {
@@ -805,7 +805,7 @@ namespace dana {
         std::string const body     = join_emitted(recorded_, redacted);
         json              end{
           {    "finished",                                                                          now_iso(now)},
-          {          "ts",                     static_cast<long long>(std::chrono::system_clock::to_time_t(now))},
+          {          "ts",                     static_cast<std::int64_t>(std::chrono::system_clock::to_time_t(now))},
           {          "ms",                                                                               elapsed},
           {        "exit",                                                                             exit_code},
           {  "incomplete",                                                                            incomplete},
@@ -819,7 +819,7 @@ namespace dana {
         prune(path_);
     }
 
-    std::string format_time(long long epoch_seconds) {
+    std::string format_time(std::int64_t epoch_seconds) {
         auto const value = static_cast<std::time_t>(epoch_seconds);
         std::tm    local{};
         localtime_r(&value, &local);

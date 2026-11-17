@@ -339,7 +339,7 @@ namespace dana::ai {
                 auto const left =
                   std::chrono::duration_cast<std::chrono::milliseconds>(deadline - std::chrono::steady_clock::now())
                     .count();
-                remaining = static_cast<int>(std::max<long long>(0, left));
+                remaining = static_cast<int>(std::max<std::int64_t>(0, left));
             }
             int             numfds = 0;
             CURLMcode const polled = poll_socket(multi_, socket_, CURL_WAIT_POLLIN, remaining, numfds);

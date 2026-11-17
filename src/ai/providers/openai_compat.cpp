@@ -434,9 +434,9 @@ namespace dana::ai {
             record.type  = item.value("type", "");
             record.state = item.value("state", "");
             if (item.contains("context_length") && item["context_length"].is_number()) {
-                record.context = item["context_length"].get<long long>();
+                record.context = item["context_length"].get<std::int64_t>();
             } else if (item.contains("max_context_length") && item["max_context_length"].is_number()) {
-                record.context = item["max_context_length"].get<long long>();
+                record.context = item["max_context_length"].get<std::int64_t>();
             }
             if (item.contains("pricing") && item["pricing"].is_object()) {
                 record.prompt_price     = item["pricing"].value("prompt", "");

@@ -119,7 +119,7 @@ namespace dana::text {
         return value;
     }
 
-    long long to_ll(std::string_view s, long long fallback) {
+    std::int64_t to_ll(std::string_view s, std::int64_t fallback) {
         if (s.empty()) {
             return fallback;
         }
@@ -128,7 +128,7 @@ namespace dana::text {
         if (digits.find_first_not_of("0123456789") != std::string_view::npos) {
             return fallback;
         }
-        long long value = 0;
+        std::int64_t value = 0;
         auto      res   = std::from_chars(digits.data(), digits.data() + digits.size(), value);
         if (res.ec != std::errc{} || res.ptr != digits.data() + digits.size()) {
             return fallback;

@@ -336,7 +336,7 @@ namespace dana::ai {
             std::vector<std::string>   model_specs;
             std::vector<std::string>   files;
             std::optional<bool>        prompt_file;
-            std::optional<long long>   prompt_limit;
+            std::optional<std::int64_t>   prompt_limit;
             std::optional<bool>        thinking;
             bool                       json     = false;
             bool                       raw      = false;
@@ -448,7 +448,7 @@ namespace dana::ai {
                 } else if (name == "--no-prompt-file") {
                     options.prompt_file = false;
                 } else if (name == "--prompt-limit") {
-                    options.prompt_limit = static_cast<long long>(parse_integer(name, value_of(i, name)));
+                    options.prompt_limit = static_cast<std::int64_t>(parse_integer(name, value_of(i, name)));
                 } else if (name == "--show-thinking") {
                     options.thinking = true;
                 } else if (name == "--no-thinking") {

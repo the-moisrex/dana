@@ -81,10 +81,10 @@ namespace dana::ai {
                 return !value.get<std::string>().empty();
             }
             if (value.is_number_integer()) {
-                return value.get<long long>() != 0;
+                return value.get<std::int64_t>() != 0;
             }
             if (value.is_number_unsigned()) {
-                return value.get<unsigned long long>() != 0;
+                return value.get<std::uint64_t>() != 0;
             }
             if (value.is_number_float()) {
                 return value.get<double>() != 0.0;
@@ -181,7 +181,7 @@ namespace dana::ai {
 
         struct utf8_unit {
             std::size_t bytes = 0; // 0 means the sequence is incomplete
-            long long   units = 0;
+            std::int64_t   units = 0;
         };
 
         // One UTF-8 code point's byte length and UTF-16 code-unit length (Google's
@@ -189,7 +189,7 @@ namespace dana::ai {
         utf8_unit decode_unit(std::string_view buffer, std::size_t index) {
             auto const  byte  = static_cast<unsigned char>(buffer[index]);
             std::size_t need  = 0;
-            long long   units = 1;
+            std::int64_t   units = 1;
             if (byte < 0x80) {
                 return {.bytes = 1, .units = 1};
             }
@@ -298,14 +298,14 @@ namespace dana::ai {
 
           private:
             std::string              buffer_;
-            std::optional<long long> expected_;
+            std::optional<std::int64_t> expected_;
             std::size_t              start_          = 0;
             std::size_t              scanned_chars_  = 0;
-            long long                scanned_units_  = 0;
+            std::int64_t                scanned_units_  = 0;
             bool                     prefix_checked_ = false;
         };
 
-        std::string error_message(long long code) {
+        std::string error_message(std::int64_t code) {
             switch (code) {
                 case 1013: return "Gemini hit a temporary error (1013); try again";
                 case 1037: return "Gemini usage limit exceeded; switch model or wait for the quota to reset";
@@ -371,9 +371,9 @@ namespace dana::ai {
                     return;
                 }
                 if (auto const* code = nested(part, {5, 2, 0, 1, 0});
-                    code != nullptr && code->is_number_integer() && code->get<long long>() != 0)
+                    code != nullptr && code->is_number_integer() && code->get<std::int64_t>() != 0)
                 {
-                    error_text = error_message(code->get<long long>());
+                    error_text = error_message(code->get<std::int64_t>());
                     sink(error(error_text));
                     return;
                 }
@@ -427,7 +427,7 @@ namespace dana::ai {
                     auto const [text, thoughts] = candidate_text(candidate);
                     auto const* indicator       = nested(candidate, {8, 0});
                     bool const  is_final =
-                      indicator != nullptr && indicator->is_number_integer() && indicator->get<long long>() == 2;
+                      indicator != nullptr && indicator->is_number_integer() && indicator->get<std::int64_t>() == 2;
 
                     std::string const key           = rcid.empty() ? "idx_" + std::to_string(index) : rcid;
                     std::string const delta         = delta_of(text, last_text_[key]);
@@ -892,7 +892,7 @@ namespace dana::ai {
                 return json::array({"", "", "", nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, ""});
             }
 
-            static long long random_reqid() {
+            static std::int64_t random_reqid() {
                 static thread_local std::mt19937   rng{std::random_device{}()};
                 std::uniform_int_distribution<int> distribution(10'000, 99'999);
                 return distribution(rng);
@@ -904,7 +904,7 @@ namespace dana::ai {
             std::string      rid_;
             std::string      rcid_;
             std::string      session_id_;
-            long long        reqid_ = 0;
+            std::int64_t        reqid_ = 0;
         };
 
         std::unique_ptr<conversation>

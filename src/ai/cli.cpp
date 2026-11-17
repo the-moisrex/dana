@@ -155,7 +155,7 @@ namespace dana::ai {
             record.model           = chat.model();
             record.history         = chat.history();
             record.resume          = chat.resume();
-            state::save(provider_name, record, scope);
+            std::ignore            = state::save(provider_name, record, scope);
         }
 
         int print_models(provider& instance, cli_options const& options, renderer::writer const& out) {

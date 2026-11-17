@@ -18,7 +18,7 @@ namespace dana::ai {
         std::vector<std::string> prompt;
         std::vector<std::string> files;
         std::optional<bool>      prompt_file;
-        std::optional<long long> prompt_limit;
+        std::optional<std::int64_t> prompt_limit;
         std::string              model;
         std::string              system;
         bool                     interactive = false;
@@ -74,7 +74,7 @@ namespace dana::ai {
         bool                     debug    = false;
         std::optional<bool>      thinking;
         std::optional<bool>      prompt_file;
-        std::optional<long long> prompt_limit;
+        std::optional<std::int64_t> prompt_limit;
         std::vector<std::string> files;
         std::string              context_file;
         int                      width  = 0;

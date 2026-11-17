@@ -153,10 +153,10 @@ namespace dana::ai {
                 return !it->get<std::string>().empty();
             }
             if (it->is_number_integer()) {
-                return it->get<long long>() != 0;
+                return it->get<std::int64_t>() != 0;
             }
             if (it->is_number_unsigned()) {
-                return it->get<unsigned long long>() != 0;
+                return it->get<std::uint64_t>() != 0;
             }
             if (it->is_number_float()) {
                 return it->get<double>() != 0.0;
@@ -790,7 +790,7 @@ namespace dana::ai {
                   {    "filename",                                file.name},
                   {"content_type",                                file.mime},
                   {      "source",                                "default"},
-                  {   "file_size", static_cast<long long>(file.data.size())},
+                  {   "file_size", static_cast<std::int64_t>(file.data.size())},
                   { "force_image",                                    false},
                   {"skip_parsing",                                    false},
                 };

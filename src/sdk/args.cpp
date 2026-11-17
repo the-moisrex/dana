@@ -35,7 +35,7 @@ namespace dana {
             std::string        copy(value);
             char const*        begin  = copy.c_str();
             char*              end    = nullptr;
-            unsigned long long parsed = std::strtoull(begin, &end, 10);
+            std::uint64_t parsed = std::strtoull(begin, &end, 10);
             if (end != begin + copy.size()) {
                 return "--head requires a non-negative integer\n";
             }

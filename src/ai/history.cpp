@@ -37,7 +37,7 @@ namespace dana::ai {
         }
         double const seconds = value > 1e12 ? value / 1000.0 : value;
         auto const   point =
-          std::chrono::system_clock::time_point(std::chrono::milliseconds(static_cast<long long>(seconds * 1000.0)));
+          std::chrono::system_clock::time_point(std::chrono::milliseconds(static_cast<std::int64_t>(seconds * 1000.0)));
         std::time_t const raw = std::chrono::system_clock::to_time_t(point);
         std::tm           broken{};
         ::gmtime_r(&raw, &broken);

@@ -176,7 +176,7 @@ namespace dana::ai {
                         record.type  = item.value("type", "");
                         record.state = item.value("state", "");
                         if (item.contains("max_context_length") && item["max_context_length"].is_number()) {
-                            record.context = item["max_context_length"].get<long long>();
+                            record.context = item["max_context_length"].get<std::int64_t>();
                         }
                         out.push_back(std::move(record));
                     }

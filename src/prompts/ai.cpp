@@ -99,7 +99,7 @@ namespace {
             if (ec) {
                 dir = std::filesystem::current_path(ec);
             }
-            std::string const name = "prompt-ai-" + std::to_string(static_cast<long long>(::getpid())) + "-" +
+            std::string const name = "prompt-ai-" + std::to_string(static_cast<std::int64_t>(::getpid())) + "-" +
                                      std::to_string(counter.fetch_add(1, std::memory_order_relaxed)) + ".txt";
             return dir / name;
         }

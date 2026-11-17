@@ -66,7 +66,7 @@ std::string dana::git::add_line_numbers_to_diff(std::string_view diff) {
     std::string        line;
     std::string        result;
 
-    unsigned long long new_line_num = 0;
+    std::uint64_t new_line_num = 0;
     bool               in_hunk      = false;
 
     while (std::getline(stream, line)) {

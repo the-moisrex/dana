@@ -237,10 +237,10 @@ namespace dana::stash {
             auto                             temp = path;
             static std::atomic<unsigned int> counter{0};
             temp +=
-              ".tmp." + std::to_string(static_cast<long long>(::getpid())) + "." + std::to_string(counter.fetch_add(1));
+              ".tmp." + std::to_string(static_cast<std::int64_t>(::getpid())) + "." + std::to_string(counter.fetch_add(1));
             for (unsigned int attempt = 0; std::filesystem::exists(temp, ec) && attempt < 100; ++attempt) {
                 temp  = path;
-                temp += ".tmp." + std::to_string(static_cast<long long>(::getpid())) + "." +
+                temp += ".tmp." + std::to_string(static_cast<std::int64_t>(::getpid())) + "." +
                         std::to_string(counter.fetch_add(1));
             }
 
@@ -281,8 +281,8 @@ namespace dana::stash {
         return {buffer.data()};
     }
 
-    long long now_ts() {
-        return static_cast<long long>(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
+    std::int64_t now_ts() {
+        return static_cast<std::int64_t>(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
     }
 
     std::filesystem::path root() {
@@ -516,7 +516,7 @@ namespace dana::stash {
           ec);
 
         static std::atomic<unsigned int> counter{0};
-        auto      probe = dir / (".prompt-stash-check-" + std::to_string(static_cast<long long>(::getpid())) + "." +
+        auto      probe = dir / (".prompt-stash-check-" + std::to_string(static_cast<std::int64_t>(::getpid())) + "." +
                                  std::to_string(counter.fetch_add(1)));
         int const fd    = ::open(probe.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0600);
         if (fd < 0) {

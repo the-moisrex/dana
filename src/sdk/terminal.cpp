@@ -19,7 +19,7 @@ namespace dana::terminal {
             return raw == nullptr ? std::string{} : std::string(raw);
         }
 
-        long long sid_from_env() {
+        std::int64_t sid_from_env() {
             std::string const raw = env_value("PROMPT_TERMINAL_SID");
             if (raw.empty()) {
                 return 0;
@@ -71,9 +71,9 @@ namespace dana::terminal {
 
         value.sid = sid_from_env();
         if (value.sid == 0) {
-            value.sid = static_cast<long long>(::getsid(0));
+            value.sid = static_cast<std::int64_t>(::getsid(0));
         }
-        value.sid = std::max(value.sid, 0LL);
+        value.sid = std::max<std::int64_t>(value.sid, 0LL);
 
         value.tty = env_value("PROMPT_TERMINAL_TTY");
         if (value.tty.empty()) {

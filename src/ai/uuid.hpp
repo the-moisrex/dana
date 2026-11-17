@@ -25,7 +25,7 @@ namespace dana::ai {
           static_cast<unsigned>((hi >> 16) & 0xFFFFU),
           static_cast<unsigned>(hi & 0xFFFFU),
           static_cast<unsigned>((lo >> 48) & 0xFFFFU),
-          static_cast<unsigned long long>(lo & 0xFFFF'FFFF'FFFFULL));
+          (lo & 0xFFFF'FFFF'FFFFULL));
         return std::string(buffer);
     }
 

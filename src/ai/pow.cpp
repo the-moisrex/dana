@@ -19,7 +19,7 @@ namespace dana::ai::pow {
     namespace {
 
         constexpr int       kMaxWorkers        = 16;
-        constexpr long long kSingleThreadLimit = 2048;
+        constexpr std::int64_t kSingleThreadLimit = 2048;
 
         char hex_digit(std::uint8_t value) {
             return static_cast<char>(value < 10 ? '0' + value : 'a' + (value - 10));
@@ -79,14 +79,14 @@ namespace dana::ai::pow {
 
         // Search `[start, stop)` for the nonce; the first worker to find one stops the
         // rest.  Returns the nonce or -1.
-        long long search_range(
+        std::int64_t search_range(
           std::string const&                  prefix,
           std::array<std::uint8_t, 32> const& target,
-          long long                           start,
-          long long                           stop_at,
-          std::atomic<long long>&             found,
+          std::int64_t                           start,
+          std::int64_t                           stop_at,
+          std::atomic<std::int64_t>&             found,
           std::atomic<bool>&                  stopped) {
-            for (long long nonce = start; nonce < stop_at; ++nonce) {
+            for (std::int64_t nonce = start; nonce < stop_at; ++nonce) {
                 if (stopped.load(std::memory_order_relaxed)) {
                     return -1;
                 }
@@ -94,7 +94,7 @@ namespace dana::ai::pow {
                 if (crypto::deepseek_hash_v1(candidate) != target) {
                     continue;
                 }
-                long long expected = -1;
+                std::int64_t expected = -1;
                 found.compare_exchange_strong(expected, nonce);
                 stopped.store(true);
                 return nonce;
@@ -108,33 +108,33 @@ namespace dana::ai::pow {
         return to_hex(crypto::deepseek_hash_v1(data));
     }
 
-    long long solve_deepseek(
+    std::int64_t solve_deepseek(
       std::string const& salt,
-      long long          expire_at,
-      long long          difficulty,
+      std::int64_t          expire_at,
+      std::int64_t          difficulty,
       std::string const& challenge,
       int                workers) {
         std::string const prefix = salt + "_" + std::to_string(expire_at) + "_";
         auto const        target = from_hex(challenge);
-        long long const   limit  = difficulty > 0 ? difficulty : 1;
+        std::int64_t const   limit  = difficulty > 0 ? difficulty : 1;
         int               count  = workers > 0 ? workers : auto_workers();
-        if (static_cast<long long>(count) > limit) {
+        if (static_cast<std::int64_t>(count) > limit) {
             count = static_cast<int>(limit);
         }
         if (count < 1) {
             count = std::max(count, 1);
         }
 
-        std::atomic<long long> found{-1};
+        std::atomic<std::int64_t> found{-1};
         std::atomic<bool>      stopped{false};
         if (count == 1 || limit < kSingleThreadLimit) {
             search_range(prefix, target, 0, limit, found, stopped);
         } else {
-            long long const          size = (limit + count - 1) / count;
+            std::int64_t const          size = (limit + count - 1) / count;
             std::vector<std::thread> pool;
             pool.reserve(static_cast<std::size_t>(count));
-            for (long long start = 0; start < limit; start += size) {
-                long long const stop_at = std::min(start + size, limit);
+            for (std::int64_t start = 0; start < limit; start += size) {
+                std::int64_t const stop_at = std::min(start + size, limit);
                 pool.emplace_back([&prefix, &target, &found, &stopped, start, stop_at] {
                     search_range(prefix, target, start, stop_at, found, stopped);
                 });
@@ -143,7 +143,7 @@ namespace dana::ai::pow {
                 thread.join();
             }
         }
-        long long const answer = found.load();
+        std::int64_t const answer = found.load();
         if (answer < 0) {
             throw error("DeepSeekHashV1: no solution within the difficulty range");
         }
@@ -154,7 +154,7 @@ namespace dana::ai::pow {
       std::string const& salt,
       std::string const& challenge,
       std::string const& signature,
-      long long          answer,
+      std::int64_t          answer,
       std::string const& target_path) {
         nlohmann::ordered_json const payload{
           {  "algorithm", "DeepSeekHashV1"},

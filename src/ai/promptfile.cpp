@@ -79,7 +79,7 @@ namespace dana::ai {
         return buffer.data();
     }
 
-    std::size_t limit_for(std::size_t provider_limit, std::optional<long long> override) {
+    std::size_t limit_for(std::size_t provider_limit, std::optional<std::int64_t> override) {
         if (override) {
             return *override < 0 ? 0U : static_cast<std::size_t>(*override);
         }
@@ -89,7 +89,7 @@ namespace dana::ai {
     bool should_attach(std::string_view         prompt,
                        std::size_t              inline_limit,
                        std::optional<bool>      mode,
-                       std::optional<long long> override) {
+                       std::optional<std::int64_t> override) {
         if (prompt.empty() || (mode && !*mode)) {
             return false;
         }
@@ -155,7 +155,7 @@ namespace dana::ai {
       bool                     disabled,
       bool                     has_upload,
       bool                     auto_attach,
-      std::optional<long long> limit) {
+      std::optional<std::int64_t> limit) {
         (void) provider;
         std::string const lowered = lower(message);
         if (!looks_too_large(lowered)) {

@@ -91,19 +91,19 @@ namespace dana::ai {
             return value.get<std::string>();
         }
 
-        long long integer_or(json const& object, std::string_view key, long long fallback) {
+        std::int64_t integer_or(json const& object, std::string_view key, std::int64_t fallback) {
             if (!object.is_object() || !object.contains(key)) {
                 return fallback;
             }
             auto const& value = object[std::string(key)];
             if (value.is_number_integer()) {
-                return value.get<long long>();
+                return value.get<std::int64_t>();
             }
             if (value.is_number_unsigned()) {
-                return static_cast<long long>(value.get<unsigned long long>());
+                return static_cast<std::int64_t>(value.get<std::uint64_t>());
             }
             if (value.is_number_float()) {
-                return static_cast<long long>(value.get<double>());
+                return static_cast<std::int64_t>(value.get<double>());
             }
             return fallback;
         }
@@ -114,10 +114,10 @@ namespace dana::ai {
                 return value.get<std::string>();
             }
             if (value.is_number_integer()) {
-                return std::to_string(value.get<long long>());
+                return std::to_string(value.get<std::int64_t>());
             }
             if (value.is_number_unsigned()) {
-                return std::to_string(value.get<unsigned long long>());
+                return std::to_string(value.get<std::uint64_t>());
             }
             return {};
         }
@@ -204,7 +204,7 @@ namespace dana::ai {
         // Turn DeepSeek's fragment-patch frames into deltas.
         class fragment_parser {
           public:
-            explicit fragment_parser(long long skip_response = 0, long long skip_thinking = 0) {
+            explicit fragment_parser(std::int64_t skip_response = 0, std::int64_t skip_thinking = 0) {
                 skip_["RESPONSE"] = skip_response;
                 skip_["THINK"]    = skip_thinking;
             }
@@ -278,7 +278,7 @@ namespace dana::ai {
                     return content(value != nullptr && value->is_string() ? value->get<std::string>() : std::string{});
                 }
                 if (path.ends_with("/accumulated_token_usage") && value != nullptr && value->is_number_integer()) {
-                    usage_ = value->get<long long>();
+                    usage_ = value->get<std::int64_t>();
                 }
                 return out;
             }
@@ -322,7 +322,7 @@ namespace dana::ai {
                             auto const drop =
                               std::min<std::size_t>(static_cast<std::size_t>(skip->second), codepoint_length(text));
                             text          = drop_codepoints(text, drop);
-                            skip->second -= static_cast<long long>(drop);
+                            skip->second -= static_cast<std::int64_t>(drop);
                         }
                         fragments_.push_back(kind);
                         auto const events = content(text);
@@ -332,7 +332,7 @@ namespace dana::ai {
                 if (response.contains("accumulated_token_usage") &&
                     response["accumulated_token_usage"].is_number_integer())
                 {
-                    usage_ = response["accumulated_token_usage"].get<long long>();
+                    usage_ = response["accumulated_token_usage"].get<std::int64_t>();
                 }
                 return out;
             }
@@ -355,12 +355,12 @@ namespace dana::ai {
                 return dana::ai::text(std::move(value));
             }
 
-            std::vector<std::string>         fragments_;
-            long long                        usage_      = 0;
-            json                             message_id_ = nullptr;
-            std::string                      status_;
-            json                             close_ = nullptr;
-            std::map<std::string, long long> skip_;
+            std::vector<std::string>            fragments_;
+            std::int64_t                        usage_      = 0;
+            json                                message_id_ = nullptr;
+            std::string                         status_;
+            json                                close_ = nullptr;
+            std::map<std::string, std::int64_t> skip_;
         };
 
         class deepseek_provider : public provider {
@@ -487,11 +487,11 @@ namespace dana::ai {
                 if (!challenge.is_object()) {
                     return {};
                 }
-                std::string const salt       = string_or(challenge, "salt");
-                long long const   expire_at  = integer_or(challenge, "expire_at", 0);
-                long long const   difficulty = integer_or(challenge, "difficulty", 1);
-                std::string const value      = string_or(challenge, "challenge");
-                long long const   answer     = pow::solve_deepseek(salt, expire_at, difficulty, value);
+                std::string const  salt       = string_or(challenge, "salt");
+                std::int64_t const expire_at  = integer_or(challenge, "expire_at", 0);
+                std::int64_t const difficulty = integer_or(challenge, "difficulty", 1);
+                std::string const  value      = string_or(challenge, "challenge");
+                std::int64_t const answer     = pow::solve_deepseek(salt, expire_at, difficulty, value);
                 return pow::deepseek_response(
                   salt,
                   value,
@@ -678,8 +678,8 @@ namespace dana::ai {
                       {"chat_session_id", conversation_id_},
                       {     "message_id",      previous_id},
                     };
-                    fragment_parser next(static_cast<long long>(codepoint_length(answer)),
-                                         static_cast<long long>(codepoint_length(thinking_text)));
+                    fragment_parser next(static_cast<std::int64_t>(codepoint_length(answer)),
+                                         static_cast<std::int64_t>(codepoint_length(thinking_text)));
                     try {
                         consume(kContinuePath, continue_headers, continue_body, next, answer, thinking_text, sink);
                     } catch (std::exception const& failure) {
@@ -719,7 +719,7 @@ namespace dana::ai {
                 request.timeout_seconds = timeout_;
                 request.debug           = debug_;
                 apply_headers(request, headers);
-                stream_lines(request, [&](std::string_view line) {
+                std::ignore = stream_lines(request, [&](std::string_view line) {
                     std::string const payload = sse_payload(line);
                     if (!payload.empty()) {
                         json const object = json::parse(payload, nullptr, false);
