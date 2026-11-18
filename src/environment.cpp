@@ -383,9 +383,9 @@ namespace dana {
         }
 
         return environment{
-          .git_root             = ::dana::fs::find_git_root().value_or(std::filesystem::path{}),
+          .git_root             = fs::find_git_root().value_or(std::filesystem::path{}),
           .working_dir          = std::move(working_dir),
-          .exe_path             = ::dana::fs::self_path().value_or(std::filesystem::path{}),
+          .exe_path             = fs::self_path().value_or(std::filesystem::path{}),
           .clipboard_content    = &clipboard::paste,
           .clipboard_identifier = [] -> std::optional<std::string> {
               return clipboard::detect_identifier(clipboard::paste());

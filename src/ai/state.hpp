@@ -36,7 +36,7 @@ namespace dana::ai::state {
     std::filesystem::path terminal_path(std::string_view provider, std::string_view scope = {});
     std::filesystem::path last_path(std::string_view scope = {});
 
-    // The current terminal's state scope (see prompt::terminal::scope).
+    // The current terminal's state scope (see dana::terminal::scope).
     std::string terminal_scope();
 
     std::optional<conversation_record> load(std::string_view provider, double max_age = kMaxAge);

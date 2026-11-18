@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <string_view>
 
-namespace prompt::hash {
+namespace dana::hash {
 
     constexpr std::uint32_t fnv1a_32(std::string_view data) {
         constexpr std::uint32_t FNV1A_32_INIT  = 0x811C'9DC5U;
@@ -32,4 +32,4 @@ namespace prompt::hash {
         return h1 ^ (h2 + 0x9e37'79b9 + (h1 << 6) + (h1 >> 2));
     }
 
-} // namespace prompt::hash
+} // namespace dana::hash

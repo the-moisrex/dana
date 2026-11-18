@@ -1,28 +1,4 @@
-add_executable(test_ai test_ai.cpp)
-target_link_libraries(test_ai PRIVATE dana_lib)
-target_include_directories(test_ai PRIVATE ${CMAKE_SOURCE_DIR}/src)
-add_test(NAME ai COMMAND test_ai)
-
-# The offline `ai.debate` relay loop: framing, rounds, agreement and failures.
-add_executable(test_ai_debate test_ai_debate.cpp)
-target_link_libraries(test_ai_debate PRIVATE dana_lib)
-target_include_directories(test_ai_debate PRIVATE ${CMAKE_SOURCE_DIR}/src)
-add_test(NAME ai_debate COMMAND test_ai_debate)
-
-# DeepSeek's proof-of-work: the custom hash's known vectors, the nonce search
-# and the x-ds-pow-response payload (offline, no site is contacted).
-add_executable(test_ai_pow test_ai_pow.cpp)
-target_link_libraries(test_ai_pow PRIVATE dana_lib)
-target_include_directories(test_ai_pow PRIVATE ${CMAKE_SOURCE_DIR}/src)
-add_test(NAME ai_pow COMMAND test_ai_pow)
-
-# The provider-independent agentic loop behind `.ai.loop`: turn order, the
-# tool feedback prompt, exhaustion, failure and result truncation.
-add_executable(test_agent_loop test_agent_loop.cpp)
-target_link_libraries(test_agent_loop PRIVATE dana_lib)
-target_include_directories(test_agent_loop PRIVATE ${CMAKE_SOURCE_DIR}/src)
-add_test(NAME agent_loop COMMAND test_agent_loop)
-
+# Core unit tests - these test components directly without spawning processes
 add_executable(test_chaining test_chaining.cpp)
 target_link_libraries(test_chaining PRIVATE dana_lib)
 target_include_directories(test_chaining PRIVATE ${CMAKE_SOURCE_DIR}/src)
@@ -63,8 +39,6 @@ target_link_libraries(test_facts PRIVATE dana_lib)
 target_include_directories(test_facts PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME facts COMMAND test_facts)
 
-# The path-alias mechanism: boundary-aware hide/reveal, stable placeholders, the
-# workspace header, the fact codec and the standard environment mapping.
 add_executable(test_alias test_alias.cpp)
 target_link_libraries(test_alias PRIVATE dana_lib)
 target_include_directories(test_alias PRIVATE ${CMAKE_SOURCE_DIR}/src)
@@ -75,535 +49,186 @@ target_link_libraries(test_compress PRIVATE dana_lib)
 target_include_directories(test_compress PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME compress COMMAND test_compress)
 
-# The tool-schema layer: the factories, the help-derived fallback and the
-# renderers/completion a prompt builds from a schema.
 add_executable(test_schema test_schema.cpp)
 target_link_libraries(test_schema PRIVATE dana_lib)
 target_include_directories(test_schema PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME schema COMMAND test_schema)
 
-# The tool-call layer: `schema::parse` (JSON -> argv) and
-# `tool_call::extract` (finding calls in an AI answer).
 add_executable(test_tool_call test_tool_call.cpp)
 target_link_libraries(test_tool_call PRIVATE dana_lib)
 target_include_directories(test_tool_call PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME tool_call COMMAND test_tool_call)
 
-# The ported opencode tools: `.glob` lists, `.grep` searches, and `.tools`
-# describes the catalog (markdown, JSON Schema, names, chat protocol).
-add_test(NAME glob_lists
-    COMMAND $<TARGET_FILE:prompt> glob --path ${CMAKE_CURRENT_SOURCE_DIR}/fixtures "*.txt")
-set_tests_properties(glob_lists PROPERTIES PASS_REGULAR_EXPRESSION "numbered\\.txt")
+add_executable(test_file_scope test_file_scope.cpp)
+target_link_libraries(test_file_scope PRIVATE dana_lib)
+target_include_directories(test_file_scope PRIVATE ${CMAKE_SOURCE_DIR}/src)
+add_test(NAME file_scope COMMAND test_file_scope)
 
-add_test(NAME grep_finds
-    COMMAND $<TARGET_FILE:prompt> grep --include "*.txt" one ${CMAKE_CURRENT_SOURCE_DIR}/fixtures)
-set_tests_properties(grep_finds PROPERTIES PASS_REGULAR_EXPRESSION "numbered\\.txt:")
-
-# `.repo`: the default compact format groups files per directory and must not
-# emit the box-drawing tree; `--format paths` is the plain `git ls-files` list.
-add_test(NAME repo_compact
-    COMMAND sh -c "$<TARGET_FILE:prompt> repo tests/fixtures | grep -q 'fixtures: .*numbered\\.txt' && ! $<TARGET_FILE:prompt> repo tests/fixtures | grep -q '├──'")
-set_tests_properties(repo_compact PROPERTIES WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-
-add_test(NAME repo_paths
-    COMMAND sh -c "$<TARGET_FILE:prompt> repo --format paths tests/fixtures | grep -qx 'tests/fixtures/numbered.txt'")
-set_tests_properties(repo_paths PROPERTIES WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-
-add_test(NAME repo_dirs
-    COMMAND $<TARGET_FILE:prompt> repo --format dirs tests/fixtures)
-set_tests_properties(repo_dirs PROPERTIES WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    PASS_REGULAR_EXPRESSION "tests/fixtures/: 2 files")
-
-add_test(NAME tools_names COMMAND $<TARGET_FILE:prompt> tools --names)
-set_tests_properties(tools_names PROPERTIES PASS_REGULAR_EXPRESSION "glob")
-
-add_test(NAME tools_json COMMAND $<TARGET_FILE:prompt> tools --json)
-set_tests_properties(tools_json PROPERTIES PASS_REGULAR_EXPRESSION "\"input\"")
-
-add_test(NAME tools_compact COMMAND $<TARGET_FILE:prompt> tools --compact --category core)
-set_tests_properties(tools_compact PROPERTIES PASS_REGULAR_EXPRESSION "glob \\[core\\]")
-
-add_test(NAME tools_category COMMAND $<TARGET_FILE:prompt> tools --names --category tse)
-set_tests_properties(tools_category PROPERTIES PASS_REGULAR_EXPRESSION "tse\\.intraday")
-
-add_test(NAME tools_chat COMMAND $<TARGET_FILE:prompt> tools --for chat --category core)
-set_tests_properties(tools_chat PROPERTIES PASS_REGULAR_EXPRESSION "\"x-positional\"")
-
-# `.tools --only`/`--exclude` narrow the catalog the agent loop advertises.
-add_test(NAME tools_only COMMAND $<TARGET_FILE:prompt> tools --names --only read,edit)
-set_tests_properties(tools_only PROPERTIES PASS_REGULAR_EXPRESSION "edit" FAIL_REGULAR_EXPRESSION "glob")
-
-add_test(NAME tools_exclude
-    COMMAND sh -c "$<TARGET_FILE:prompt> tools --names --exclude edit | grep -qx read && ! $<TARGET_FILE:prompt> tools --names --exclude edit | grep -qx edit")
-
-# `.tools.run` executes a call from the context; `--print` previews it.
-add_test(NAME tools_run_print
-    COMMAND sh -c "printf '```json\\n{\"tool\":\"glob\",\"input\":{\"pattern\":\"*.txt\",\"path\":\"${CMAKE_CURRENT_SOURCE_DIR}/fixtures\"}}\\n```\\n' | $<TARGET_FILE:prompt> .tools.run --print")
-set_tests_properties(tools_run_print PROPERTIES PASS_REGULAR_EXPRESSION "prompt glob")
-
-add_test(NAME tools_run_call
-    COMMAND sh -c "printf '```json\\n{\"tool\":\"glob\",\"input\":{\"pattern\":\"*.txt\",\"path\":\"${CMAKE_CURRENT_SOURCE_DIR}/fixtures\"}}\\n```\\n' | $<TARGET_FILE:prompt> .tools.run --yes")
-set_tests_properties(tools_run_call PROPERTIES PASS_REGULAR_EXPRESSION "### Tool: glob")
-
-# A read-only tool needs no approval even with no terminal: an agent loop can
-# explore freely. `setsid` detaches the controlling tty so the ask path cannot
-# be reached by accident.
-add_test(NAME tools_run_readonly
-    COMMAND sh -c "printf '```json\\n{\"tool\":\"glob\",\"input\":{\"pattern\":\"*.txt\",\"path\":\"${CMAKE_CURRENT_SOURCE_DIR}/fixtures\"}}\\n```\\n' | setsid $<TARGET_FILE:prompt> .tools.run")
-set_tests_properties(tools_run_readonly PROPERTIES PASS_REGULAR_EXPRESSION "### Tool: glob")
-
-# A tool call reads a file even when the chain already embedded it: the
-# `keys::files` dedup record is a chain-wide record, not a per-call one.
-add_test(NAME tools_run_reads_embedded_file
-    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_tools_read_embedded.sh $<TARGET_FILE:prompt>)
-
-# The flat call shape a model actually emits: parameters beside `tool`.
-add_test(NAME tools_run_flat
-    COMMAND sh -c "printf '{\"tool\":\"cli\",\"command\":\"echo flat-ok\"}\\n' | $<TARGET_FILE:prompt> .tools.run --yes")
-set_tests_properties(tools_run_flat PROPERTIES PASS_REGULAR_EXPRESSION "flat-ok")
-
-# Several calls in one answer all run, so a chat turn does not need a round trip
-# per call.
-add_test(NAME tools_run_multi
-    COMMAND sh -c "printf '```json\\n{\"tool\":\"cli\",\"input\":{\"command\":\"echo first-call\"}}\\n```\\n```json\\n{\"tool\":\"cli\",\"input\":{\"command\":\"echo second-call\"}}\\n```\\n' | $<TARGET_FILE:prompt> .tools.run --yes > ${CMAKE_CURRENT_BINARY_DIR}/tools_run_multi.out 2>&1; grep -q first-call ${CMAKE_CURRENT_BINARY_DIR}/tools_run_multi.out && grep -q second-call ${CMAKE_CURRENT_BINARY_DIR}/tools_run_multi.out && cat ${CMAKE_CURRENT_BINARY_DIR}/tools_run_multi.out")
-set_tests_properties(tools_run_multi PROPERTIES PASS_REGULAR_EXPRESSION "### Tool: cli")
-
-# `.skill.gen` teaches the SKILL.md shape and marks the chain as a skill save.
-add_test(NAME skill_gen_help COMMAND $<TARGET_FILE:prompt> .skill.gen)
-set_tests_properties(skill_gen_help PROPERTIES PASS_REGULAR_EXPRESSION "SKILL.md")
-
-# `.compress.delegate` hands an AI the region plan and the compressor catalog.
-add_test(NAME compress_delegate
-    COMMAND $<TARGET_FILE:prompt> .compress.delegate ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/numbered.txt)
-set_tests_properties(compress_delegate PROPERTIES PASS_REGULAR_EXPRESSION "Available compressors")
-
-# A directory argument is a clean usage error, not the stream exception
-# (`basic_filebuf::underflow: Is a directory`) that used to abort the process.
-add_test(NAME compress_directory
-    COMMAND $<TARGET_FILE:prompt> .compress ${CMAKE_CURRENT_SOURCE_DIR})
-set_tests_properties(compress_directory PROPERTIES
-    PASS_REGULAR_EXPRESSION "is a directory")
-
-# The pasted-text → instrument policy, now next to the clipboard instead of
-# inline in the dispatcher's environment initializer.
-add_executable(test_clipboard test_clipboard.cpp)
-target_link_libraries(test_clipboard PRIVATE dana_lib)
-target_include_directories(test_clipboard PRIVATE ${CMAKE_SOURCE_DIR}/src)
-add_test(NAME clipboard_identifier COMMAND test_clipboard)
-
-# End-to-end `.clipboard`/`.c.p` (paste) and `.c.c` (copy) against a stubbed
-# xclip backend, so the paste/copy roles, --head caps and passthrough are
-# exercised without a real session clipboard.
-add_test(NAME clipboard_prompt
-    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_clipboard_prompt.sh $<TARGET_FILE:prompt>)
-
-add_test(NAME ai_help COMMAND $<TARGET_FILE:prompt> .ai.dseek --help)
-set_tests_properties(ai_help PROPERTIES PASS_REGULAR_EXPRESSION "--with-context")
-
-# The API providers (a local LM Studio server / the OpenAI-compatible API)
-# advertise their endpoint flags instead of a browser session.
-add_test(NAME ai_lms_help COMMAND $<TARGET_FILE:prompt> .ai.lms --help)
-set_tests_properties(ai_lms_help PROPERTIES PASS_REGULAR_EXPRESSION "--base-url")
-
-add_test(NAME ai_openai_help COMMAND $<TARGET_FILE:prompt> .ai.openai --help)
-set_tests_properties(ai_openai_help PROPERTIES PASS_REGULAR_EXPRESSION "--api-key")
-
-add_test(NAME ai_openrouter_help COMMAND $<TARGET_FILE:prompt> .ai.openrouter --help)
-set_tests_properties(ai_openrouter_help PROPERTIES PASS_REGULAR_EXPRESSION "--api-key")
-
-add_test(NAME ai_claude_help COMMAND $<TARGET_FILE:prompt> .ai.claude --help)
-set_tests_properties(ai_claude_help PROPERTIES PASS_REGULAR_EXPRESSION "--prompt-file")
-
-add_test(NAME ai_debate_help COMMAND $<TARGET_FILE:prompt> .ai.debate --help)
-set_tests_properties(ai_debate_help PROPERTIES PASS_REGULAR_EXPRESSION "--rounds")
-
-# `.ai.reply` continues this terminal's last chat; --any is the global escape.
-add_test(NAME ai_reply_help COMMAND $<TARGET_FILE:prompt> .ai.reply --help)
-set_tests_properties(ai_reply_help PROPERTIES PASS_REGULAR_EXPRESSION "this terminal")
-
-add_test(NAME ai_debate_help_state COMMAND $<TARGET_FILE:prompt> .ai.debate --help)
-set_tests_properties(ai_debate_help_state PROPERTIES PASS_REGULAR_EXPRESSION "--continue")
-
-add_test(NAME ai_debate_print_prompt
-    COMMAND $<TARGET_FILE:prompt> .note hello .ai.debate grok dseek --print-prompt)
-set_tests_properties(ai_debate_print_prompt PROPERTIES PASS_REGULAR_EXPRESSION "Another AI said")
-
-# The completion callback offers the provider names, and PROVIDER= after
-# -m/--model.
-add_test(NAME ai_debate_complete
-    COMMAND $<TARGET_FILE:prompt> .ai.debate --complete gro)
-set_tests_properties(ai_debate_complete PROPERTIES PASS_REGULAR_EXPRESSION "grok")
-
-add_test(NAME ai_debate_complete_model
-    COMMAND $<TARGET_FILE:prompt> .ai.debate --complete "" -m)
-set_tests_properties(ai_debate_complete_model PROPERTIES PASS_REGULAR_EXPRESSION "deepseek=")
-
-# The relay loop itself, with fake conversations (no network, no browser).
-find_package(Python3 COMPONENTS Interpreter)
-if(Python3_Interpreter_FOUND)
-    add_test(NAME ai_debate_unit
-        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_debate.py)
-    # The API engine against a threaded HTTP stub: SSE mapping, discovery,
-    # model defaulting, --param, inline attachments, -c replay, refusals.
-    add_test(NAME ai_lms_unit
-        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_lms.py)
-    # OpenRouter: model listing with context/pricing, key resolution order
-    # (env/.env/flag/opencode) and the OPENROUTER_MODEL default.
-    add_test(NAME ai_openrouter_unit
-        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_openrouter.py)
-    # Claude's web chat: the Messages SSE stream, chat creation/resume and the
-    # wiggle upload attachment shape.
-    add_test(NAME ai_claude_unit
-        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_claude.py)
-    # The GapGPT poll fallback: bearer-token headers and a transport
-    # failure that must not abort a quiet (tool-running) turn.
-    add_test(NAME ai_gap_unit
-        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_gap.py)
-    # Perplexity's block stream: markdown diffs, workflow items, the
-    # COMPLETED fallback and the stored-thread extraction.
-    add_test(NAME ai_perplexity_unit
-        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_perplexity.py)
-    # Gemini's length-prefixed frames: UTF-16 lengths, text/thinking deltas,
-    # error frames and the batchexecute history bodies.
-    add_test(NAME ai_gemini_unit
-        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_gemini.py)
-    # The terminal-scoped conversation mirror `.ai.reply` depends on.
-    add_test(NAME ai_reply_state
-        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_state.py)
-endif()
-
-add_test(NAME ai_help_tty COMMAND $<TARGET_FILE:prompt> .ai.dseek --help)
-set_tests_properties(ai_help_tty PROPERTIES PASS_REGULAR_EXPRESSION "--tty")
-
-add_test(NAME ai_print_prompt COMMAND $<TARGET_FILE:prompt> .note hello .ai.dseek --print-prompt)
-set_tests_properties(ai_print_prompt PROPERTIES PASS_REGULAR_EXPRESSION "hello")
-
-# `.ai.loop`: the agentic tool loop. --print-prompt is the offline dry run.
-add_test(NAME ai_loop_help COMMAND $<TARGET_FILE:prompt> .ai.gap.loop --help)
-set_tests_properties(ai_loop_help PROPERTIES PASS_REGULAR_EXPRESSION "--real-paths")
-
-add_test(NAME ai_loop_print_prompt COMMAND $<TARGET_FILE:prompt> .note hello .ai.gap.loop --print-prompt)
-set_tests_properties(ai_loop_print_prompt PROPERTIES PASS_REGULAR_EXPRESSION "/prompt-ws-[0-9a-f]+")
-
-# `--real-paths` turns the placeholder workspace off.
-add_test(NAME ai_loop_real_paths COMMAND $<TARGET_FILE:prompt> .note hello .ai.gap.loop --print-prompt --real-paths)
-set_tests_properties(ai_loop_real_paths PROPERTIES PASS_REGULAR_EXPRESSION "Working directory"
-                     FAIL_REGULAR_EXPRESSION "/prompt-ws-")
-
-# `.paths.hide`/`.paths.reveal`: the silent context transform and its inverse.
-add_test(NAME paths_hide
-    COMMAND sh -c "f=$(mktemp); $<TARGET_FILE:prompt> .note 'see /tmp/alias-ctest-root/src/a.cpp' .paths.hide /tmp/alias-ctest-root .save \"$f\" --force >/dev/null 2>&1; grep -q '/prompt-ws-' \"$f\"; rm -f \"$f\"")
-
-add_test(NAME paths_reveal
-    COMMAND sh -c "f=$(mktemp); $<TARGET_FILE:prompt> .note 'see /tmp/alias-ctest-root/src/a.cpp' .paths.hide /tmp/alias-ctest-root .paths.reveal .save \"$f\" --force >/dev/null 2>&1; grep -q '/tmp/alias-ctest-root/src/a.cpp' \"$f\"; rm -f \"$f\"")
-
-add_test(NAME ai_loop_complete COMMAND $<TARGET_FILE:prompt> .ai.loop --complete "")
-set_tests_properties(ai_loop_complete PROPERTIES PASS_REGULAR_EXPRESSION "openrouter")
-
-# `.write --content` writes exactly the given text, which is how a tool call
-# writes a file (the child prompt starts with an empty context).
-add_test(NAME write_content
-    COMMAND sh -c "f=$(mktemp); $<TARGET_FILE:prompt> .write --content hello \"$f\" >/dev/null 2>&1; test \"$(cat $f)\" = hello; rm -f $f")
-
-add_test(NAME ai_head COMMAND $<TARGET_FILE:prompt> .note one .note two .ai.dseek --print-prompt --head 1)
-set_tests_properties(ai_head PROPERTIES PASS_REGULAR_EXPRESSION "one" FAIL_REGULAR_EXPRESSION "two")
-
-# End-to-end `.ai.*` sinks: stub providers prove --tty/--width/--height are
-# forwarded on a terminal, the styled stream stays display-only and the chain
-# gets the plain --context-file answer.
-add_test(NAME ai_sink_roundtrip
-    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_sink.sh $<TARGET_FILE:prompt>)
-
-# End-to-end native API providers: `ai.cli` and the in-process `.ai.*` sinks
-# against a local OpenAI-compatible stub (SSE, -c replay, --list, --json).
-add_test(NAME ai_native
-    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_native.sh
-            $<TARGET_FILE:prompt> $<TARGET_FILE:ai.cli>)
-
-# End-to-end `.ai.debate`: the same side-channel plumbing as `.ai.*`, plus the
-# forwarded provider names, the debate flags and stdin.
-add_test(NAME ai_debate_sink
-    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_debate_sink.sh $<TARGET_FILE:prompt>)
-
-# End-to-end `.ai.reply`: terminal-scoped provider selection, exact `--reply`
-# resumption, --any, explicit providers and the only-new-text rule.
-add_test(NAME ai_reply_sink
-    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_reply.sh $<TARGET_FILE:prompt>)
-
-# End-to-end `.save`: explicit/directory/derived targets, --dir/--file,
-# preflight fail-fast, passthrough into a sink, --head, no-clobber, sanitized
-# names and the empty-context guard.
-add_test(NAME save_roundtrip
-    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_save.sh
-            $<TARGET_FILE:prompt> ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/numbered.txt)
-
-# End-to-end `.clear`/`.flush`: a context reset between sections, piped stdin,
-# hint/taint reset, `.flush` == `.save .clear`, no-clobber and preflight.
-add_test(NAME clear_roundtrip
-    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_clear.sh $<TARGET_FILE:prompt>)
-
-# The stash store: names, scopes, the JSON round-trip, append merging,
-# sanitization, malformed files and the cross-process append lock.
-add_executable(test_stash test_stash.cpp)
-target_link_libraries(test_stash PRIVATE dana_lib)
-target_include_directories(test_stash PRIVATE ${CMAKE_SOURCE_DIR}/src)
-add_test(NAME stash COMMAND test_stash)
-
-# End-to-end `.stash`/`.stashed`: append/replace, scope shadowing, fact and flag
-# restoration, the management subcommands and completion.
-add_test(NAME stash_roundtrip
-    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_stash.sh $<TARGET_FILE:prompt>)
-
-# The history store: the marker format, the byte framing (a body that contains
-# a fake marker), the chain replay, truncation and the retention pass.
-add_executable(test_history test_history.cpp)
-target_link_libraries(test_history PRIVATE dana_lib)
-target_include_directories(test_history PRIVATE ${CMAKE_SOURCE_DIR}/src)
-add_test(NAME history COMMAND test_history)
-
-# End-to-end recording: `.history` reproduces stdout, list/find/purge, the env
-# knobs, inner-run tagging and completion.
-add_test(NAME history_roundtrip
-    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_history.sh $<TARGET_FILE:prompt>)
-
-# `tse_data::run_tool`: a timeout, a non-zero exit and an empty dataset each
-# produce a message instead of the old silent empty soft_error.
-add_executable(test_tse_tool test_tse_tool.cpp)
-target_link_libraries(test_tse_tool PRIVATE dana_lib)
-target_include_directories(test_tse_tool PRIVATE ${CMAKE_SOURCE_DIR}/src)
-add_test(NAME tse_tool COMMAND test_tse_tool)
+add_executable(test_file_filter test_file_filter.cpp)
+target_link_libraries(test_file_filter PRIVATE dana_lib)
+target_include_directories(test_file_filter PRIVATE ${CMAKE_SOURCE_DIR}/src)
+add_test(NAME file_filter COMMAND test_file_filter)
 
 add_executable(test_embed test_embed.cpp)
 target_link_libraries(test_embed PRIVATE dana_lib)
 target_include_directories(test_embed PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME embed COMMAND test_embed)
 
-# The one text-fold rule (`append_block`/`strip_newlines`) shared by the chain
-# context, the stdout accumulator, the clipboard builder and the history replay.
 add_executable(test_strings test_strings.cpp)
 target_link_libraries(test_strings PRIVATE dana_lib)
 target_include_directories(test_strings PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME strings COMMAND test_strings)
-
-# End-to-end smoke: the dispatcher trims every emitted segment on both sides,
-# separates blocks with one blank line and skips an empty segment.
-add_test(NAME output_fold
-    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_output.sh $<TARGET_FILE:prompt>)
-
-# End-to-end `prompt yt`: a failed subtitle fetch fails the prompt (exit 1, no
-# output) unless --fallback asks for the pre-change raw-URL behaviour.
-add_test(NAME yt_roundtrip
-    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_yt.sh $<TARGET_FILE:prompt>)
 
 add_executable(test_completion test_completion.cpp)
 target_link_libraries(test_completion PRIVATE dana_lib)
 target_include_directories(test_completion PRIVATE ${CMAKE_SOURCE_DIR}/src)
 add_test(NAME completion COMMAND test_completion)
 
-# End-to-end smoke: the built binary numbers the lines of an embedded file when
-# asked (and only then).
-add_test(NAME files_num
-    COMMAND $<TARGET_FILE:prompt> files --num ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/numbered.txt)
-set_tests_properties(files_num PROPERTIES PASS_REGULAR_EXPRESSION "1 \\| one")
+add_executable(test_history test_history.cpp)
+target_link_libraries(test_history PRIVATE dana_lib)
+target_include_directories(test_history PRIVATE ${CMAKE_SOURCE_DIR}/src)
+add_test(NAME history COMMAND test_history)
 
-# The chain-wide file record: parsing, canonical keys and the ordered union.
-add_executable(test_file_scope test_file_scope.cpp)
-target_link_libraries(test_file_scope PRIVATE dana_lib)
-target_include_directories(test_file_scope PRIVATE ${CMAKE_SOURCE_DIR}/src)
-add_test(NAME file_scope COMMAND test_file_scope)
+add_executable(test_stash test_stash.cpp)
+target_link_libraries(test_stash PRIVATE dana_lib)
+target_include_directories(test_stash PRIVATE ${CMAKE_SOURCE_DIR}/src)
+add_test(NAME stash COMMAND test_stash)
 
-# End-to-end: a file named in several file prompts is embedded once,
-# `--no-dedup` re-emits it, and a diff-only mode does not count.
+add_executable(test_clipboard test_clipboard.cpp)
+target_link_libraries(test_clipboard PRIVATE dana_lib)
+target_include_directories(test_clipboard PRIVATE ${CMAKE_SOURCE_DIR}/src)
+add_test(NAME clipboard_identifier COMMAND test_clipboard)
+
+# AI engine tests
+add_executable(test_ai test_ai.cpp)
+target_link_libraries(test_ai PRIVATE dana_lib)
+target_include_directories(test_ai PRIVATE ${CMAKE_SOURCE_DIR}/src)
+add_test(NAME ai COMMAND test_ai)
+
+add_executable(test_ai_debate test_ai_debate.cpp)
+target_link_libraries(test_ai_debate PRIVATE dana_lib)
+target_include_directories(test_ai_debate PRIVATE ${CMAKE_SOURCE_DIR}/src)
+add_test(NAME ai_debate COMMAND test_ai_debate)
+
+add_executable(test_ai_pow test_ai_pow.cpp)
+target_link_libraries(test_ai_pow PRIVATE dana_lib)
+target_include_directories(test_ai_pow PRIVATE ${CMAKE_SOURCE_DIR}/src)
+add_test(NAME ai_pow COMMAND test_ai_pow)
+
+add_executable(test_agent_loop test_agent_loop.cpp)
+target_link_libraries(test_agent_loop PRIVATE dana_lib)
+target_include_directories(test_agent_loop PRIVATE ${CMAKE_SOURCE_DIR}/src)
+add_test(NAME agent_loop COMMAND test_agent_loop)
+
+add_executable(test_tse_tool test_tse_tool.cpp)
+target_link_libraries(test_tse_tool PRIVATE dana_lib)
+target_include_directories(test_tse_tool PRIVATE ${CMAKE_SOURCE_DIR}/src)
+add_test(NAME tse_tool COMMAND test_tse_tool)
+
+# === NEW: Integrated prompt execution tests ===
+# These replace the many CMake command-line tests with fast in-process tests
+
+add_executable(test_prompt_exec test_prompt_exec.cpp)
+target_link_libraries(test_prompt_exec PRIVATE dana_lib)
+target_include_directories(test_prompt_exec PRIVATE ${CMAKE_SOURCE_DIR}/src)
+add_test(NAME prompt_exec COMMAND test_prompt_exec)
+
+add_executable(test_tools_exec test_tools_exec.cpp)
+target_link_libraries(test_tools_exec PRIVATE dana_lib)
+target_include_directories(test_tools_exec PRIVATE ${CMAKE_SOURCE_DIR}/src)
+add_test(NAME tools_exec COMMAND test_tools_exec)
+
+add_executable(test_agent_exec test_agent_exec.cpp)
+target_link_libraries(test_agent_exec PRIVATE dana_lib)
+target_include_directories(test_agent_exec PRIVATE ${CMAKE_SOURCE_DIR}/src)
+add_test(NAME agent_exec COMMAND test_agent_exec)
+
+add_executable(test_ai_sinks test_ai_sinks.cpp)
+target_link_libraries(test_ai_sinks PRIVATE dana_lib)
+target_include_directories(test_ai_sinks PRIVATE ${CMAKE_SOURCE_DIR}/src)
+add_test(NAME ai_sinks COMMAND test_ai_sinks)
+
+# === End-to-end shell tests (kept for integration coverage) ===
+
+# These test the actual binary through its CLI, verifying the full stack
+# including argument parsing, process forking, and shell integration.
+
+add_test(NAME ai_sink_roundtrip
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_sink.sh $<TARGET_FILE:prompt>)
+
+add_test(NAME ai_native
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_native.sh
+        $<TARGET_FILE:prompt> $<TARGET_FILE:ai.cli>)
+
+add_test(NAME ai_debate_sink
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_debate_sink.sh $<TARGET_FILE:prompt>)
+
+add_test(NAME ai_reply_sink
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_reply.sh $<TARGET_FILE:prompt>)
+
+add_test(NAME save_roundtrip
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_save.sh
+        $<TARGET_FILE:prompt> ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/numbered.txt)
+
+add_test(NAME clear_roundtrip
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_clear.sh $<TARGET_FILE:prompt>)
+
+add_test(NAME stash_roundtrip
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_stash.sh $<TARGET_FILE:prompt>)
+
+add_test(NAME history_roundtrip
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_history.sh $<TARGET_FILE:prompt>)
+
 add_test(NAME file_dedup
-    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_file_dedup.sh $<TARGET_FILE:prompt>)
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_file_dedup.sh $<TARGET_FILE:prompt>)
 
-# The chain-wide file selection filter: the pattern matching (basename, path,
-# directory, absolute), the scope resolution and the published union.
-add_executable(test_file_filter test_file_filter.cpp)
-target_link_libraries(test_file_filter PRIVATE dana_lib)
-target_include_directories(test_file_filter PRIVATE ${CMAKE_SOURCE_DIR}/src)
-add_test(NAME file_filter COMMAND test_file_filter)
-
-# End-to-end `.files.exclude`/`.files.scope`: the filter reaches `.files`,
-# `.read.grep`, `.grep`, `.glob`, `.git-dirty`, `.git.diff` and `.commit`, and
-# the fzf picker (a stub) feeds the exclusion.
 add_test(NAME file_filter_roundtrip
-    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_file_filter.sh $<TARGET_FILE:prompt>)
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_file_filter.sh $<TARGET_FILE:prompt>)
 
-# End-to-end smoke: `--complete` answers from the prompt's own help (flags) and
-# its own code (flag values) without running the prompt or the network.
-add_test(NAME complete_flags COMMAND $<TARGET_FILE:prompt> metadata --complete --)
-set_tests_properties(complete_flags PROPERTIES PASS_REGULAR_EXPRESSION "--format")
+add_test(NAME clipboard_prompt
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_clipboard_prompt.sh $<TARGET_FILE:prompt>)
 
-add_test(NAME complete_values COMMAND $<TARGET_FILE:prompt> diagram --complete "" --type)
-set_tests_properties(complete_values PROPERTIES PASS_REGULAR_EXPRESSION "mermaid")
+add_test(NAME output_fold
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_output.sh $<TARGET_FILE:prompt>)
 
-# End-to-end smoke: the whole-line mode (what shell/completions.fish calls)
-# classifies the position itself — prompt names at the head, a `.name`/`-name`
-# step boundary after a prompt, the open prompt's own values, and the
-# `*.prompt` files that can be inlined next to the cwd.
-add_test(NAME complete_line_head COMMAND $<TARGET_FILE:prompt> --complete-line "")
-set_tests_properties(complete_line_head PROPERTIES PASS_REGULAR_EXPRESSION "--no-prompt-files")
+add_test(NAME yt_roundtrip
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_yt.sh $<TARGET_FILE:prompt>)
 
-add_test(NAME complete_line_step COMMAND $<TARGET_FILE:prompt> --complete-line ".met" .note hi)
-set_tests_properties(complete_line_step PROPERTIES PASS_REGULAR_EXPRESSION "\\.metadata")
-
-add_test(NAME complete_line_values COMMAND $<TARGET_FILE:prompt> --complete-line "" .diagram --type)
-set_tests_properties(complete_line_values PROPERTIES PASS_REGULAR_EXPRESSION "mermaid")
-
-add_test(NAME complete_line_prompt_file COMMAND $<TARGET_FILE:prompt> --complete-line "hel")
-set_tests_properties(complete_line_prompt_file PROPERTIES
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/fixtures
-    PASS_REGULAR_EXPRESSION "hello\\.prompt")
-
-# Functions in the line mode: `.func` is a keyword at a step boundary, and an
-# inline `.func NAME … .end` makes `.NAME` a step candidate.
-add_test(NAME complete_line_func COMMAND $<TARGET_FILE:prompt> --complete-line ".f" .note hi)
-set_tests_properties(complete_line_func PROPERTIES PASS_REGULAR_EXPRESSION "\\.func")
-
-add_test(NAME complete_line_inline_func
-    COMMAND $<TARGET_FILE:prompt> --complete-line ".o" .func one .note test .end)
-set_tests_properties(complete_line_inline_func PROPERTIES PASS_REGULAR_EXPRESSION "\\.one")
-
-# End-to-end smoke: `tse.analyze` is instructions only — it takes no arguments,
-# fetches nothing and needs no bin/ tool, so it can run without the network.
-add_test(NAME tse_analyze_instructions COMMAND $<TARGET_FILE:prompt> tse.analyze)
-set_tests_properties(tse_analyze_instructions PROPERTIES PASS_REGULAR_EXPRESSION "institutional analyst")
-
-# End-to-end smoke: the historical base-rate lens is instructions only too.
-add_test(NAME tse_analyze_history_instructions COMMAND $<TARGET_FILE:prompt> tse.analyze.history)
-set_tests_properties(tse_analyze_history_instructions PROPERTIES PASS_REGULAR_EXPRESSION "mid-trend correction")
-
-# End-to-end smoke: `length` turns a target into an answer-length instruction,
-# standalone and chained, with the exact/approximate and unit spellings.
-add_test(NAME length_exact COMMAND $<TARGET_FILE:prompt> .length =200)
-set_tests_properties(length_exact PROPERTIES PASS_REGULAR_EXPRESSION "exactly 200 words")
-
-add_test(NAME length_units COMMAND $<TARGET_FILE:prompt> length 10 lines)
-set_tests_properties(length_units PROPERTIES PASS_REGULAR_EXPRESSION "about 10 lines")
-
-add_test(NAME length_preset_chain COMMAND $<TARGET_FILE:prompt> .note hello .length short)
-set_tests_properties(length_preset_chain PROPERTIES PASS_REGULAR_EXPRESSION "Keep your answer short")
-
-add_test(NAME length_default COMMAND $<TARGET_FILE:prompt> length)
-set_tests_properties(length_default PROPERTIES PASS_REGULAR_EXPRESSION "one or two paragraphs")
-
-add_test(NAME length_shape COMMAND $<TARGET_FILE:prompt> .length blog)
-set_tests_properties(length_shape PROPERTIES PASS_REGULAR_EXPRESSION "blog post")
-
-add_test(NAME length_conflict COMMAND $<TARGET_FILE:prompt> length --max --min 5)
-set_tests_properties(length_conflict PROPERTIES WILL_FAIL TRUE)
-
-# The agentic layer: the response contract, extraction, command printing, loop
-# item listing/printing, and one real parallel loop. No network.
-add_test(NAME agent_expect_contract COMMAND $<TARGET_FILE:prompt> .expect command:prompt)
-set_tests_properties(agent_expect_contract PROPERTIES PASS_REGULAR_EXPRESSION "single `prompt` command")
-
-# A multi-entry plan: the unnamed primary plus a named binding, rendered as one
-# combined contract.
-add_test(NAME agent_expect_plan
-    COMMAND $<TARGET_FILE:prompt> .expect command:prompt save.stem=field:filename)
-set_tests_properties(agent_expect_plan PROPERTIES
-    PASS_REGULAR_EXPRESSION "filename: <value>"
-    FAIL_REGULAR_EXPRESSION "expected exactly one selector")
-
-add_test(NAME agent_extract
-    COMMAND $<TARGET_FILE:prompt> .note [=[```sh
-prompt .length 5
-```]=] .expect command:prompt .extract)
-set_tests_properties(agent_extract PROPERTIES PASS_REGULAR_EXPRESSION "prompt \\.length 5")
-
-# The `field` selector: a labelled value, positional and bound as a fact.
-add_test(NAME agent_extract_field
-    COMMAND $<TARGET_FILE:prompt> .note [=[filename: fix-parser.prompt]=] .extract field:filename)
-set_tests_properties(agent_extract_field PROPERTIES PASS_REGULAR_EXPRESSION "fix-parser\\.prompt")
+add_test(NAME tools_run_reads_embedded_file
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_tools_read_embedded.sh $<TARGET_FILE:prompt>)
 
 add_test(NAME agent_extract_bind
-    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_extract_bind.sh $<TARGET_FILE:prompt>)
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_extract_bind.sh $<TARGET_FILE:prompt>)
 
-# `md.extract`'s field parsing and the combined contract, as a unit test.
+# === Python unit tests (kept for complex protocol testing) ===
+
+find_package(Python3 COMPONENTS Interpreter)
 if(Python3_Interpreter_FOUND)
+    add_test(NAME ai_debate_unit
+            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_debate.py)
+    add_test(NAME ai_lms_unit
+            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_lms.py)
+    add_test(NAME ai_openrouter_unit
+            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_openrouter.py)
+    add_test(NAME ai_claude_unit
+            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_claude.py)
+    add_test(NAME ai_gap_unit
+            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_gap.py)
+    add_test(NAME ai_perplexity_unit
+            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_perplexity.py)
+    add_test(NAME ai_gemini_unit
+            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_gemini.py)
+    add_test(NAME ai_reply_state
+            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_state.py)
     add_test(NAME md_extract_unit
-        COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_md_extract.py
-                $<TARGET_FILE:md.extract>)
+            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_md_extract.py
+            $<TARGET_FILE:md.extract>)
 endif()
 
-add_test(NAME agent_exec_print COMMAND $<TARGET_FILE:prompt> .exec --print git status)
-set_tests_properties(agent_exec_print PROPERTIES PASS_REGULAR_EXPRESSION "git status")
+# === Environment setup for all tests ===
 
-add_test(NAME agent_exec_args COMMAND $<TARGET_FILE:prompt> .exec --print -- echo "a b")
-set_tests_properties(agent_exec_args PROPERTIES PASS_REGULAR_EXPRESSION "echo 'a b'")
-
-# `--` hands the rest of argv to the command: its own `-h` is not prompt's.
-add_test(NAME agent_exec_help_arg COMMAND $<TARGET_FILE:prompt> .exec --print -- echo -h)
-set_tests_properties(agent_exec_help_arg PROPERTIES PASS_REGULAR_EXPRESSION "echo -h")
-
-add_test(NAME agent_exec_chain_print COMMAND $<TARGET_FILE:prompt> .exec --print -- prompt .note hi)
-set_tests_properties(agent_exec_chain_print PROPERTIES PASS_REGULAR_EXPRESSION "prompt \\.note hi")
-
-add_test(NAME agent_exec_chain_run COMMAND $<TARGET_FILE:prompt> .exec --yes -- prompt .note hi)
-set_tests_properties(agent_exec_chain_run PROPERTIES PASS_REGULAR_EXPRESSION "hi")
-
-add_test(NAME agent_exec_allowed
-    COMMAND ${CMAKE_COMMAND} -E env PROMPT_POLICY_ALLOW=echo $<TARGET_FILE:prompt> .exec echo hi)
-set_tests_properties(agent_exec_allowed PROPERTIES PASS_REGULAR_EXPRESSION "hi")
-
-add_test(NAME agent_exec_denied COMMAND $<TARGET_FILE:prompt> .exec sudo ls)
-set_tests_properties(agent_exec_denied PROPERTIES WILL_FAIL TRUE)
-
-add_test(NAME agent_each_print
-    COMMAND $<TARGET_FILE:prompt> .note [=[| symbol |
-| --- |
-| a |
-| b |]=] .each --print .tse {symbol} .end)
-set_tests_properties(agent_each_print PROPERTIES PASS_REGULAR_EXPRESSION "prompt .tse b")
-
-add_test(NAME agent_each_run
-    COMMAND $<TARGET_FILE:prompt> .note [=[| symbol |
-| --- |
-| a |
-| b |]=] .each .length 10 .end)
-set_tests_properties(agent_each_run PROPERTIES PASS_REGULAR_EXPRESSION "## b")
-
-add_test(NAME agent_each_list
-    COMMAND $<TARGET_FILE:prompt> .note [=[| symbol |
-| --- |
-| a |
-| b |]=] .each --list .length 10 .end)
-set_tests_properties(agent_each_list PROPERTIES PASS_REGULAR_EXPRESSION "2 items")
-
-# A body `.exec` is pre-approved once by the parent and runs in each child.
-add_test(NAME agent_each_exec
-    COMMAND $<TARGET_FILE:prompt> .note [=[| symbol |
-| --- |
-| a |
-| b |]=] .each --yes table:symbol .exec -- echo {symbol} .end)
-set_tests_properties(agent_each_exec PROPERTIES PASS_REGULAR_EXPRESSION "## b")
-
-# Prompt files: a `*.prompt` argument is inlined as the chain it holds.
-add_test(NAME prompt_file_run COMMAND $<TARGET_FILE:prompt> ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/hello.prompt)
-set_tests_properties(prompt_file_run PROPERTIES PASS_REGULAR_EXPRESSION "hello from a prompt file")
-
-# A `*.prompt` token in the first position that resolves to nothing is an error.
-add_test(NAME prompt_file_missing COMMAND $<TARGET_FILE:prompt> no-such-file.prompt)
-set_tests_properties(prompt_file_missing PROPERTIES PASS_REGULAR_EXPRESSION "cannot find prompt file")
-
-# Functions: `.func NAME(params) … .end` defines a step and `.name` calls it.
-add_test(NAME function_inline COMMAND $<TARGET_FILE:prompt> .func hi .note hello .end .hi)
-set_tests_properties(function_inline PROPERTIES PASS_REGULAR_EXPRESSION "hello")
-
-add_test(NAME function_params
-    COMMAND $<TARGET_FILE:prompt> .func "greet(who,ai=dseek)" .note "hello {who} {ai}" .end .greet world)
-set_tests_properties(function_params PROPERTIES PASS_REGULAR_EXPRESSION "hello world dseek")
-
-add_test(NAME function_shadow COMMAND $<TARGET_FILE:prompt> .func note .note x .end)
-set_tests_properties(function_shadow PROPERTIES WILL_FAIL TRUE)
-
-# `prompt` records every invocation under $XDG_STATE_HOME: point the whole
-# suite at a scratch directory so tests never touch the user's real history
-# store (the history test sets its own per-case directory on top of this).
 get_property(_prompt_tests DIRECTORY PROPERTY TESTS)
 if(_prompt_tests)
     set_tests_properties(${_prompt_tests} PROPERTIES
-        ENVIRONMENT "PROMPT_HISTORY_DIR=${CMAKE_CURRENT_BINARY_DIR}/history;PROMPT_FUNCS=")
+            ENVIRONMENT "PROMPT_HISTORY_DIR=${CMAKE_CURRENT_BINARY_DIR}/history;PROMPT_FUNCS=")
 endif()

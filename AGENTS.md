@@ -1,4 +1,4 @@
-# AGENTS.md — `prompts/` (native prompt dispatcher, C++)
+# AGENTS.md — `dana` (native prompt dispatcher, C++)
 
 This directory builds the `prompt` command: a native C++ dispatcher where every
 prompt is a `src/prompts/<name>.cpp` that registers itself. There is no scripting
@@ -20,12 +20,12 @@ fall through to `auto` — that is how leading file/identifier args reach it.
 ## Build, test, lint
 
 ```bash
-cmake -S prompts -B prompts/build -DCMAKE_BUILD_TYPE=Release && cmake --build prompts/build -j 8   # Release
-cmake -S prompts -B prompts/build-asan -DCMAKE_BUILD_TYPE=Debug
-cmake --build prompts/build-asan -j 8 && (cd prompts/build-asan && ctest)                          # Debug + tests
-clang-format -i prompts/src/**/*.{cpp,hpp} && clang-format --dry-run -Werror prompts/src/**/*.{cpp,hpp}
-clang-tidy -p prompts/build src/*.cpp src/*/*.cpp && clang-tidy -p prompts/build-asan tests/*.cpp  # zero findings
-cmake --install prompts/build --prefix "$HOME/cmd" --component prompt                              # -> bin/prompt, bin/md.extract
+cmake -S prompts -B build -DCMAKE_BUILD_TYPE=Release && cmake --build prompts/build -j 8   # Release
+cmake -S prompts -B build-asan -DCMAKE_BUILD_TYPE=Debug
+cmake --build build-asan -j 8 && (cd prompts/build-asan && ctest)                          # Debug + tests
+clang-format -i src/**/*.{cpp,hpp} && clang-format --dry-run -Werror src/**/*.{cpp,hpp}
+clang-tidy -p build src/*.cpp src/*/*.cpp && clang-tidy -p build-asan tests/*.cpp  # zero findings
+cmake --install build --prefix "$HOME/cmd" --component prompt                              # -> bin/prompt, bin/md.extract
 ```
 
 The build type is **not** defaulted (only the `Debug` branch adds the warning
@@ -41,9 +41,9 @@ whole tree must stay clang-format clean.
 ## Adding or changing a prompt
 
 - **One file = one prompt.** A prompt is `src/prompts/<name>.cpp` implementing
-  `static void execute_<name>(prompt::view const& v, prompt::result& r)` and
+  `static void execute_<name>(dana::view const& v, dana::result& r)` and
   `static void render_help_<name>(std::ostream&)`, ending with
-  `[[maybe_unused]] bool const registered = prompt::register_prompt("<name>", "<summary>", &execute_<name>, &render_help_<name>);`.
+  `[[maybe_unused]] bool const registered = dana::register_prompt("<name>", "<summary>", &execute_<name>, &render_help_<name>);`.
   CMake globs `src/prompts/*.cpp`, so no other file changes; registration runs at
   static-init time, which is why `dana_lib` must stay an OBJECT library.
   The registry is a fixed array of `prompt_registry_capacity` (128) slots; a
@@ -58,7 +58,7 @@ whole tree must stay clang-format clean.
   prints. The help's first line must be `Usage: prompt <name>`.
 - The name is passed explicitly because dotted/dashed names (`git.diff`,
   `tse.find`, `clang-tidy`) cannot be derived from the identifier.
-- A **sink** uses `prompt::register_sink(...)` instead (see "Sinks" below). It
+- A **sink** uses `dana::register_sink(...)` instead (see "Sinks" below). It
   needs only its executor, help renderer and stream flag; the dispatcher owns
   the shared flags and the barrier ordering.
 - A prompt that **embeds file content** registers with `register_file_prompt`
@@ -72,8 +72,8 @@ whole tree must stay clang-format clean.
 
 ## Prompt contract
 
-Two types, one direction each: `prompt::view` is everything a segment may
-**read**, `prompt::result` is everything it may **produce**. Nothing in a prompt
+Two types, one direction each: `dana::view` is everything a segment may
+**read**, `dana::result` is everything it may **produce**. Nothing in a prompt
 mutates chain state, which is what makes forked parallel segments safe.
 
 - **Reading** (`sdk/stage.hpp`): `v.name`, `v.args` (a span — `.empty()`,
@@ -111,7 +111,7 @@ mutates chain state, which is what makes forked parallel segments safe.
 ### Facts (`sdk/facts.hpp`)
 
 Facts are the only inter-prompt channel: an ordered string→string store with
-well-known keys in `namespace prompt::keys`. Values are length-prefixed on the
+well-known keys in `namespace dana::keys`. Values are length-prefixed on the
 wire, so any content (newlines, UTF-8) survives. There are exactly two write
 points, with two merge rules:
 
@@ -177,7 +177,7 @@ batch, so a filter after it only affects the following batch.
   the prior patterns and its own, newline-separated. A pattern is matched
   against a file's absolute path, its path relative to the git root, its path
   relative to `.files.scope`, and its basename (`*`/`?` via
-  `prompt::glob::match`). A wildcard-free pattern also names a directory (its
+  `dana::glob::match`). A wildcard-free pattern also names a directory (its
   whole subtree is out) and, when it has no `/`, matches a directory component
   anywhere in the path. With no PATTERN it opens `fzf -m` over the candidates
   and excludes the picks. `--clear` drops every exclusion, `--list` prints them
@@ -199,7 +199,7 @@ the patterns into `rg -g '!…'` / GNU grep `--exclude`/`--exclude-dir` flags.
 `select_files(env, filter)` and `select_directories(env, filter)` pipe those
 candidates to `fzf -m`; callers keep the bare `select_files(env)` when the
 filter is empty so `$FZF_DEFAULT_COMMAND` still applies. `core/glob.hpp`'s
-`prompt::glob::match`/`has_wildcard` is the one matcher, shared with
+`dana::glob::match`/`has_wildcard` is the one matcher, shared with
 `core/git.cpp`'s diff path filter. The reach is every prompt that selects or
 embeds files (`.files`, `.read`, `.files.grep`/`.read.grep`, `.grep`, `.glob`,
 `.git.files`, `.git-dirty`, `.git.diff`, `.git.worktree.files`/`.diff`,
@@ -294,7 +294,7 @@ case, `funcs`-file loading and override) plus the
 ## Sinks
 
 A sink is a chain barrier, not an ordinary prompt. Register it with
-`prompt::register_sink("<name>", "<summary>", &execute_<name>, &render_help_<name>, nullptr, stream_output)`
+`dana::register_sink("<name>", "<summary>", &execute_<name>, &render_help_<name>, nullptr, stream_output)`
 (`stream_output=false` marks a silent sink) and no other switches; contiguous
 sinks chain in argv order, each answer feeding the next. Adding a sink does not
 touch the AI code or the dispatcher: the descriptor role makes `main.cpp` batch
@@ -422,7 +422,7 @@ stem)`), which the dispatcher carries through parallel children to later
   lives in `prompts/src/ai/state.cpp`: the plain `ai/<provider>.json` (for `-c`) is
   mirrored per terminal under `ai/terminals/<scope>/<provider>.json` with a
   `last` marker (and a global `ai/last`); `<scope>` is
-  `prompt::terminal::scope` (`src/sdk/terminal.cpp`), matched byte-for-byte by
+  `dana::terminal::scope` (`src/sdk/terminal.cpp`), matched byte-for-byte by
   `state::terminal_scope()`. `.ai.debate` mirrors each participant and sets
   `last` to `debate`, so `.ai.reply <provider>` is required to continue one.
 - **Network resilience.** `src/ai/http.cpp` owns the retry policy so every
@@ -589,7 +589,7 @@ CLI share it, so they can never disagree.
 
 - **One file = one extractor.** An extractor is `src/extract/<name>.cpp`
   implementing a `run(text, qualifier, options)` function and ending with one
-  `prompt::extract::register_extractor("<name>", "<summary>", &run_<name>);`.
+  `dana::extract::register_extractor("<name>", "<summary>", &run_<name>);`.
   CMake globs the sources, so no other file changes. The registry is a fixed
   array of `extract_registry_capacity` slots and aborts at startup when it
   overflows (like the prompt registry) rather than silently dropping a kind.
@@ -825,7 +825,7 @@ Use these instead of re-open-coding the same loops:
   `rg_globs()`/`grep_excludes()` and `exclude_fact(patterns)`; plus
   `select_files(env, filter)`/`select_directories(env, filter)` and
   `display_path(env, path)`. See "Chain-wide file filter" above.
-- `core/glob.hpp`: `prompt::glob::match(pattern, text)` (the `*`/`?` matcher
+- `core/glob.hpp`: `dana::glob::match(pattern, text)` (the `*`/`?` matcher
   shared with `core/git.cpp`) and `has_wildcard(pattern)`.
 - `embed.hpp`: `infer_lang` (`std::string_view`), `trim_context`,
   `trim_context_nl`, `head_output`, `read_file`, `number_lines(text, numbered)`

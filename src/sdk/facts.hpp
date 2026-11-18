@@ -53,7 +53,7 @@ namespace dana {
         // The chain's intent, published as an artifact by `.fix`/`.debug`/`.run` (and
         // overridable with `.compress --for`). Read by `.compress` so the same input
         // compresses differently when it is being repaired rather than merely read.
-        // Values are `general`, `fix`, `debug`, `review` (`prompt::signals::intent`).
+        // Values are `general`, `fix`, `debug`, `review` (`dana::signals::intent`).
         inline constexpr std::string_view mode = "prompt.mode";
 
         // What the chain is *about*: newline-separated focal items — failed Google Test
@@ -82,8 +82,8 @@ namespace dana {
         inline constexpr std::string_view path_alias = "paths.alias";
 
         // The detected project shape, published by `.project` and re-derived on demand
-        // by `.compress` through `prompt::project::detect`. `build_dir` is a path, the
-        // rest are `prompt::project` enum names.
+        // by `.compress` through `dana::project::detect`. `build_dir` is a path, the
+        // rest are `dana::project` enum names.
         inline constexpr std::string_view project_language  = "project.language";
         inline constexpr std::string_view project_build     = "project.build";
         inline constexpr std::string_view project_build_dir = "project.build_dir";
