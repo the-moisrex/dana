@@ -452,7 +452,8 @@ namespace dana::extract {
                 completion::write_item(os, keyword, "let the extractor choose");
             }
         }
-        std::string const binding = std::string(keys::save_stem) + "=";
+        std::string binding  = std::string(to_string(keys::save_stem));
+        binding             += '=';
         if (completion::matches(strip, binding)) {
             completion::write_item(os, binding, "publish the value as a fact");
         }

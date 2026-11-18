@@ -6,10 +6,10 @@
 
 namespace dana {
 
-    void stdin_source::load(std::string content) {
-        content_ = std::move(content);
-        piped_   = true;
-        spent_   = false;
+    void stdin_source::load(std::string inp_content) {
+        m_content = std::move(inp_content);
+        m_piped   = true;
+        m_spent   = false;
     }
 
     std::string clipboard_content(environment const& env) {

@@ -79,7 +79,8 @@ skill is saved under, so keep it short and kebab-case.
         std::string plan = "code:markdown";
         if (want_name) {
             plan += '\n';
-            plan += std::string(keys::save_stem) + "=field:filename";
+            plan += to_string(keys::save_stem);
+            plan += "=field:filename";
         }
         r.published.set(keys::expect, plan);
         r.published.set(keys::save_kind, "skill");

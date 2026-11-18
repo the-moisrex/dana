@@ -122,7 +122,7 @@ namespace dana::tse_data {
         return has_letter || (all_digits && token.size() >= 15) || token.contains("://");
     }
 
-    inline std::optional<std::string> identifier_in_args(std::vector<std::string_view> const& args) {
+    inline std::optional<std::string> identifier_in_args(std::span<std::string_view const> args) {
         for (std::size_t i = 0; i < args.size(); ++i) {
             std::string_view arg = args[i];
             if (arg == "--") {
@@ -158,12 +158,12 @@ namespace dana::tse_data {
         if (d.prior.get(keys::tse_symbol)) {
             return;
         }
-        auto id = identifier_in_args(std::vector<std::string_view>(d.args.begin(), d.args.end()));
+        auto const id = identifier_in_args(d.args);
         if (!id) {
             return;
         }
-        std::filesystem::path path(*id);
-        std::error_code       ec;
+        std::filesystem::path const path(*id);
+        std::error_code             ec;
         if (path.extension() == ".stock" || std::filesystem::is_regular_file(path, ec)) {
             return;
         }

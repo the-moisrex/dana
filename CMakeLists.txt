@@ -90,39 +90,40 @@ add_custom_command(
 # pulls in members that resolve some undefined symbol — the registrar of a
 # prompt nothing references would be dropped, silently unregistering it.
 add_library(dana_lib OBJECT
-    src/environment.cpp
-    src/core/fs.cpp
-    src/core/process.cpp
     src/core/clipboard.cpp
+    src/core/fs.cpp
+    src/core/git.cpp
+    src/core/process.cpp
     src/core/sanitize.cpp
     src/core/strings.cpp
-    src/core/git.cpp
-    src/sdk/facts.cpp
-    src/sdk/stage.cpp
-    src/sdk/wire.cpp
-    src/sdk/prompt_registry.cpp
-    src/sdk/chaining.cpp
-    src/sdk/prompt_file.cpp
-    src/sdk/completion.cpp
-    src/sdk/line_completion.cpp
-    src/sdk/function.cpp
-    src/sdk/embed.cpp
-    src/sdk/file_scope.cpp
-    src/sdk/file_filter.cpp
-    src/sdk/args.cpp
-    src/sdk/sink.cpp
+    src/environment.cpp
     src/sdk/agent.cpp
+    src/sdk/alias.cpp
+    src/sdk/args.cpp
+    src/sdk/chain_state.cpp
+    src/sdk/chaining.cpp
+    src/sdk/completion.cpp
+    src/sdk/embed.cpp
     src/sdk/extract.cpp
-    src/sdk/policy.cpp
+    src/sdk/facts.cpp
+    src/sdk/file_filter.cpp
+    src/sdk/file_scope.cpp
+    src/sdk/function.cpp
     src/sdk/history.cpp
+    src/sdk/line_completion.cpp
+    src/sdk/policy.cpp
+    src/sdk/project.cpp
+    src/sdk/prompt_file.cpp
+    src/sdk/prompt_registry.cpp
+    src/sdk/schema.cpp
+    src/sdk/signals.cpp
+    src/sdk/sink.cpp
+    src/sdk/stage.cpp
     src/sdk/stash.cpp
     src/sdk/terminal.cpp
-    src/sdk/project.cpp
-    src/sdk/signals.cpp
-    src/sdk/schema.cpp
     src/sdk/tool_call.cpp
     src/sdk/tool_exec.cpp
-    src/sdk/alias.cpp
+    src/sdk/wire.cpp
     ${EXTRACT_SRCS}
     ${COMPRESS_SRCS}
     ${AI_SRCS}

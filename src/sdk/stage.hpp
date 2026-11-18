@@ -15,7 +15,7 @@ namespace dana {
 
     // Process-wide, built once at startup and never written again: where the repo
     // is, where this executable lives, and the clipboard/file-picker services.
-    struct environment {
+    struct [[nodiscard]] environment {
         std::filesystem::path git_root;
         // The directory the dispatcher was started in, captured once so every
         // segment agrees (and so a prompt never has to call current_path()).
@@ -30,7 +30,7 @@ namespace dana {
     // The live-terminal writers. A parallel or captured segment leaves the stream
     // flags false, so write_stdout() only accumulates and the dispatcher emits the
     // result in chain order; a streaming sink tees each chunk as it arrives.
-    struct stream_config {
+    struct [[nodiscard]] stream_config {
         void (*stdout_writer)(std::string_view) = nullptr;
         void (*stderr_writer)(std::string_view) = nullptr;
         bool stream_stdout                      = false;
@@ -39,39 +39,42 @@ namespace dana {
 
     // The shared, spend-once stdin. `piped()` says a pipe was attached;
     // `available()` says nobody has read it yet; `text()` is empty once spent.
-    class stdin_source {
-      public:
-        void load(std::string content);
+    struct [[nodiscard]] stdin_source {
+        void load(std::string inp_content);
 
         [[nodiscard]] bool piped() const {
-            return piped_;
+            return m_piped;
         }
 
         [[nodiscard]] bool spent() const {
-            return spent_;
+            return m_spent;
         }
 
         [[nodiscard]] bool available() const {
-            return piped_ && !spent_;
+            return m_piped && !m_spent;
         }
 
         [[nodiscard]] std::string_view text() const {
-            return spent_ ? std::string_view{} : content_;
+            return m_spent ? std::string_view{} : m_content;
+        }
+
+        void set_text(std::string_view const new_text) {
+            m_content = new_text;
         }
 
         void spend() {
-            spent_ = true;
+            m_spent = true;
         }
 
       private:
-        std::string content_;
-        bool        piped_ = false;
-        bool        spent_ = false;
+        std::string m_content;
+        bool        m_piped = false;
+        bool        m_spent = false;
     };
 
     // Everything a segment may read. All views point into dispatcher-owned storage
     // that outlives the call; a segment never mutates chain state.
-    struct view {
+    struct [[nodiscard]] view {
         std::string_view                  name;
         std::span<std::string_view const> args;
         // The accumulated chain text before this segment (the sink barrier).
@@ -99,7 +102,7 @@ namespace dana {
 
     // Everything a segment may produce. The dispatcher sanitizes `out`, merges
     // `published`, prints `err`/`stderr_buffer`, and applies the flags.
-    struct result {
+    struct [[nodiscard]] result {
         std::string out;
         std::string err;
         std::string stderr_buffer;
@@ -125,7 +128,7 @@ namespace dana {
     // before a batch forks, so parallel siblings agree on one identity. A hook must
     // not print, must not touch the network, and must treat `args`/`environment`
     // as its only inputs.
-    struct declaration {
+    struct [[nodiscard]] declaration {
         std::span<std::string_view const> args;
         environment const&                env;
         facts const&                      prior;

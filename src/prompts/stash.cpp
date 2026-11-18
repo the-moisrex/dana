@@ -411,7 +411,7 @@ namespace dana {
                         out += "  (none)\n";
                     } else {
                         for (auto const& entry : rec->known.entries()) {
-                            out += std::format("  {}: {}\n", entry.key, entry.value);
+                            out += std::format("  {}: {}\n", to_string(entry.key), entry.value);
                         }
                     }
                 }

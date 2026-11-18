@@ -8,89 +8,88 @@
 #include <vector>
 
 namespace dana {
-
     // The keys the dispatcher and the built-in prompts agree on. A key is a plain
     // string, so a prompt family can publish its own without touching the SDK; the
     // constants below exist only to keep the names spelled once.
-    namespace keys {
-
+    enum struct [[nodiscard]] keys : std::uint8_t {
         // The basename stem a later `.save` should derive its filename from.
-        inline constexpr std::string_view save_stem = "save.stem";
+        save_stem,
 
         // The response shape the AI was asked for, as a plan: newline-separated
         // `[name=]selector` entries (`command:prompt`, `save.stem=field:filename`).
         // Published by `.expect` and `.delegate`, read by `.extract` (all entries) and
         // by `.each`/`.exec` (the unnamed primary entry only) when they are given no
         // selector of their own. See `sdk/agent.hpp`'s `parse_expect_plan`.
-        inline constexpr std::string_view expect = "prompt.expect";
+        expect,
 
         // Declared by `.save` (when it has no explicit target) so `.delegate` knows to
         // ask the AI for a file name and publish the `save.stem` binding for it. The
         // value is a marker ("1"); presence is what matters.
-        inline constexpr std::string_view save_wants_name = "save.want_name";
+        save_wants_name,
 
         // What the chain is saving, so `.save` can pick a destination other than the
         // current directory. `.skill.gen` publishes `skill`, which makes a nameless
         // `.save` write `$XDG_DATA_HOME/agents/skills/<stem>/SKILL.md` (the layout the
         // `skill` prompt loads). The value is a short kind name; empty means a plain
         // file in the working directory.
-        inline constexpr std::string_view save_kind = "save.kind";
+        save_kind,
 
         // The resolved TSE instrument, published once per chain by whichever `tse*`
         // prompt resolved it first.
-        inline constexpr std::string_view tse_symbol = "tse.instrument.symbol";
+        tse_symbol,
 
         // The provider an AI sink just talked to (`gap`, `dseek`, …), so a later
         // `.ai.reply` in the same chain continues that chat without consulting the
         // on-disk terminal marker. `debate` when the sink was `.ai.debate`.
-        inline constexpr std::string_view ai_provider = "ai.provider";
+        ai_provider,
 
         // The plain answer the previous AI sink produced in this chain. `.ai.reply`
         // drops it from the context it sends: the continued chat already contains it,
         // so only the newly appended instruction should be re-sent.
-        inline constexpr std::string_view ai_answer = "ai.answer";
+        ai_answer,
 
         // The chain's intent, published as an artifact by `.fix`/`.debug`/`.run` (and
         // overridable with `.compress --for`). Read by `.compress` so the same input
         // compresses differently when it is being repaired rather than merely read.
         // Values are `general`, `fix`, `debug`, `review` (`dana::signals::intent`).
-        inline constexpr std::string_view mode = "prompt.mode";
+        mode,
 
         // What the chain is *about*: newline-separated focal items — failed Google Test
         // cases, `path:line` error sites, or the files under repair. `.compress` never
         // compresses a focal region and its `gtest.units` compressor keeps the focal
         // test bodies while sampling the rest.
-        inline constexpr std::string_view focus = "prompt.focus";
+        focus,
 
         // The files whose content this chain has already emitted, as newline-separated
         // canonical absolute paths. A file prompt reads it through `sdk/file_scope.hpp`,
         // skips what is already there and publishes the union, so a chain like
         // `.read.grep X .files.grep X .files X .read X` embeds each file once.
-        inline constexpr std::string_view files = "files.emitted";
+        files,
 
         // The chain-wide file selection filter: newline-separated exclusion patterns
         // (paths, basenames, globs, directories) published by `.files.exclude`, and the
         // absolute search root published by `.files.scope`. Every file prompt reads
         // them through `sdk/file_filter.hpp`.
-        inline constexpr std::string_view excluded_files = "files.excluded";
-        inline constexpr std::string_view file_root      = "files.root";
+        excluded_files,
+        file_root,
 
         // The path-alias mapping `.paths.hide` publishes for the rest of the chain: a
         // length-prefixed list of (real root, placeholder) pairs (`sdk/alias.hpp`'s
         // `encode`/`decode`). Every `.ai.*` sink reads it to hide the context it sends
         // and reveal the answer it gets back.
-        inline constexpr std::string_view path_alias = "paths.alias";
+        path_alias,
 
         // The detected project shape, published by `.project` and re-derived on demand
         // by `.compress` through `dana::project::detect`. `build_dir` is a path, the
         // rest are `dana::project` enum names.
-        inline constexpr std::string_view project_language  = "project.language";
-        inline constexpr std::string_view project_build     = "project.build";
-        inline constexpr std::string_view project_build_dir = "project.build_dir";
-        inline constexpr std::string_view project_package   = "project.package";
-        inline constexpr std::string_view project_tests     = "project.tests";
+        project_language,
+        project_build,
+        project_build_dir,
+        project_package,
+        project_tests,
+    };
 
-    } // namespace keys
+    [[nodiscard]] std::string_view to_string(keys key) noexcept;
 
     // The only inter-prompt channel. Ordered key/value pairs of strings; a value
     // may contain anything (the wire writes it length-prefixed).
@@ -102,17 +101,19 @@ namespace dana {
     //     nearest successful segment, which is exactly what `.save` means.
     struct [[nodiscard]] facts {
         struct [[nodiscard]] entry {
-            std::string key;
+            keys        key;
             std::string value;
         };
 
+        void set(keys key, std::string_view value);
         void set(std::string_view key, std::string_view value);
 
-        [[nodiscard]] std::optional<std::string_view> get(std::string_view key) const;
+        [[nodiscard]] std::optional<std::string_view> get(keys key) const noexcept;
+        [[nodiscard]] std::optional<std::string_view> get(std::string_view key) const noexcept;
 
         // Drop a key (used when a child prompt must not inherit a chain-wide
         // record, e.g. the file dedup scope of an in-process tool call).
-        void erase(std::string_view key);
+        void erase(keys key);
 
         [[nodiscard]] bool empty() const {
             return m_entries.empty();

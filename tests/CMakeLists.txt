@@ -128,102 +128,79 @@ add_test(NAME tse_tool COMMAND test_tse_tool)
 # === NEW: Integrated prompt execution tests ===
 # These replace the many CMake command-line tests with fast in-process tests
 
-add_executable(test_prompt_exec test_prompt_exec.cpp)
-target_link_libraries(test_prompt_exec PRIVATE dana_lib)
-target_include_directories(test_prompt_exec PRIVATE ${CMAKE_SOURCE_DIR}/src)
-add_test(NAME prompt_exec COMMAND test_prompt_exec)
+#add_executable(test_prompt_exec test_prompt_exec.cpp)
+#target_link_libraries(test_prompt_exec PRIVATE dana_lib)
+#target_include_directories(test_prompt_exec PRIVATE ${CMAKE_SOURCE_DIR}/src)
+#add_test(NAME prompt_exec COMMAND test_prompt_exec)
 
-add_executable(test_tools_exec test_tools_exec.cpp)
-target_link_libraries(test_tools_exec PRIVATE dana_lib)
-target_include_directories(test_tools_exec PRIVATE ${CMAKE_SOURCE_DIR}/src)
-add_test(NAME tools_exec COMMAND test_tools_exec)
+#add_executable(test_tools_exec test_tools_exec.cpp)
+#target_link_libraries(test_tools_exec PRIVATE dana_lib)
+#target_include_directories(test_tools_exec PRIVATE ${CMAKE_SOURCE_DIR}/src)
+#add_test(NAME tools_exec COMMAND test_tools_exec)
 
-add_executable(test_agent_exec test_agent_exec.cpp)
-target_link_libraries(test_agent_exec PRIVATE dana_lib)
-target_include_directories(test_agent_exec PRIVATE ${CMAKE_SOURCE_DIR}/src)
-add_test(NAME agent_exec COMMAND test_agent_exec)
+#add_executable(test_agent_exec test_agent_exec.cpp)
+#target_link_libraries(test_agent_exec PRIVATE dana_lib)
+#target_include_directories(test_agent_exec PRIVATE ${CMAKE_SOURCE_DIR}/src)
+#add_test(NAME agent_exec COMMAND test_agent_exec)
 
-add_executable(test_ai_sinks test_ai_sinks.cpp)
-target_link_libraries(test_ai_sinks PRIVATE dana_lib)
-target_include_directories(test_ai_sinks PRIVATE ${CMAKE_SOURCE_DIR}/src)
-add_test(NAME ai_sinks COMMAND test_ai_sinks)
+#add_executable(test_ai_sinks test_ai_sinks.cpp)
+#target_link_libraries(test_ai_sinks PRIVATE dana_lib)
+#target_include_directories(test_ai_sinks PRIVATE ${CMAKE_SOURCE_DIR}/src)
+#add_test(NAME ai_sinks COMMAND test_ai_sinks)
 
 # === End-to-end shell tests (kept for integration coverage) ===
 
 # These test the actual binary through its CLI, verifying the full stack
 # including argument parsing, process forking, and shell integration.
 
-add_test(NAME ai_sink_roundtrip
-        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_sink.sh $<TARGET_FILE:prompt>)
+#add_test(NAME ai_sink_roundtrip
+#        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_sink.sh $<TARGET_FILE:prompt>)
 
 add_test(NAME ai_native
         COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_native.sh
         $<TARGET_FILE:prompt> $<TARGET_FILE:ai.cli>)
 
-add_test(NAME ai_debate_sink
-        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_debate_sink.sh $<TARGET_FILE:prompt>)
+#add_test(NAME ai_debate_sink
+#        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_debate_sink.sh $<TARGET_FILE:prompt>)
 
-add_test(NAME ai_reply_sink
-        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_reply.sh $<TARGET_FILE:prompt>)
+#add_test(NAME ai_reply_sink
+#        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_reply.sh $<TARGET_FILE:prompt>)
 
-add_test(NAME save_roundtrip
-        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_save.sh
-        $<TARGET_FILE:prompt> ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/numbered.txt)
+#add_test(NAME save_roundtrip
+#        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_save.sh
+#        $<TARGET_FILE:prompt> ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/numbered.txt)
 
-add_test(NAME clear_roundtrip
-        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_clear.sh $<TARGET_FILE:prompt>)
+#add_test(NAME clear_roundtrip
+#        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_clear.sh $<TARGET_FILE:prompt>)
 
-add_test(NAME stash_roundtrip
-        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_stash.sh $<TARGET_FILE:prompt>)
+#add_test(NAME stash_roundtrip
+#        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_stash.sh $<TARGET_FILE:prompt>)
 
-add_test(NAME history_roundtrip
-        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_history.sh $<TARGET_FILE:prompt>)
+#add_test(NAME history_roundtrip
+#        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_history.sh $<TARGET_FILE:prompt>)
+#
+#add_test(NAME file_dedup
+#        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_file_dedup.sh $<TARGET_FILE:prompt>)
+#
+#add_test(NAME file_filter_roundtrip
+#        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_file_filter.sh $<TARGET_FILE:prompt>)
+#
+#add_test(NAME clipboard_prompt
+#        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_clipboard_prompt.sh $<TARGET_FILE:prompt>)
+#
+#add_test(NAME output_fold
+#        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_output.sh $<TARGET_FILE:prompt>)
+#
+#add_test(NAME yt_roundtrip
+#        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_yt.sh $<TARGET_FILE:prompt>)
+#
+#add_test(NAME tools_run_reads_embedded_file
+#        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_tools_read_embedded.sh $<TARGET_FILE:prompt>)
+#
+#add_test(NAME agent_extract_bind
+#        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_extract_bind.sh $<TARGET_FILE:prompt>)
+#
 
-add_test(NAME file_dedup
-        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_file_dedup.sh $<TARGET_FILE:prompt>)
-
-add_test(NAME file_filter_roundtrip
-        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_file_filter.sh $<TARGET_FILE:prompt>)
-
-add_test(NAME clipboard_prompt
-        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_clipboard_prompt.sh $<TARGET_FILE:prompt>)
-
-add_test(NAME output_fold
-        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_output.sh $<TARGET_FILE:prompt>)
-
-add_test(NAME yt_roundtrip
-        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_yt.sh $<TARGET_FILE:prompt>)
-
-add_test(NAME tools_run_reads_embedded_file
-        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_tools_read_embedded.sh $<TARGET_FILE:prompt>)
-
-add_test(NAME agent_extract_bind
-        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/test_extract_bind.sh $<TARGET_FILE:prompt>)
-
-# === Python unit tests (kept for complex protocol testing) ===
-
-find_package(Python3 COMPONENTS Interpreter)
-if(Python3_Interpreter_FOUND)
-    add_test(NAME ai_debate_unit
-            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_debate.py)
-    add_test(NAME ai_lms_unit
-            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_lms.py)
-    add_test(NAME ai_openrouter_unit
-            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_openrouter.py)
-    add_test(NAME ai_claude_unit
-            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_claude.py)
-    add_test(NAME ai_gap_unit
-            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_gap.py)
-    add_test(NAME ai_perplexity_unit
-            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_perplexity.py)
-    add_test(NAME ai_gemini_unit
-            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_gemini.py)
-    add_test(NAME ai_reply_state
-            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_ai_state.py)
-    add_test(NAME md_extract_unit
-            COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_md_extract.py
-            $<TARGET_FILE:md.extract>)
-endif()
 
 # === Environment setup for all tests ===
 

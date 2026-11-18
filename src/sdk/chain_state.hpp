@@ -17,20 +17,10 @@ namespace dana {
         facts       known;
         bool        redacted   = false;
         bool        incomplete = false;
-
-        void append(std::string_view block, bool block_redacted) {
-            if (!text::append_block(text, block)) {
-                return;
-            }
-            redacted = redacted || block_redacted;
-        }
-
-        void clear() {
-            text.clear();
-            known.clear();
-            redacted   = false;
-            incomplete = false;
-        }
     };
+
+    void append(chain_state& state, std::string_view block, bool block_redacted);
+
+    void clear(chain_state& state);
 
 } // namespace dana

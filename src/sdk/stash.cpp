@@ -122,7 +122,7 @@ namespace dana::stash {
 
             json facts_json = json::object();
             for (auto const& entry : value.known.entries()) {
-                facts_json[entry.key] = entry.value;
+                facts_json[to_string(entry.key)] = entry.value;
             }
             j["facts"] = std::move(facts_json);
             j["text"]  = value.text;

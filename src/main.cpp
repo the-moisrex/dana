@@ -981,7 +981,7 @@ Notes:
                 stdin_pending = false;
                 stdin.spend();
             }
-            state.append(outcome.out, outcome.redacted);
+            append(state, outcome.out, outcome.redacted);
             if (emit_sources) {
                 emitter.emit(outcome.out, outcome.no_clipboard, outcome.redacted);
             }
@@ -1069,7 +1069,7 @@ Notes:
             if (has_output) {
                 if (opts.with_context) {
                     merge = "append";
-                    state.append(outcome.out, outcome.redacted);
+                    append(state, outcome.out, outcome.redacted);
                 } else {
                     merge      = "replace";
                     state.text = std::string(dana::text::strip_newlines(outcome.out));
@@ -1099,7 +1099,7 @@ Notes:
         // emitted output, the clipboard and the exit status are unaffected.
         if (outcome.clear) {
             merge = "clear";
-            state.clear();
+            clear(state);
             return false;
         }
         state.known.merge(outcome.published, true);
@@ -1112,7 +1112,7 @@ Notes:
         }
         merge = opts.with_context ? "append" : "replace";
         if (opts.with_context) {
-            state.append(outcome.out, outcome.redacted);
+            append(state, outcome.out, outcome.redacted);
         } else {
             state.text = std::string(dana::text::strip_newlines(outcome.out));
             if (!state.text.empty()) {

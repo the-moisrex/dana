@@ -153,7 +153,7 @@ namespace dana {
               "`prompt <name>.prompt`. Keep the name short and descriptive, and use the exact\n"
               "`filename:` label.\n";
             r.published.set(keys::expect,
-                            std::string("command:prompt\n") + std::string(keys::save_stem) + "=field:filename");
+                            std::string("command:prompt\n") + to_string(keys::save_stem) + "=field:filename");
         } else {
             r.published.set(keys::expect, "command:prompt");
         }
