@@ -562,32 +562,51 @@ print(command)
                     result.exit_code = 2;
                     return result;
                 }
-                // `mapfile -t lines <<< "$info"` over the captured three-line output.
-                std::vector<std::string> lines;
-                std::size_t              start = 0;
-                while (start <= info.output.size()) {
-                    auto const nl = info.output.find('\n', start);
-                    if (nl == std::string_view::npos) {
-                        lines.push_back(info.output.substr(start));
-                        break;
+
+                // Parse the 3 lines efficiently using string_view without vector allocations
+                std::string_view const info_out = info.output;
+                std::string_view       line1;
+                std::string_view       line2;
+                std::string_view       line3;
+
+                auto const nl1 = info_out.find('\n');
+                if (nl1 != std::string_view::npos) {
+                    line1          = info_out.substr(0, nl1);
+                    auto const nl2 = info_out.find('\n', nl1 + 1);
+                    if (nl2 != std::string_view::npos) {
+                        line2 = info_out.substr(nl1 + 1, nl2 - (nl1 + 1));
+                        line3 = info_out.substr(nl2 + 1);
+                        // trim trailing newline from line3 if present
+                        if (!line3.empty() && line3.back() == '\n') {
+                            line3.remove_suffix(1);
+                        }
+                    } else {
+                        line2 = info_out.substr(nl1 + 1);
                     }
-                    lines.push_back(info.output.substr(start, nl - start));
-                    start = nl + 1;
-                }
-                while (lines.size() < 3) {
-                    lines.emplace_back();
+                } else {
+                    line1 = info_out;
                 }
 
-                std::string header = "## Screen snapshot: " + std::string(label);
-                if (!lines[0].empty()) {
-                    header += " — screened " + lines[0];
+                // Pre-allocate header size roughly
+                std::string header;
+                header.reserve(64 + label.size() + line1.size() + line2.size());
+                header = "## Screen snapshot: ";
+                header.append(label);
+                if (!line1.empty()) {
+                    header.append(" — screened ");
+                    header.append(line1);
                 }
-                if (!lines[1].empty()) {
-                    header += " — " + lines[1];
+                if (!line2.empty()) {
+                    header.append(" — ");
+                    header.append(line2);
                 }
-                result.output += header + "\n";
-                if (!lines[2].empty()) {
-                    result.output += "Command: " + lines[2] + "\n";
+                result.output += header;
+                result.output += '\n';
+
+                if (!line3.empty()) {
+                    result.output.append("Command: ");
+                    result.output.append(line3);
+                    result.output.append("\n");
                 }
 
                 auto const csv = process::run_snippet(kRowsToCsvPy, payload);
@@ -599,9 +618,7 @@ print(command)
                 if (csv.output.empty()) {
                     result.output += "(no rows)\n";
                 } else {
-                    result.output += "```csv\n";
-                    result.output += text::trim_head(csv.output, head_lines);
-                    result.output += "\n```\n";
+                    text::append_fenced(result.output, csv.output, head_lines, "csv");
                 }
                 return result;
             }
@@ -616,15 +633,25 @@ print(command)
                         return result;
                     }
                     count = counted.output;
+                    // strip trailing newline if counted.output has one
+                    if (!count.empty() && count.back() == '\n') {
+                        count.pop_back();
+                    }
                 } else {
-                    // `printf '%s\n' "$payload" | wc -l`: one line per newline plus the
-                    // final one printf adds.
                     count = std::to_string(std::count(payload.begin(), payload.end(), '\n') + 1);
                 }
-                result.output += "## Piped tse.find " + std::string(kind == "jsonl" ? "rows" : "results") + ": " +
-                                 std::string(label) + " (" + count + " rows, no snapshot metadata)\n\n";
+
+                result.output.append("## Piped tse.find ");
+                result.output.append(kind == "jsonl" ? "rows" : "results");
+                result.output.append(": ");
+                result.output.append(label);
+                result.output.append(" (");
+                result.output.append(count);
+                result.output.append(" rows, no snapshot metadata)\n\n");
             } else if (kind == "table") {
-                result.output += "## Piped tse.find table: " + std::string(label) + "\n\n";
+                result.output.append("## Piped tse.find table: ");
+                result.output.append(label);
+                result.output.append("\n\n");
             } else {
                 result.error     = "prompt tse.find: unsupported review payload: " + std::string(kind) + "\n";
                 result.exit_code = 2;
@@ -632,9 +659,7 @@ print(command)
             }
 
             if (kind == "table") {
-                result.output += "```text\n";
-                result.output += text::trim_head(payload, head_lines);
-                result.output += "\n```\n";
+                text::append_fenced(result.output, payload, head_lines, "text");
                 return result;
             }
 
@@ -647,9 +672,7 @@ print(command)
             if (csv.output.empty()) {
                 result.output += "(no rows)\n";
             } else {
-                result.output += "```csv\n";
-                result.output += text::trim_head(csv.output, head_lines);
-                result.output += "\n```\n";
+                text::append_fenced(result.output, csv.output, head_lines, "csv");
             }
             return result;
         }
@@ -707,14 +730,14 @@ print(command)
             throw prompt_error{parsed.exit_code, std::move(parsed.error)};
         }
 
-        auto screener = locate_screener(v);
+        auto const screener = locate_screener(v);
         if (!std::filesystem::is_regular_file(screener.tool)) {
             throw soft_error{"prompt tse.find: screener not found: " + screener.tool_abs.string() + "\n"};
         }
-        std::string tool = screener_to_run(screener, v);
+        std::string const tool = screener_to_run(screener, v);
 
-        auto input          = classify_input(v, parsed);
-        bool stdin_consumed = input.read_stdin && v.in.piped();
+        auto const input          = classify_input(v, parsed);
+        bool const stdin_consumed = input.read_stdin && v.in.piped();
         if (!input.error.empty()) {
             throw prompt_error{input.exit_code, std::move(input.error)};
         }
@@ -726,8 +749,8 @@ print(command)
                 for (auto const& file : input.review_files) {
                     // `$(cat -- "$resolved")`: its stderr is inherited and its
                     // trailing newlines are dropped by the capture.
-                    auto payload  = process::captured(dana::process::run_command({"cat", "--", file}).stdout_data);
-                    auto rendered = emit_review(
+                    auto const payload = process::captured(dana::process::run_command({"cat", "--", file}).stdout_data);
+                    auto       rendered = emit_review(
                       "doc",
                       dana::fs::relative_path(file, v.env.git_root).string(),
                       payload,

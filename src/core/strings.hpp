@@ -44,8 +44,8 @@ namespace dana::text {
     // Non-throwing integer parsing. When `s` is not a valid non-negative integer
     // the bash code path it ports produced `fallback` (e.g. bash arithmetic
     // treats a bare word as an unset variable → 0).
-    std::size_t to_size(std::string_view s, std::size_t fallback = 0);
-    std::int64_t   to_ll(std::string_view s, std::int64_t fallback = 0);
+    std::size_t  to_size(std::string_view s, std::size_t fallback = 0);
+    std::int64_t to_ll(std::string_view s, std::int64_t fallback = 0);
 
     // Escape every regex metacharacter (for interpolating $HOME/$USER into patterns).
     std::string regex_escape(std::string_view s);
@@ -66,5 +66,12 @@ namespace dana::text {
     std::size_t parse_head_value(std::string_view text);
 
     bool ends_with(std::string_view text, std::string_view suffix);
+
+
+    // Add: ```text ... ```
+    void append_fenced(std::string&               out,
+                       std::string_view           payload,
+                       std::optional<std::size_t> head_lines,
+                       std::string_view           language);
 
 } // namespace dana::text

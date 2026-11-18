@@ -1,4 +1,5 @@
 #include "strings.hpp"
+
 #include "../sdk/embed.hpp"
 
 #include <algorithm>
@@ -131,7 +132,7 @@ namespace dana::text {
             return fallback;
         }
         std::int64_t value = 0;
-        auto      res   = std::from_chars(digits.data(), digits.data() + digits.size(), value);
+        auto         res   = std::from_chars(digits.data(), digits.data() + digits.size(), value);
         if (res.ec != std::errc{} || res.ptr != digits.data() + digits.size()) {
             return fallback;
         }
@@ -164,7 +165,7 @@ namespace dana::text {
     // Trim a --head-capped context the way `sed -n 1,Np` does: a range whose end
     // precedes its start counts as line 1, so a --head of 0 keeps one line while an
     // absent --head adds a single trailing newline.
-    std::string trim_head(std::string_view text, std::optional<std::size_t> head_lines) {
+    std::string trim_head(std::string_view const text, std::optional<std::size_t> const head_lines) {
         return trim_context_nl(text, head_lines);
     }
 
@@ -179,7 +180,7 @@ namespace dana::text {
 
     // Leading-zero tokens would be read in base 8 by an arithmetic test, where
     // 08-style tokens error out and count as false, so only all-zero values fail.
-    bool is_positive_int_token(std::string_view text) {
+    bool is_positive_int_token(std::string_view const text) {
         if (!is_all_digits(text)) {
             return false;
         }
@@ -197,6 +198,21 @@ namespace dana::text {
 
     bool ends_with(std::string_view text, std::string_view suffix) {
         return text.size() >= suffix.size() && text.substr(text.size() - suffix.size()) == suffix;
+    }
+
+    // Generalized helper for appending fenced code/text blocks efficiently
+    void append_fenced(std::string&               out,
+                       std::string_view           payload,
+                       std::optional<std::size_t> head_lines,
+                       std::string_view const     language) {
+        auto const trimmed = head_lines.has_value() ? trim_head(payload, *head_lines) : std::string_view(payload);
+
+        // out.reserve(out.size() + 3 + language.size() + 1 + trimmed.size() + 5);
+        out.append("\n```");
+        out.append(language);
+        out.append("\n");
+        out.append(trimmed);
+        out.append("\n```\n");
     }
 
 } // namespace dana::text
