@@ -1,13 +1,14 @@
 #include "process.hpp"
 
+#include "strings.hpp"
+
+#include <algorithm>
 #include <array>
 #include <cerrno>
 #include <chrono>
 #include <csignal>
 #include <cstdio>
-#include <cstdlib>
 #include <fcntl.h>
-#include <filesystem>
 #include <future>
 #include <memory>
 #include <poll.h>
@@ -21,15 +22,6 @@
 namespace dana::process {
 
     namespace {
-        // Feeds stdin_data to the child through a pipe in the parent (no temp files,
-        // no half-duplex popen). Reads the child's streams until EOF.
-        struct child_io {
-            std::string in;
-            std::string out;
-            std::string err;
-            stderr_mode err_mode = stderr_mode::inherit;
-        };
-
         struct pump_entry {
             int                            fd       = -1;
             bool                           open     = true;
@@ -370,5 +362,25 @@ namespace dana::process {
         }
         return run_command(args, stdin_data, envs, timeout);
     }
+
+    // `$(...)` capture semantics: every trailing newline is dropped and the script
+    // re-adds exactly one when it prints the value.
+    std::string captured(std::string_view const text) {
+        return text::strip_trailing_newlines(text);
+    }
+
+    snippet_result run_snippet(std::string_view const script, std::string_view const stdin_data) {
+        std::string const script_storage(script);
+        std::string       command = "python3 -c \"$0\" 2>&1";
+        // run_command only redirects stdin when it has data to feed; an empty
+        // payload must still read an empty stream, like `printf '%s' "" |` does.
+        if (stdin_data.empty()) {
+            command += " < /dev/null";
+        }
+
+        auto const result = run_command({"bash", "-c", command, script_storage}, stdin_data);
+        return {.output = captured(result.stdout_data), .exit_code = result.exit_code};
+    }
+
 
 } // namespace dana::process

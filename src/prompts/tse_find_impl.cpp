@@ -302,80 +302,6 @@ print(command)
         // --- END generated text blocks ---
 
         // ---------------------------------------------------------------------------
-        // Small helpers mirroring the shell semantics the script relies on
-        // ---------------------------------------------------------------------------
-
-        std::string strip_trailing_newlines(std::string_view text) {
-            while (!text.empty() && text.back() == '\n') {
-                text.remove_suffix(1);
-            }
-            return std::string(text);
-        }
-
-        // `$(...)` capture semantics: every trailing newline is dropped and the script
-        // re-adds exactly one when it prints the value.
-        std::string captured(std::string_view text) {
-            return strip_trailing_newlines(text);
-        }
-
-        // Trim a --head-capped context the way `sed -n 1,Np` does: a range whose end
-        // precedes its start counts as line 1, so a --head of 0 keeps one line while an
-        // absent --head adds a single trailing newline.
-        std::string trim_head(std::string_view text, std::optional<std::size_t> head_lines) {
-            return trim_context_nl(text, head_lines);
-        }
-
-        bool is_all_digits(std::string_view text) {
-            if (text.empty()) {
-                return false;
-            }
-            return std::ranges::all_of(text, [](char c) {
-                return c >= '0' && c <= '9';
-            });
-        }
-
-        // Leading-zero tokens would be read in base 8 by an arithmetic test, where
-        // 08-style tokens error out and count as false, so only all-zero values fail.
-        bool is_positive_int_token(std::string_view text) {
-            if (!is_all_digits(text)) {
-                return false;
-            }
-            return std::ranges::any_of(text, [](char c) {
-                return c != '0';
-            });
-        }
-
-        std::size_t parse_head_value(std::string_view const text) {
-            std::string const copy(text);
-            std::uint64_t     parsed = std::strtoull(copy.c_str(), nullptr, 10);
-            parsed                   = std::min<std::size_t>(parsed, 0x7fff'ffff'ffff'ffffULL);
-            return parsed;
-        }
-
-        bool ends_with(std::string_view text, std::string_view suffix) {
-            return text.size() >= suffix.size() && text.substr(text.size() - suffix.size()) == suffix;
-        }
-
-        struct snippet_result {
-            // stdout and stderr merged, exactly like `$(... 2>&1)`.
-            std::string output;
-            int         exit_code = 0;
-        };
-
-        snippet_result run_snippet(std::string_view script, std::string_view stdin_data) {
-            std::string const script_storage(script);
-            std::string       command = "python3 -c \"$0\" 2>&1";
-            // run_command only redirects stdin when it has data to feed; an empty
-            // payload must still read an empty stream, like `printf '%s' "" |` does.
-            if (stdin_data.empty()) {
-                command += " < /dev/null";
-            }
-
-            auto result = dana::process::run_command({"bash", "-c", command, script_storage}, stdin_data);
-            return {.output = captured(result.stdout_data), .exit_code = result.exit_code};
-        }
-
-        // ---------------------------------------------------------------------------
         // Argument parsing (parse_arguments, then the script's own loop)
         // ---------------------------------------------------------------------------
 
@@ -398,13 +324,13 @@ print(command)
             // --help prints the help and exits 0, --head is validated here, everything
             // else survives into this prompt's own loop.
             for (std::size_t i = 0; i < v.args.size();) {
-                if (v.args[i] == "--help" || v.args[i] == "-h") {
+                if (v.args.at(i) == "--help" || v.args.at(i) == "-h") {
                     std::string help  = help_text(render_help_tse_find_impl);
                     parsed.wants_help = true;
                     parsed.help_text  = help;
                     return parsed;
                 }
-                if (v.args[i] != "--head") {
+                if (v.args.at(i) != "--head") {
                     ++i;
                     continue;
                 }
@@ -413,15 +339,15 @@ print(command)
                     parsed.exit_code = 2;
                     return parsed;
                 }
-                if (!is_all_digits(v.args[i + 1])) {
+                if (!text::is_all_digits(v.args.at(i + 1))) {
                     parsed.error     = "--head requires a non-negative integer\n";
                     parsed.exit_code = 2;
                     return parsed;
                 }
-                parsed.head_lines  = parse_head_value(v.args[i + 1]);
-                consumed[i]        = true;
-                consumed[i + 1]    = true;
-                i                 += 2;
+                parsed.head_lines   = text::parse_head_value(v.args.at(i + 1));
+                consumed.at(i)      = true;
+                consumed.at(i + 1)  = true;
+                i                  += 2;
             }
 
             constexpr std::string_view kModeUsage  = "prompt tse.find: --mode requires chat or agentic\n";
@@ -429,36 +355,37 @@ print(command)
             constexpr std::string_view kMaxIter    = "prompt tse.find: --max-iter requires a positive integer\n";
 
             for (std::size_t i = 0; i < v.args.size(); ++i) {
-                if (consumed[i]) {
+                if (consumed.at(i)) {
                     continue;
                 }
-                std::string_view arg = v.args[i];
+                auto const arg = v.args.at(i);
                 if (arg == "--mode") {
-                    if (i + 1 >= v.args.size() || consumed[i + 1]) {
+                    if (i + 1 >= v.args.size() || consumed.at(i + 1)) {
                         parsed.error     = kModeUsage;
                         parsed.exit_code = 2;
                         return parsed;
                     }
-                    std::string_view value = v.args[i + 1];
+                    auto const value = v.args.at(i + 1);
                     if (value != "chat" && value != "agentic") {
                         parsed.error     = kModeChoice;
                         parsed.exit_code = 2;
                         return parsed;
                     }
-                    parsed.mode     = std::string(value);
-                    consumed[i]     = true;
-                    consumed[i + 1] = true;
+                    parsed.mode        = std::string(value);
+                    consumed.at(i)     = true;
+                    consumed.at(i + 1) = true;
                     continue;
                 }
                 if (arg == "--max-iter") {
-                    if (i + 1 >= v.args.size() || consumed[i + 1] || !is_positive_int_token(v.args[i + 1])) {
+                    if (i + 1 >= v.args.size() || consumed.at(i + 1) || !text::is_positive_int_token(v.args.at(i + 1)))
+                    {
                         parsed.error     = kMaxIter;
                         parsed.exit_code = 2;
                         return parsed;
                     }
-                    parsed.max_iter = std::string(v.args[i + 1]);
-                    consumed[i]     = true;
-                    consumed[i + 1] = true;
+                    parsed.max_iter    = std::string(v.args.at(i + 1));
+                    consumed.at(i)     = true;
+                    consumed.at(i + 1) = true;
                     continue;
                 }
                 if (arg == "--dry-run") {
@@ -518,7 +445,7 @@ print(command)
             std::vector<std::string> screen_rest;
             bool                     has_dash = false;
             for (auto const& token : parsed.rest_args) {
-                if (ends_with(token, ".tse") || ends_with(token, ".tse.args")) {
+                if (text::ends_with(token, ".tse") || text::ends_with(token, ".tse.args")) {
                     screen_files.push_back(token);
                 } else {
                     screen_rest.push_back(token);
@@ -528,11 +455,9 @@ print(command)
                 }
             }
 
-            constexpr std::string_view kNoQuery =
-              "prompt tse.find: no query given (pass it as arguments or pipe it on stdin)\n";
-            auto no_query = [&kNoQuery] {
-                std::string help = help_text(render_help_tse_find_impl);
-                return std::string(kNoQuery) + help;
+            auto const no_query = [] {
+                return std::format("prompt tse.find: no query given (pass it as arguments or pipe it on stdin)\n{}",
+                                   help_text(render_help_tse_find_impl));
             };
 
             if (!screen_files.empty()) {
@@ -547,7 +472,7 @@ print(command)
                 } else {
                     bool has_args_file = false;
                     for (auto const& file : screen_files) {
-                        if (ends_with(file, ".tse.args")) {
+                        if (text::ends_with(file, ".tse.args")) {
                             has_args_file = true;
                         }
                     }
@@ -576,20 +501,20 @@ print(command)
                     if (i != 0U) {
                         query += ' ';
                     }
-                    query += screen_rest[i];
+                    query += screen_rest.at(i);
                 }
                 out.query       = std::move(query);
                 out.source_kind = "generator";
             } else {
                 out.read_stdin     = true;
                 // read_stdin captures through `$(cat)`, which drops trailing newlines.
-                out.review_payload = captured(v.in.text());
+                out.review_payload = process::captured(v.in.text());
                 if (out.review_payload.empty()) {
                     out.error     = no_query();
                     out.exit_code = 2;
                     return out;
                 }
-                auto kind = run_snippet(kClassifyPy, out.review_payload);
+                auto kind = process::run_snippet(kClassifyPy, out.review_payload);
                 if (kind.exit_code != 0) {
                     out.error     = "prompt tse.find: cannot classify stdin: " + kind.output + "\n";
                     out.exit_code = 2;
@@ -631,7 +556,7 @@ print(command)
             emit_result result;
 
             if (kind == "doc") {
-                auto info = run_snippet(kSnapshotInfoPy, payload);
+                auto const info = process::run_snippet(kSnapshotInfoPy, payload);
                 if (info.exit_code != 0) {
                     result.error     = "prompt tse.find: " + std::string(label) + ": " + info.output + "\n";
                     result.exit_code = 2;
@@ -641,7 +566,7 @@ print(command)
                 std::vector<std::string> lines;
                 std::size_t              start = 0;
                 while (start <= info.output.size()) {
-                    std::size_t nl = info.output.find('\n', start);
+                    auto const nl = info.output.find('\n', start);
                     if (nl == std::string_view::npos) {
                         lines.push_back(info.output.substr(start));
                         break;
@@ -665,7 +590,7 @@ print(command)
                     result.output += "Command: " + lines[2] + "\n";
                 }
 
-                auto csv = run_snippet(kRowsToCsvPy, payload);
+                auto const csv = process::run_snippet(kRowsToCsvPy, payload);
                 if (csv.exit_code != 0) {
                     result.error     = "prompt tse.find: " + std::string(label) + ": " + csv.output + "\n";
                     result.exit_code = 2;
@@ -675,7 +600,7 @@ print(command)
                     result.output += "(no rows)\n";
                 } else {
                     result.output += "```csv\n";
-                    result.output += trim_head(csv.output, head_lines);
+                    result.output += text::trim_head(csv.output, head_lines);
                     result.output += "\n```\n";
                 }
                 return result;
@@ -684,8 +609,8 @@ print(command)
             if (kind == "array" || kind == "jsonl") {
                 std::string count;
                 if (kind == "array") {
-                    auto counted = run_snippet(kRowCountPy, payload);
-                    if (counted.exit_code != 0) {
+                    auto const counted = process::run_snippet(kRowCountPy, payload);
+                    if (counted.exit_code != 0) [[unlikely]] {
                         result.error     = "prompt tse.find: " + std::string(label) + ": " + counted.output + "\n";
                         result.exit_code = 2;
                         return result;
@@ -708,12 +633,12 @@ print(command)
 
             if (kind == "table") {
                 result.output += "```text\n";
-                result.output += trim_head(payload, head_lines);
+                result.output += text::trim_head(payload, head_lines);
                 result.output += "\n```\n";
                 return result;
             }
 
-            auto csv = run_snippet(kRowsToCsvPy, payload);
+            auto const csv = process::run_snippet(kRowsToCsvPy, payload);
             if (csv.exit_code != 0) {
                 result.error     = "prompt tse.find: " + std::string(label) + ": " + csv.output + "\n";
                 result.exit_code = 2;
@@ -723,7 +648,7 @@ print(command)
                 result.output += "(no rows)\n";
             } else {
                 result.output += "```csv\n";
-                result.output += trim_head(csv.output, head_lines);
+                result.output += text::trim_head(csv.output, head_lines);
                 result.output += "\n```\n";
             }
             return result;
@@ -749,11 +674,11 @@ print(command)
             paths.tool_abs = paths.tool;
 
             std::error_code ec;
-            auto            bin_dir = paths.tool.parent_path();
+            auto const      bin_dir = paths.tool.parent_path();
             if (std::filesystem::is_directory(bin_dir, ec)) {
-                auto absolute   = std::filesystem::weakly_canonical(bin_dir, ec);
-                paths.tool_abs  = (ec || absolute.empty()) ? bin_dir.lexically_normal() : absolute;
-                paths.tool_abs /= "tse.find";
+                auto const absolute  = std::filesystem::weakly_canonical(bin_dir, ec);
+                paths.tool_abs       = (ec || absolute.empty()) ? bin_dir.lexically_normal() : absolute;
+                paths.tool_abs      /= "tse.find";
             } else {
                 // A missing directory leaves no absolute path, so tool_abs
                 // degenerates to "/" + the basename it appends.
@@ -801,7 +726,7 @@ print(command)
                 for (auto const& file : input.review_files) {
                     // `$(cat -- "$resolved")`: its stderr is inherited and its
                     // trailing newlines are dropped by the capture.
-                    auto payload  = captured(dana::process::run_command({"cat", "--", file}).stdout_data);
+                    auto payload  = process::captured(dana::process::run_command({"cat", "--", file}).stdout_data);
                     auto rendered = emit_review(
                       "doc",
                       dana::fs::relative_path(file, v.env.git_root).string(),
@@ -847,9 +772,10 @@ print(command)
             }
 
             std::string output(kReviewInstructions);
-            output        += "---\n\n";
-            auto rendered  = emit_review("doc", "fresh tse.find run", captured(screen.stdout_data), parsed.head_lines);
-            output        += rendered.output;
+            output += "---\n\n";
+            auto rendered =
+              emit_review("doc", "fresh tse.find run", process::captured(screen.stdout_data), parsed.head_lines);
+            output += rendered.output;
             if (rendered.exit_code != 0) {
                 throw usage_error{std::move(rendered.error), std::move(output)};
             }
@@ -863,14 +789,15 @@ print(command)
         // Generator: embed the tool's own --help as the flag reference.
         auto help_run = dana::process::run_command({"bash", "-c", R"(NO_COLOR=1 "$0" "$@" 2>&1)", tool, "--help"});
         if (help_run.exit_code != 0) {
-            throw soft_error{"prompt tse.find: tse.find --help failed:\n" + captured(help_run.stdout_data) + "\n",
-                             {},
-                             false,
-                             stdin_consumed};
+            throw soft_error{
+              "prompt tse.find: tse.find --help failed:\n" + process::captured(help_run.stdout_data) + "\n",
+              {},
+              false,
+              stdin_consumed};
         }
         // `help_text="$(trim_context "$help_text")"`: the captured text is capped by
         // sed and its trailing newline dropped, then printed with a single `\n`.
-        std::string help_text = trim_head(captured(help_run.stdout_data), parsed.head_lines);
+        std::string help_text = text::trim_head(process::captured(help_run.stdout_data), parsed.head_lines);
 
         std::string output =
           std::format("{}{}\n{}{}{}", kGeneratorIntro, input.query, kHelpHeader, help_text, kBuildingCommand);

@@ -97,4 +97,17 @@ namespace dana::process {
       std::vector<std::string> const& env        = {},
       std::chrono::milliseconds       timeout    = std::chrono::seconds(30));
 
+    struct [[nodiscard]] snippet_result {
+        // stdout and stderr merged, exactly like `$(... 2>&1)`.
+        std::string output;
+        int         exit_code = 0;
+    };
+
+    // `$(...)` capture semantics: every trailing newline is dropped and the script
+    // re-adds exactly one when it prints the value.
+    std::string captured(std::string_view text);
+
+    snippet_result run_snippet(std::string_view script, std::string_view stdin_data);
+
+
 } // namespace dana::process

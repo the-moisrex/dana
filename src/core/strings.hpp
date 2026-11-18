@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -48,5 +49,22 @@ namespace dana::text {
 
     // Escape every regex metacharacter (for interpolating $HOME/$USER into patterns).
     std::string regex_escape(std::string_view s);
+
+    std::string strip_trailing_newlines(std::string_view text);
+
+    // Trim a --head-capped context the way `sed -n 1,Np` does: a range whose end
+    // precedes its start counts as line 1, so a --head of 0 keeps one line while an
+    // absent --head adds a single trailing newline.
+    std::string trim_head(std::string_view text, std::optional<std::size_t> head_lines);
+
+    bool is_all_digits(std::string_view text);
+
+    // Leading-zero tokens would be read in base 8 by an arithmetic test, where
+    // 08-style tokens error out and count as false, so only all-zero values fail.
+    bool is_positive_int_token(std::string_view text);
+
+    std::size_t parse_head_value(std::string_view text);
+
+    bool ends_with(std::string_view text, std::string_view suffix);
 
 } // namespace dana::text

@@ -1,5 +1,7 @@
 #include "strings.hpp"
+#include "../sdk/embed.hpp"
 
+#include <algorithm>
 #include <charconv>
 
 namespace dana::text {
@@ -150,6 +152,51 @@ namespace dana::text {
             out += c;
         }
         return out;
+    }
+
+    std::string strip_trailing_newlines(std::string_view text) {
+        while (!text.empty() && text.back() == '\n') {
+            text.remove_suffix(1);
+        }
+        return std::string(text);
+    }
+
+    // Trim a --head-capped context the way `sed -n 1,Np` does: a range whose end
+    // precedes its start counts as line 1, so a --head of 0 keeps one line while an
+    // absent --head adds a single trailing newline.
+    std::string trim_head(std::string_view text, std::optional<std::size_t> head_lines) {
+        return trim_context_nl(text, head_lines);
+    }
+
+    bool is_all_digits(std::string_view text) {
+        if (text.empty()) {
+            return false;
+        }
+        return std::ranges::all_of(text, [](char c) {
+            return c >= '0' && c <= '9';
+        });
+    }
+
+    // Leading-zero tokens would be read in base 8 by an arithmetic test, where
+    // 08-style tokens error out and count as false, so only all-zero values fail.
+    bool is_positive_int_token(std::string_view text) {
+        if (!is_all_digits(text)) {
+            return false;
+        }
+        return std::ranges::any_of(text, [](char c) {
+            return c != '0';
+        });
+    }
+
+    std::size_t parse_head_value(std::string_view const text) {
+        std::string const copy(text);
+        std::uint64_t     parsed = std::strtoull(copy.c_str(), nullptr, 10);
+        parsed                   = std::min<std::size_t>(parsed, 0x7fff'ffff'ffff'ffffULL);
+        return parsed;
+    }
+
+    bool ends_with(std::string_view text, std::string_view suffix) {
+        return text.size() >= suffix.size() && text.substr(text.size() - suffix.size()) == suffix;
     }
 
 } // namespace dana::text
