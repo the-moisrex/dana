@@ -21,7 +21,7 @@ namespace dana::ai {
 
     } // namespace
 
-    sink_setup prepare_sink(std::string_view provider_name, std::span<std::string_view const> args) {
+    sink_setup prepare_sink(std::string_view provider_name, text::string_views args) {
         sink_setup setup;
         setup.label          = std::string(provider_name);
         auto const canonical = canonical_provider(provider_name);

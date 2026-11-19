@@ -336,7 +336,7 @@ namespace dana {
         // Whether the arguments name an explicit file/directory. `--dir`/`--file` take
         // no value, and no other save option does, so the first non-option token is the
         // target.
-        bool has_positional_target(std::span<std::string_view const> args) {
+        bool has_positional_target(text::string_views args) {
             bool options = true;
             for (auto const arg : args) {
                 if (options && arg == "--") {

@@ -78,7 +78,7 @@ namespace dana {
         // function, its arguments follow, `--` ends the argument tail, an `.each` body
         // is skipped (nested chains are not completed) and a `.func … .end` body is a
         // chain of its own. `functions` are the names the expander would know here.
-        cursor locate(std::span<std::string_view const> prior, std::span<std::string_view const> functions) {
+        cursor locate(text::string_views prior, text::string_views functions) {
             cursor            c;
             bool              after_dash     = false;
             bool              skip_signature = false;
@@ -175,7 +175,7 @@ namespace dana {
     } // namespace
 
     void complete_line(std::string_view                  current,
-                       std::span<std::string_view const> prior,
+                       text::string_views prior,
                        std::filesystem::path const&      git_root,
                        std::ostream&                     out) {
         // Complete against the tokens the chain will actually run: an inlined
@@ -183,7 +183,7 @@ namespace dana {
         bool const no_files = std::ranges::find(prior, std::string_view{"--no-prompt-files"}) != prior.end();
         auto const expanded = expand_prompt_file_tokens(prior, git_root, !no_files);
         std::vector<std::string_view>     effective_views;
-        std::span<std::string_view const> effective = prior;
+        text::string_views effective = prior;
         if (expanded.error.empty()) {
             effective_views.reserve(expanded.storage.size());
             for (auto const& token : expanded.storage) {

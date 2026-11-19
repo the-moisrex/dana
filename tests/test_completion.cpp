@@ -87,7 +87,7 @@ namespace {
     };
 
     completion_request request(std::string_view prefix, std::vector<std::string_view> const& prior) {
-        return completion_request{.prefix = prefix, .prior_args = std::span<std::string_view const>{prior}};
+        return completion_request{.prefix = prefix, .prior_args = text::string_views{prior}};
     }
 
     // `matches` is a plain prefix test, with the empty prefix matching everything.

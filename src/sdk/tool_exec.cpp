@@ -13,15 +13,6 @@ namespace dana::tool_exec {
 
     namespace {
 
-        std::vector<std::string_view> views_of(std::vector<std::string> const& values) {
-            std::vector<std::string_view> out;
-            out.reserve(values.size());
-            for (auto const& value : values) {
-                out.push_back(value);
-            }
-            return out;
-        }
-
         std::string body_of(result const& res) {
             std::string body = res.out;
             if (!res.err.empty()) {
@@ -112,7 +103,7 @@ namespace dana::tool_exec {
             }
 
             try {
-                auto const        res   = run_sub_prompt(v, call.name, views_of(argv), std::nullopt, nullptr, false);
+                auto const        res   = run_sub_prompt(v, call.name, argv, std::nullopt, nullptr, false);
                 std::string const body  = body_of(res);
                 blocks                 += tool_call::format_result(call, body, 0, true);
                 record(report, call, body, 0, true);

@@ -16,7 +16,7 @@ namespace dana {
 
         // The FILE arguments, ignoring the `--head <value>` pair and the line-number
         // flags — enough to name the files under repair as the chain's focus.
-        std::vector<std::string> focus_files(std::span<std::string_view const> args) {
+        std::vector<std::string> focus_files(text::string_views args) {
             std::vector<std::string> files;
             for (std::size_t i = 0; i < args.size(); ++i) {
                 std::string_view const arg = args[i];

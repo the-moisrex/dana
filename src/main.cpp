@@ -193,7 +193,7 @@ namespace {
         return outcome;
     }
 
-    bool wants_help(std::span<std::string_view const> args) {
+    bool wants_help(dana::text::string_views args) {
         return std::ranges::any_of(args, [](std::string_view arg) {
             return arg == "--help" || arg == "-h";
         });
@@ -202,7 +202,7 @@ namespace {
     bool invocation_wants_help(dana::prompt_invocation const& inv) {
         // `.exec -- COMMAND ...` owns the rest of argv, so a command's own `-h`
         // (e.g. `shutdown -h now`) must not turn into this prompt's help request.
-        auto args = std::span<std::string_view const>(inv.args);
+        auto args = dana::text::string_views(inv.args);
         if (inv.name == "exec") {
             if (auto const it = std::ranges::find(args, std::string_view{"--"}); it != args.end()) {
                 args = args.first(static_cast<std::size_t>(it - args.begin()));
@@ -251,10 +251,10 @@ namespace {
     // What the dispatcher knows about one chain position: its descriptor and the
     // arguments the prompt actually sees (a sink's shared flags are stripped).
     struct segment {
-        dana::prompt_descriptor const*    desc = nullptr;
-        std::string_view                  name;
-        std::vector<std::string_view>     args;
-        std::span<std::string_view const> body;
+        dana::prompt_descriptor const* desc = nullptr;
+        std::string_view               name;
+        std::vector<std::string_view>  args;
+        dana::text::string_views       body;
     };
 
     // A batch containing a file source or a file-filter step must run in argv
@@ -777,10 +777,10 @@ Notes:
 
     // One helper builds the read-only view, so preflights, parallel children and
     // sequential segments all see exactly the same shape.
-    auto make_view = [&](std::string_view                  name,
-                         std::span<std::string_view const> args,
-                         std::span<std::string_view const> body,
-                         dana::facts const&                prior) {
+    auto make_view = [&](std::string_view const         name,
+                         dana::text::string_views const args,
+                         dana::text::string_views const body,
+                         dana::facts const&             prior) {
         return dana::view{
           .name  = name,
           .args  = args,

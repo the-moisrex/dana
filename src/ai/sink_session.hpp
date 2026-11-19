@@ -5,11 +5,11 @@
 // the conversation and persist it afterwards. The plain sink runs one turn; the
 // loop runs many on the same conversation.
 
+#include "../core/strings.hpp"
 #include "cli.hpp"
 #include "providers/provider.hpp"
 
 #include <memory>
-#include <span>
 #include <string>
 #include <string_view>
 
@@ -25,7 +25,7 @@ namespace dana::ai {
     };
 
     // Throws usage_error/soft_error exactly as the plain sink does.
-    [[nodiscard]] sink_setup prepare_sink(std::string_view provider_name, std::span<std::string_view const> args);
+    [[nodiscard]] sink_setup prepare_sink(std::string_view provider_name, text::string_views args);
 
     struct [[nodiscard]] sink_session {
         std::string                   label;

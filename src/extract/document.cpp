@@ -1,12 +1,13 @@
 #include "document.hpp"
 
+#include "../core/strings.hpp"
+
 #include <algorithm>
 #include <array>
 #include <cctype>
 #include <cstddef>
 #include <nlohmann/json.hpp>
 #include <optional>
-#include <span>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -48,16 +49,14 @@ namespace dana::extract {
         // --- Language families ------------------------------------------------------
 
         struct family_def {
-            std::string_view                  name;
-            std::span<std::string_view const> aliases;
+            std::string_view   name;
+            text::string_views aliases;
 
-            constexpr family_def(std::string_view family, std::span<std::string_view const> names)
-              : name(family),
-                aliases(names) {}
+            constexpr family_def(std::string_view family, text::string_views names) : name(family), aliases(names) {}
         };
 
         template <std::size_t N>
-        constexpr std::span<std::string_view const> aliases(std::array<std::string_view, N> const& list) {
+        constexpr text::string_views aliases(std::array<std::string_view, N> const& list) {
             return list;
         }
 

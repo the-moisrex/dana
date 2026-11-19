@@ -129,7 +129,7 @@ namespace {
 
     // --print-prompt, --print-session and --list answer on stdout without an
     // assistant turn, so there is no plain answer to read back.
-    bool inspect_only(std::span<std::string_view const> args) {
+    bool inspect_only(text::string_views args) {
         return std::ranges::any_of(args, [](std::string_view arg) {
             return arg == "--print-prompt" || arg == "--print-session" || arg == "--list" || arg == "--models";
         });
@@ -433,7 +433,7 @@ namespace {
       view const&                       v,
       result&                           r,
       std::string_view                  provider,
-      std::span<std::string_view const> args,
+      text::string_views args,
       std::string_view                  context) {
         auto setup = ai::prepare_sink(provider, args);
         if (setup.options.print_prompt) {
@@ -478,14 +478,6 @@ namespace {
 
     // ---- `.ai.loop`: the agentic tool loop ------------------------------------
 
-    std::vector<std::string_view> views_of(std::vector<std::string> const& values) {
-        std::vector<std::string_view> out;
-        out.reserve(values.size());
-        for (auto const& value : values) {
-            out.push_back(value);
-        }
-        return out;
-    }
 
     // A loop flag is either `--flag value` or `--flag=value`. `value` is empty for
     // the first form, which means "read the next argument".
@@ -641,7 +633,7 @@ namespace {
             catalog_args.emplace_back("--exclude");
             catalog_args.emplace_back("edit,write,cli,run");
         }
-        auto const catalog = run_sub_prompt(v, "tools", views_of(catalog_args));
+        auto const catalog = run_sub_prompt(v, "tools", catalog_args);
         text::append_block(out, catalog.out);
 
         if (cli.agents && !v.env.git_root.empty()) {
@@ -834,7 +826,7 @@ namespace {
       view const&                       v,
       result&                           r,
       std::string_view                  provider,
-      std::span<std::string_view const> args,
+      text::string_views args,
       std::string_view                  context) {
         // A `.paths.hide` earlier in the chain published the mapping: hide what the
         // model reads, reveal what the user gets back. `--print-prompt` must show
@@ -1148,7 +1140,7 @@ namespace {
     // explicit `--provider NAME` or a leading PROVIDER). Used only to pick the model
     // list after `-m`; the runtime resolution also consults the chain facts and the
     // terminal marker.
-    std::optional<std::string> reply_provider_from_args(std::span<std::string_view const> args) {
+    std::optional<std::string> reply_provider_from_args(text::string_views args) {
         for (std::size_t i = 0; i < args.size(); ++i) {
             if (args[i] == "--provider" && i + 1 < args.size()) {
                 return canonical_provider(args[i + 1]);

@@ -31,7 +31,7 @@ namespace dana {
     void write_prompt_candidates(
       prompt_descriptor const&          desc,
       std::string_view                  prefix,
-      std::span<std::string_view const> prior_args,
+      text::string_views prior_args,
       std::ostream&                     out) {
         // Flags first (they are what an empty prefix mostly wants), then whatever
         // the prompt knows about its own operands.

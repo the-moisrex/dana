@@ -25,7 +25,7 @@ namespace dana {
     namespace {
 
         // --offset N: the 1-based starting position of the read window.
-        [[nodiscard]] std::size_t parse_offset(std::span<std::string_view const> args) {
+        [[nodiscard]] std::size_t parse_offset(text::string_views args) {
             std::optional<std::size_t> offset;
 
             for (std::size_t i = 0; i < args.size(); ++i) {
@@ -59,7 +59,7 @@ namespace dana {
         }
 
         // Extract FILE... while removing options and their values.
-        [[nodiscard]] std::vector<std::string> read_positionals(std::span<std::string_view const> args) {
+        [[nodiscard]] std::vector<std::string> read_positionals(text::string_views args) {
             std::vector<std::string> result;
             result.reserve(args.size());
 

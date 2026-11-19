@@ -32,7 +32,7 @@ namespace dana {
             tse_codal_prompt_config config;
             std::string const       pfx = "prompt tse.codal: ";
 
-            if (auto msg = parse_head_option({v.args.data(), v.args.size()}, config.head_lines); !msg.empty()) {
+            if (auto msg = parse_head_option(v.args, config.head_lines); !msg.empty()) {
                 config.failed = true;
                 config.error  = std::move(msg);
                 return config;

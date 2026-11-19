@@ -67,7 +67,7 @@ namespace dana {
             return arg.substr(option.size());
         }
 
-        [[nodiscard]] each_options parse_each_args(std::span<std::string_view const> args) {
+        [[nodiscard]] each_options parse_each_args(text::string_views args) {
             each_options out;
             for (std::size_t i = 0; i < args.size(); ++i) {
                 std::string_view const arg = args[i];

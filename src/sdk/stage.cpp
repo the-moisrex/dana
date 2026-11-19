@@ -31,7 +31,7 @@ namespace dana {
     result run_sub_prompt(
       view const&                       parent,
       std::string_view                  name,
-      std::span<std::string_view const> args,
+      text::string_views args,
       std::optional<std::string_view>   stdin_text,
       facts const*                      extra_facts,
       bool                              inherit_file_scope) {

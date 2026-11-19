@@ -1,8 +1,9 @@
 #pragma once
 
+#include "../core/strings.hpp"
+
 #include <cstddef>
 #include <filesystem>
-#include <ostream>
 #include <span>
 #include <string>
 #include <string_view>
@@ -80,10 +81,8 @@ namespace dana {
     // see the effective tokens a chain would run, so a function defined inside an
     // inlined file is discovered and an `.each`/`.func` block coming from a file
     // classifies correctly.
-    expanded_argv expand_prompt_file_tokens(
-      std::span<std::string_view const> tokens,
-      std::filesystem::path const&      git_root,
-      bool                              expand = true);
+    expanded_argv
+    expand_prompt_file_tokens(text::string_views tokens, std::filesystem::path const& git_root, bool expand = true);
 
     // Completion for a `*.prompt` argument, answered from the same three sources
     // the resolver reads. A `current` without `/` lists the `.prompt` files of the

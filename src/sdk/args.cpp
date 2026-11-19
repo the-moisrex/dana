@@ -10,7 +10,7 @@
 namespace dana {
 
     std::string
-    parse_head_option(std::span<std::string_view const> args, std::optional<std::size_t>& head_lines, bool strict) {
+    parse_head_option(text::string_views args, std::optional<std::size_t>& head_lines, bool strict) {
         for (std::size_t i = 0; i < args.size(); ++i) {
             if (args[i] != "--head") {
                 continue;
@@ -97,7 +97,7 @@ namespace dana {
         return help;
     }
 
-    std::vector<std::string> positional_args(std::span<std::string_view const> args) {
+    std::vector<std::string> positional_args(text::string_views args) {
         std::vector<std::string> out;
         out.reserve(args.size());
         for (std::size_t i = 0; i < args.size(); ++i) {
@@ -117,7 +117,7 @@ namespace dana {
         return positional_args(in.args);
     }
 
-    file_args collect_file_args(std::span<std::string_view const> args) {
+    file_args collect_file_args(text::string_views args) {
         file_args result;
         for (std::size_t i = 0; i < args.size(); ++i) {
             if (args[i] == "--head") {

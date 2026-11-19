@@ -76,12 +76,12 @@ namespace dana {
     // that outlives the call; a segment never mutates chain state.
     struct [[nodiscard]] view {
         std::string_view                  name;
-        std::span<std::string_view const> args;
+        text::string_views args;
         // The accumulated chain text before this segment (the sink barrier).
         std::string_view text;
         // The verbatim tokens of a body-taking prompt (`.each`), empty otherwise.
         // NOLINTNEXTLINE(readability-redundant-member-init) — keep `view{...}` aggregates warning-free.
-        std::span<std::string_view const> body{};
+        text::string_views body{};
         // Declarations for this batch plus the artifacts of completed segments.
         facts const&       prior;
         environment const& env;
@@ -129,7 +129,7 @@ namespace dana {
     // not print, must not touch the network, and must treat `args`/`environment`
     // as its only inputs.
     struct [[nodiscard]] declaration {
-        std::span<std::string_view const> args;
+        text::string_views args;
         environment const&                env;
         facts const&                      prior;
         facts&                            declared;
@@ -151,7 +151,7 @@ namespace dana {
     result run_sub_prompt(
       view const&                       parent,
       std::string_view                  name,
-      std::span<std::string_view const> args,
+      text::string_views args,
       std::optional<std::string_view>   stdin_text         = std::nullopt,
       facts const*                      extra_facts        = nullptr,
       bool                              inherit_file_scope = true);

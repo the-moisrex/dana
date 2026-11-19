@@ -351,7 +351,7 @@ namespace dana {
     }
 
     expanded_argv expand_prompt_file_tokens(
-      std::span<std::string_view const> tokens,
+      text::string_views tokens,
       std::filesystem::path const&      git_root,
       bool                              expand) {
         std::vector<std::string> rest;

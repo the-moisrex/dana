@@ -12,6 +12,8 @@
 // models are discovered from the endpoint (`lms`, `openai`, `openrouter`) have
 // empty lists.
 
+#include "../core/strings.hpp"
+
 #include <optional>
 #include <span>
 #include <string>
@@ -27,10 +29,10 @@ namespace dana::ai::models {
 
     struct [[nodiscard]] entry {
         //: Canonical provider name (`dseek`, not `deepseek`).
-        std::string_view                  provider;
-        std::string_view                  default_model;
-        std::span<std::string_view const> models;
-        std::span<alias const>            aliases;
+        std::string_view       provider;
+        std::string_view       default_model;
+        text::string_views     models;
+        std::span<alias const> aliases;
     };
 
     //: Every provider, in catalog order.

@@ -24,7 +24,7 @@ namespace dana {
     // Parse every sink flag the dispatcher owns. Unknown arguments are copied to
     // rest untouched, so provider/sink-specific flags do not need to be listed
     // here. Stops looking for sink flags after `--`.
-    sink_args parse_sink_args(std::span<std::string_view const> args);
+    sink_args parse_sink_args(text::string_views args);
 
     // The common Options: block every sink appends to its own help.
     void render_sink_help(std::ostream& out);

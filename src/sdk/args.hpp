@@ -22,7 +22,7 @@ namespace dana {
     // clamped (it simply prints every line).
     // Prompts with their own arg loop (note, gtest-case) accept any value — pass
     // strict = false to mirror them (a non-numeric value becomes 0).
-    std::string parse_head_option(std::span<std::string_view const> args,
+    std::string parse_head_option(text::string_views args,
                                   std::optional<std::size_t>&       head_lines,
                                   bool                              strict = true);
 
@@ -71,7 +71,7 @@ namespace dana {
     // --num/--numbered removed: the filter loop the prompts run before treating
     // each remaining token as a path. The strings are owned copies (callers build
     // argv vectors and concatenate them).
-    std::vector<std::string> positional_args(std::span<std::string_view const> args);
+    std::vector<std::string> positional_args(text::string_views args);
     std::vector<std::string> positional_args(view const& in);
 
     // The FILE arguments (everything but --head's value and --num/--numbered) split
@@ -84,7 +84,7 @@ namespace dana {
         std::vector<std::string_view>      missing;
     };
 
-    file_args collect_file_args(std::span<std::string_view const> args);
+    file_args collect_file_args(text::string_views args);
     // The view overload is the one prompts call; it reads the prompt's own FILE
     // arguments. A sibling `.files` already embeds what it resolved, so its output
     // carries the files into the chain — a prompt must not embed them a second time.

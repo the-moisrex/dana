@@ -40,7 +40,7 @@ namespace dana {
 
     } // namespace
 
-    sink_args parse_sink_args(std::span<std::string_view const> args) {
+    sink_args parse_sink_args(text::string_views args) {
         sink_args parsed;
         bool      positional = false;
         for (std::size_t i = 0; i < args.size(); ++i) {

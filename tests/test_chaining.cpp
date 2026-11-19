@@ -391,15 +391,18 @@ namespace {
         }
         check(refused, "agent: a pipe is refused");
 
-        auto spec = agent::parse_exec_args(std::array<std::string_view, 3>{"--print", "git", "status"});
+        constexpr std::array<std::string_view, 3> git_status{"--print", "git", "status"};
+        auto spec = agent::parse_exec_args(git_status);
         check(spec.print_only && spec.command.size() == 2 && spec.command[0] == "git",
               "agent: --print before the program");
         check(spec.command.size() == 2 && spec.command[1] == "status", "agent: program arguments are kept");
 
-        auto selector = agent::parse_exec_args(std::array<std::string_view, 1>{"table:symbol"});
+        constexpr std::array<std::string_view, 1>table_symbol{"table:symbol"};
+        auto selector = agent::parse_exec_args(table_symbol);
         check(selector.selector == "table:symbol" && selector.command.empty(), "agent: a selector is not a command");
 
-        auto flag_after = agent::parse_exec_args(std::array<std::string_view, 2>{"echo", "--version"});
+        constexpr std::array<std::string_view, 2> echo_ver{"echo", "--version"};
+        auto flag_after = agent::parse_exec_args(echo_ver);
         check(flag_after.command.size() == 2 && flag_after.command[1] == "--version",
               "agent: after the program, flags belong to the program");
 

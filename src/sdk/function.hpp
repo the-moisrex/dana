@@ -86,7 +86,7 @@ namespace dana {
     // skipping malformed ones (a bad signature, an unterminated block). Whole-line
     // completion uses it to offer a function defined earlier on the same command
     // line, or in an inlined `*.prompt` file, without expanding the chain.
-    std::vector<function_def> collect_inline_functions(std::span<std::string_view const> tokens);
+    std::vector<function_def> collect_inline_functions(text::string_views tokens);
 
     // A one-line description of a function for completion, e.g. `function(task,
     // ai=dseek)` or `function` when it takes no parameters.

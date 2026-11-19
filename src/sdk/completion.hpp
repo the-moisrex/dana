@@ -13,6 +13,8 @@
 // Output is one candidate per line, `value<TAB>description` (the description
 // is optional), the format `tse.resolve --complete` uses and fish reads.
 
+#include "../core/strings.hpp"
+
 #include <ostream>
 #include <span>
 #include <string>
@@ -24,7 +26,7 @@ namespace dana {
         // The token being completed (may be empty).
         std::string_view prefix;
         // The prompt's arguments typed before the current token, in order.
-        std::span<std::string_view const> prior_args;
+        text::string_views prior_args;
     };
 
     using completion_fn = void (*)(completion_request const&, std::ostream&);
@@ -56,7 +58,7 @@ namespace dana {
             }
         }
 
-        inline void write_values(std::ostream& os, std::string_view prefix, std::span<std::string_view const> values) {
+        inline void write_values(std::ostream& os, std::string_view prefix, text::string_views values) {
             for (auto value : values) {
                 if (matches(prefix, value)) {
                     write_item(os, value, {});
@@ -67,10 +69,10 @@ namespace dana {
         // Emits `values` only when the previous argument is `flag`, so a prompt can
         // complete `--format <TAB>`'s value without a state machine.
         inline bool write_values_after_flag(
-          std::ostream&                     os,
-          completion_request const&         req,
-          std::string_view                  flag,
-          std::span<std::string_view const> values) {
+          std::ostream&             os,
+          completion_request const& req,
+          std::string_view          flag,
+          text::string_views        values) {
             if (req.prior_args.empty() || req.prior_args.back() != flag) {
                 return false;
             }
@@ -149,10 +151,10 @@ namespace dana {
     struct prompt_descriptor; // prompt_registry.hpp — forward-declared so the two
                               // headers never include each other
     void write_prompt_candidates(
-      prompt_descriptor const&          desc,
-      std::string_view                  prefix,
-      std::span<std::string_view const> prior_args,
-      std::ostream&                     out);
+      prompt_descriptor const& desc,
+      std::string_view         prefix,
+      text::string_views       prior_args,
+      std::ostream&            out);
 
     // Every registered prompt plus the extra `candidates` (the functions visible at
     // this point in the chain), merged into the catalog's locale-aware order, each

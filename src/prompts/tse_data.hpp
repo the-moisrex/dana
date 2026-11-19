@@ -122,7 +122,7 @@ namespace dana::tse_data {
         return has_letter || (all_digits && token.size() >= 15) || token.contains("://");
     }
 
-    inline std::optional<std::string> identifier_in_args(std::span<std::string_view const> args) {
+    inline std::optional<std::string> identifier_in_args(text::string_views args) {
         for (std::size_t i = 0; i < args.size(); ++i) {
             std::string_view arg = args[i];
             if (arg == "--") {

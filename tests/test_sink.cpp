@@ -43,7 +43,7 @@ namespace {
           "--show-context",
           "--",
         };
-        auto parsed = parse_sink_args(std::span<std::string_view const>(args.data(), args.size()));
+        auto parsed = parse_sink_args(text::string_views(args.data(), args.size()));
         check(parsed.error.empty(), "sink flags: valid flags parse");
         check(parsed.options.with_context, "sink flags: --with-context");
         check(parsed.options.show_context, "sink flags: --show-context");
@@ -58,7 +58,7 @@ namespace {
 
     void test_sink_double_dash() {
         std::array<std::string_view, 3> args = {"--", "--with-context", "x"};
-        auto parsed = parse_sink_args(std::span<std::string_view const>(args.data(), args.size()));
+        auto parsed = parse_sink_args(text::string_views(args.data(), args.size()));
         check(parsed.error.empty(), "sink --: no error");
         check(!parsed.options.with_context, "sink --: stops sink-flag parsing");
         check(parsed.rest.size() == 3, "sink --: everything after -- is kept");
@@ -66,15 +66,15 @@ namespace {
 
     void test_sink_errors() {
         std::array<std::string_view, 2> bad_mode = {"--on-error", "nope"};
-        auto parsed = parse_sink_args(std::span<std::string_view const>(bad_mode.data(), bad_mode.size()));
+        auto parsed = parse_sink_args(text::string_views(bad_mode.data(), bad_mode.size()));
         check(!parsed.error.empty(), "sink flags: invalid --on-error rejected");
 
         std::array<std::string_view, 2> bad_head = {"--head", "x"};
-        parsed = parse_sink_args(std::span<std::string_view const>(bad_head.data(), bad_head.size()));
+        parsed = parse_sink_args(text::string_views(bad_head.data(), bad_head.size()));
         check(!parsed.error.empty(), "sink flags: invalid --head rejected");
 
         std::array<std::string_view, 1> missing = {"--on-error"};
-        parsed = parse_sink_args(std::span<std::string_view const>(missing.data(), missing.size()));
+        parsed = parse_sink_args(text::string_views(missing.data(), missing.size()));
         check(!parsed.error.empty(), "sink flags: missing --on-error value rejected");
     }
 

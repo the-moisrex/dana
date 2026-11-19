@@ -202,7 +202,7 @@ namespace dana::agent {
         return out;
     }
 
-    exec_spec parse_exec_args(std::span<std::string_view const> args) {
+    exec_spec parse_exec_args(text::string_views args) {
         exec_spec spec;
         bool      literal = false;
         for (std::size_t i = 0; i < args.size(); ++i) {

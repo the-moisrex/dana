@@ -471,7 +471,7 @@ namespace dana {
         return true;
     }
 
-    std::vector<function_def> collect_inline_functions(std::span<std::string_view const> tokens) {
+    std::vector<function_def> collect_inline_functions(text::string_views tokens) {
         std::vector<function_def> out;
         for (std::size_t i = 0; i + 1 < tokens.size(); ++i) {
             if (tokens[i] != ".func") {
