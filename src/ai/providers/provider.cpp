@@ -18,35 +18,36 @@ namespace dana::ai {
 
     } // namespace
 
-    std::string provider::base_url(std::string const& requested) {
-        return requested;
+    std::string provider::base_url(std::string_view requested) {
+        return std::string(requested);
     }
 
-    std::string provider::api_key(std::string const& requested) {
-        return keys::resolve(info().name, std::array<std::string, 1>{info().key_env}, requested).key;
+    std::string provider::api_key(std::string_view requested) {
+        std::array<std::string, 1> const stuff{info().key_env};
+        return keys::resolve(info().name, stuff, requested).key;
     }
 
     std::vector<std::pair<std::string, std::string>> provider::headers(
-      std::string const& key,
-      std::string const& /*unused*/) {
+      std::string_view key,
+      std::string_view /*unused*/) {
         std::vector<std::pair<std::string, std::string>> out;
-        std::string const                                token = key.empty() ? api_key({}) : key;
+        std::string const                                token = key.empty() ? api_key({}) : std::string(key);
         if (!token.empty()) {
             out.emplace_back("Authorization", "Bearer " + token);
         }
         return out;
     }
 
-    std::string provider::chat_url(std::string const& base) {
-        return base + "/chat/completions";
+    std::string provider::chat_url(std::string_view base) {
+        return std::format("{}/chat/completions", base);
     }
 
-    std::vector<model_record> provider::chat_models(std::string const& /*unused*/, long /*unused*/) {
+    std::vector<model_record> provider::chat_models(std::string_view /*unused*/, long /*unused*/) {
         return {};
     }
 
     std::vector<model_record>
-    provider::chat_models_with_key(std::string const& base, long timeout, std::string const& /*unused*/) {
+    provider::chat_models_with_key(std::string_view base, long timeout, std::string_view /*unused*/) {
         return chat_models(base, timeout);
     }
 
@@ -54,9 +55,9 @@ namespace dana::ai {
         return info().models;
     }
 
-    std::string provider::resolve_model(std::string const& requested, std::string const& /*unused*/) {
+    std::string provider::resolve_model(std::string_view requested, std::string_view /*unused*/) {
         if (!requested.empty()) {
-            return requested;
+            return std::string(requested);
         }
         if (!info().model_env.empty()) {
             std::string const value = env_value(info().model_env);
@@ -75,8 +76,8 @@ namespace dana::ai {
         return report;
     }
 
-    std::string provider::error_hint(std::string const& message, std::string const& /*unused*/) {
-        return message;
+    std::string provider::error_hint(std::string_view message, std::string_view /*unused*/) {
+        return std::string(message);
     }
 
 } // namespace dana::ai

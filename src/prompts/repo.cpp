@@ -30,12 +30,13 @@ namespace dana {
         struct repo_options {
             repo_format              format = repo_format::compact;
             std::size_t              depth  = 0; // 0 = unlimited
+            std::string_view         depth_str;
             std::vector<std::string> dirs;
         };
 
         // Single-quote a value for embedding inside a bash -c pipeline the prompt will
         // re-parse (run_command adds the outer layer of quoting).
-        std::string sh_quote(std::string const& s) {
+        std::string sh_quote(std::string_view s) {
             std::string out = "'";
             for (char c : s) {
                 if (c == '\'') {
@@ -52,7 +53,7 @@ namespace dana {
         // bash -c pipeline: tree reads the file list from the pipe exactly like the
         // script (its colour/summary output depends on how it is invoked — run_pipeline
         // feeds it a temp file and tree changes its default output under popen).
-        std::string run_tree(std::vector<std::string> const& ls_dirs, std::span<std::string const> tree_args) {
+        std::string run_tree(text::string_views ls_dirs, text::string_views tree_args) {
             std::string ls = "git ls-files";
             if (!ls_dirs.empty()) {
                 ls += " --";
@@ -85,7 +86,7 @@ namespace dana {
             throw usage_error{"repo: unknown --format '" + std::string(value) + "' (compact, tree, paths, dirs)"};
         }
 
-        std::size_t parse_depth(std::string_view text) {
+        std::size_t parse_depth(std::string_view const text) {
             if (text.empty()) {
                 throw usage_error{"repo: --depth needs a number"};
             }
@@ -122,10 +123,12 @@ namespace dana {
                     if (i + 1 >= v.args.size()) {
                         throw usage_error{"repo: --depth needs a value"};
                     }
-                    opts.depth  = parse_depth(v.args[i + 1]);
-                    i          += 2;
+                    opts.depth_str  = v.args[i + 1];
+                    opts.depth      = parse_depth(opts.depth_str);
+                    i              += 2;
                 } else if (arg.starts_with("--depth=")) {
-                    opts.depth = parse_depth(arg.substr(std::string_view{"--depth="}.size()));
+                    opts.depth_str = arg.substr(std::string_view{"--depth="}.size());
+                    opts.depth     = parse_depth(opts.depth_str);
                     ++i;
                 } else if (arg.size() > 1 && arg.front() == '-') {
                     throw usage_error{"repo: unknown option " + std::string(arg)};
@@ -139,7 +142,7 @@ namespace dana {
 
         // `git ls-files -z` once: the compact/paths/dirs formats need no `tree` binary,
         // and the NUL separator keeps any path intact.
-        std::vector<std::string> list_tracked(std::vector<std::string> const& dirs) {
+        std::vector<std::string> list_tracked(text::string_views dirs) {
             std::vector<std::string> argv{"git", "ls-files", "-z"};
             if (!dirs.empty()) {
                 argv.emplace_back("--");
@@ -168,27 +171,27 @@ namespace dana {
         }
 
         struct dir_node {
-            std::set<std::string> dirs;  // child directory names
-            std::set<std::string> files; // file names directly in this directory
+            std::set<std::string_view> dirs;  // child directory names
+            std::set<std::string_view> files; // file names directly in this directory
         };
 
-        using dir_map = std::map<std::string, dir_node>;
+        using dir_map = std::map<std::string_view, dir_node>;
 
         // One node per directory, keyed by its root-relative path ("" is the root).
-        dir_map build_tree(std::vector<std::string> const& files) {
+        dir_map build_tree(text::string_views files) {
             dir_map tree;
-            for (auto const& path : files) {
+            for (auto const path : files) {
                 std::size_t const slash = path.rfind('/');
-                std::string const dir   = slash == std::string::npos ? std::string{} : path.substr(0, slash);
-                std::string const name  = slash == std::string::npos ? path : path.substr(slash + 1);
+                auto const        dir   = slash == std::string_view::npos ? std::string_view{} : path.substr(0, slash);
+                auto const        name  = slash == std::string_view::npos ? path : path.substr(slash + 1);
                 tree[dir].files.insert(name);
 
                 std::string prefix;
                 std::size_t start = 0;
                 while (start <= dir.size()) {
                     std::size_t const next = dir.find('/', start);
-                    std::string const child =
-                      dir.substr(start, next == std::string::npos ? std::string::npos : next - start);
+                    auto const        child =
+                      dir.substr(start, next == std::string_view::npos ? std::string_view::npos : next - start);
                     if (child.empty()) {
                         break;
                     }
@@ -206,7 +209,7 @@ namespace dana {
             return tree;
         }
 
-        std::size_t dir_depth(std::string const& key) {
+        std::size_t dir_depth(std::string_view key) {
             if (key.empty()) {
                 return 0;
             }
@@ -216,8 +219,8 @@ namespace dana {
         // Files under each directory, accumulated bottom-up: the map is sorted, so a
         // child key ("a/b") always follows its parent ("a"), and reverse iteration
         // visits every descendant before its ancestor.
-        std::map<std::string, std::size_t> subtree_file_counts(dir_map const& tree) {
-            std::map<std::string, std::size_t> counts;
+        std::map<std::string_view, std::size_t> subtree_file_counts(dir_map const& tree) {
+            std::map<std::string_view, std::size_t> counts;
             for (auto const& [key, node] : tree) {
                 counts[key] = node.files.size();
             }
@@ -236,7 +239,7 @@ namespace dana {
         }
 
         std::string
-        render_compact(dir_map const& tree, std::map<std::string, std::size_t> const& counts, std::size_t limit) {
+        render_compact(dir_map const& tree, std::map<std::string_view, std::size_t> const& counts, std::size_t limit) {
             std::string out;
             for (auto const& [key, node] : tree) {
                 std::size_t const depth = dir_depth(key);
@@ -275,7 +278,7 @@ namespace dana {
         }
 
         std::string
-        render_dirs(dir_map const& tree, std::map<std::string, std::size_t> const& counts, std::size_t limit) {
+        render_dirs(dir_map const& tree, std::map<std::string_view, std::size_t> const& counts, std::size_t limit) {
             std::string out;
             for (auto const& [key, node] : tree) {
                 if (limit > 0 && dir_depth(key) > limit) {
@@ -290,7 +293,7 @@ namespace dana {
             return out;
         }
 
-        std::string render_paths(std::vector<std::string> const& files) {
+        std::string render_paths(text::string_views files) {
             std::string out;
             for (auto const& f : files) {
                 out += f;
@@ -305,20 +308,17 @@ namespace dana {
         // repo.sh scans every arg for --help/-h itself (before the git check);
         // the native dispatcher already intercepted those before we run.
 
-        if (
-          dana::process::run_command(std::vector<std::string>{"git", "rev-parse", "--is-inside-work-tree"}).exit_code !=
-          0)
-        {
+        if (process::run_command({"git", "rev-parse", "--is-inside-work-tree"}).exit_code != 0) [[unlikely]] {
             throw soft_error{"prompt repo: Not inside a git repository.\n"};
         }
 
         repo_options const opts = parse_repo_args(v);
 
         if (opts.format == repo_format::tree) {
-            std::vector<std::string> tree_args;
+            std::vector<std::string_view> tree_args;
             if (opts.depth > 0) {
                 tree_args.emplace_back("-L");
-                tree_args.push_back(std::to_string(opts.depth));
+                tree_args.emplace_back(opts.depth_str);
             }
             std::string output = "# Repository file structure (git-tracked files)\n\n";
             if (opts.dirs.empty()) {
@@ -347,10 +347,10 @@ namespace dana {
             return;
         }
 
-        dir_map const                            tree   = build_tree(files);
-        std::map<std::string, std::size_t> const counts = subtree_file_counts(tree);
-        std::size_t const dir_count                     = tree.contains(std::string{}) ? tree.size() - 1 : tree.size();
-        std::string       output                        = std::format(
+        dir_map const     tree      = build_tree(files);
+        auto const        counts    = subtree_file_counts(tree);
+        std::size_t const dir_count = tree.contains(std::string{}) ? tree.size() - 1 : tree.size();
+        std::string       output    = std::format(
           "# Repository file structure (git-tracked, {} files, {} directories)\n\n",
           files.size(),
           dir_count);

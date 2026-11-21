@@ -11,7 +11,7 @@
 
 namespace dana {
 
-    chain_result parse_chain(std::span<char const* const> argv, std::span<prompt_descriptor const> registry) {
+    chain_result parse_chain(text::string_views argv, std::span<prompt_descriptor const> registry) {
         auto find = [&](std::string_view name) -> prompt_descriptor const* {
             for (auto const& d : registry) {
                 if (d.name == name) {

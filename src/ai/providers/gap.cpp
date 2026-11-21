@@ -50,11 +50,11 @@ namespace dana::ai {
         constexpr std::array<std::string_view, 2> kFailedStatus{"error", "failed"};
 
         std::string trim(std::string_view value) {
-            std::size_t first = value.find_first_not_of(" \t\r\n");
+            auto const first = value.find_first_not_of(" \t\r\n");
             if (first == std::string_view::npos) {
                 return {};
             }
-            std::size_t last = value.find_last_not_of(" \t\r\n");
+            auto const last = value.find_last_not_of(" \t\r\n");
             return std::string(value.substr(first, last - first + 1));
         }
 
@@ -213,7 +213,7 @@ namespace dana::ai {
         }
 
         //: Friendly labels accepted by `--model` (the site's own ids are also accepted).
-        std::string alias_model(std::string const& requested) {
+        std::string alias_model(std::string_view requested) {
             std::string key   = trim(requested);
             std::string upper = key;
             std::transform(upper.begin(), upper.end(), upper.begin(), [](unsigned char c) {
@@ -262,9 +262,9 @@ namespace dana::ai {
             }
 
             std::unique_ptr<conversation>
-            open(session::match const& match, std::string const& model, open_options const& options) override;
+            open(session::match const& match, std::string_view model, open_options const& options) override;
 
-            std::string resolve_model(std::string const& requested, std::string const& /*base*/) override {
+            std::string resolve_model(std::string_view requested, std::string_view /*base*/) override {
                 if (trim(requested).empty()) {
                     return info_.default_model;
                 }
@@ -293,7 +293,7 @@ namespace dana::ai {
                 return "wss://" + host + std::string(kWsPath);
             }
 
-            [[nodiscard]] static std::string status_error(std::string const& status) {
+            [[nodiscard]] static std::string status_error(std::string_view status) {
                 static std::map<std::string_view, std::string_view> const hints{
                   {"unauthorized", "the session is not signed in; open gapgpt.app in a browser"},
                   {"free_sub_upgrade", "this model needs a paid plan"},
@@ -304,12 +304,12 @@ namespace dana::ai {
                     "text file, lower --prompt-limit, or shorten/split the prompt", },
                   {"cancelled", "the request was cancelled"},
                 };
-                std::string const message = "GapGPT refused the message (" + status + ")";
-                auto const        it      = hints.find(status);
+                auto const message = std::format("GapGPT refused the message ({})", status);
+                auto const it      = hints.find(status);
                 return it == hints.end() ? message : message + ": " + std::string(it->second);
             }
 
-            [[nodiscard]] std::string const& origin() const {
+            [[nodiscard]] std::string_view origin() const {
                 return info_.origin;
             }
 
@@ -368,8 +368,11 @@ namespace dana::ai {
 
         class gap_conversation : public conversation {
           public:
-            gap_conversation(gap_provider& owner, session::match match, std::string model, open_options const& options)
-              : conversation(std::move(match), std::move(model), options),
+            gap_conversation(gap_provider&       owner,
+                             session::match      match,
+                             std::string_view    model,
+                             open_options const& options)
+              : conversation(std::move(match), model, options),
                 owner_(owner),
                 headers_(owner_.history_headers(match_)) {
                 if (model_.empty()) {
@@ -380,9 +383,7 @@ namespace dana::ai {
                 }
             }
 
-            void send(std::string const&              prompt,
-                      std::vector<std::string> const& files,
-                      event_sink const&               sink) override {
+            void send(std::string_view prompt, text::string_views files, event_sink const& sink) override {
                 if (match_.cookie_header.empty()) {
                     sink(error("no cookies in the GapGPT session; log in to gapgpt.app"));
                     return;
@@ -395,7 +396,8 @@ namespace dana::ai {
                     return;
                 }
 
-                std::string const base_text = (turns_ == 0 && !system_.empty()) ? system_ + "\n\n" + prompt : prompt;
+                std::string const base_text =
+                  (turns_ == 0 && !system_.empty()) ? system_ + "\n\n" + std::string(prompt) : std::string(prompt);
                 std::vector<std::string> attempts;
 
                 // Attempt 1: inline everything.
@@ -410,13 +412,13 @@ namespace dana::ai {
                 }
                 std::string reason;
                 if (inline_ok) {
-                    auto result = attempt(base_text + inline_text, {}, sink);
+                    auto const result = attempt(base_text + inline_text, {}, sink);
                     if (result.ok) {
                         finish_turn(prompt, result.answer);
                         sink(done());
                         return;
                     }
-                    if (!result.answer.empty()) {
+                    if (!result.answer.empty()) [[unlikely]] {
                         sink(error("GapGPT stream failed after partial answer (" +
                                    (result.reason.empty() ? std::string("error") : result.reason) +
                                    "); not retrying to avoid duplicating output"));
@@ -528,7 +530,7 @@ namespace dana::ai {
                 std::string answer;
             };
 
-            static std::string join(std::vector<std::string> const& parts, std::string_view separator) {
+            static std::string join(text::string_views parts, std::string_view separator) {
                 std::string text;
                 for (std::size_t i = 0; i < parts.size(); ++i) {
                     if (i != 0) {
@@ -558,7 +560,7 @@ namespace dana::ai {
                 socket_.connect(owner_.ws_url(), headers, owner_.origin(), 20);
             }
 
-            std::int64_t send_event(std::string const& event, json const& data) {
+            std::int64_t send_event(std::string_view event, json const& data) {
                 static thread_local std::mt19937 rng{std::random_device{}()};
                 auto const                       rid = static_cast<std::int64_t>(rng() % 100'000'000ULL);
                 json const                       envelope{
@@ -571,7 +573,7 @@ namespace dana::ai {
                 return rid;
             }
 
-            [[nodiscard]] json action(std::string const& text, std::vector<std::string> const& file_tokens) const {
+            [[nodiscard]] json action(std::string_view text, text::string_views file_tokens) const {
                 json mode_extra = json::object();
                 if (model_ == owner_.info().default_model) {
                     mode_extra = json{
@@ -582,20 +584,20 @@ namespace dana::ai {
                     };
                 }
                 return json{
-                  {                     "type",   "text_message"},
-                  {            "message_token",               ""},
-                  {                 "bot_name",           model_},
-                  {                  "version",                4},
-                  {               "chat_token", conversation_id_},
-                  {                     "text",             text},
-                  {              "file_tokens",      file_tokens},
-                  {          "allow_downgrade",            false},
-                  {       "enable_user_memory",            false},
-                  {                     "mode",               ""},
-                  {               "mode_extra",       mode_extra},
-                  {               "chat_extra",   json::object()},
-                  {             "is_temporary",            false},
-                  {"messenger_browser_session",          uuid4()},
+                  {                     "type",                               "text_message"},
+                  {            "message_token",                                           ""},
+                  {                 "bot_name",                                       model_},
+                  {                  "version",                                            4},
+                  {               "chat_token",                             conversation_id_},
+                  {                     "text",                            std::string(text)},
+                  {              "file_tokens", file_tokens | std::ranges::to<std::vector>()},
+                  {          "allow_downgrade",                                        false},
+                  {       "enable_user_memory",                                        false},
+                  {                     "mode",                                           ""},
+                  {               "mode_extra",                                   mode_extra},
+                  {               "chat_extra",                               json::object()},
+                  {             "is_temporary",                                        false},
+                  {"messenger_browser_session",                                      uuid4()},
                 };
             }
 
@@ -616,8 +618,7 @@ namespace dana::ai {
                 return {std::move(frame)};
             }
 
-            attempt_result
-            attempt(std::string const& text, std::vector<std::string> const& file_tokens, event_sink const& sink) {
+            attempt_result attempt(std::string_view text, text::string_views file_tokens, event_sink const& sink) {
                 json const data{
                   {"action", action(text, file_tokens)},
                   {"chat_token", conversation_id_},
@@ -628,7 +629,7 @@ namespace dana::ai {
                 };
 
                 std::optional<std::int64_t> rid;
-                std::string              failure;
+                std::string                 failure;
                 for (int index = 0; index < kConnectAttempts; ++index) {
                     try {
                         ensure();
@@ -926,7 +927,7 @@ namespace dana::ai {
                 return {chosen, completed(chosen)};
             }
 
-            void finish_turn(std::string const& prompt, std::string const& answer) {
+            void finish_turn(std::string_view prompt, std::string_view answer) {
                 ++turns_;
                 if (!title_.empty()) {
                     resume_["title"] = title_;
@@ -944,7 +945,7 @@ namespace dana::ai {
         };
 
         std::unique_ptr<conversation>
-        gap_provider::open(session::match const& match, std::string const& model, open_options const& options) {
+        gap_provider::open(session::match const& match, std::string_view model, open_options const& options) {
             return std::make_unique<gap_conversation>(*this, match, model, options);
         }
 

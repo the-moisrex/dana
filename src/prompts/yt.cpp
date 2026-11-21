@@ -88,36 +88,16 @@ namespace dana {
         };
 
         command_output run_tool(
-          std::filesystem::path const&    tool,
-          std::vector<std::string> const& args,
-          std::string_view                stdin_data,
-          std::chrono::milliseconds       timeout) {
+          std::filesystem::path const& tool,
+          text::string_views           args,
+          std::string_view             stdin_data,
+          std::chrono::milliseconds    timeout) {
             std::vector<std::string> cmd = {tool.string()};
             cmd.insert(cmd.end(), args.begin(), args.end());
             auto result = dana::process::run_command(cmd, stdin_data, {}, timeout);
             return {.stdout_data = std::move(result.stdout_data),
                     .status      = result.exit_code,
                     .timed_out   = result.timed_out};
-        }
-
-        // xargs: every whitespace-separated token becomes one subtitle argument (an
-        // empty token list still runs the command once, like GNU xargs without -r).
-        std::vector<std::string> xargs_tokens(std::string_view text) {
-            std::vector<std::string> tokens;
-            std::size_t              pos = 0;
-            while (pos < text.size()) {
-                std::size_t start = text.find_first_not_of(" \t\r\n", pos);
-                if (start == std::string_view::npos) {
-                    break;
-                }
-                std::size_t end = text.find_first_of(" \t\r\n", start);
-                if (end == std::string_view::npos) {
-                    end = text.size();
-                }
-                tokens.emplace_back(text.substr(start, end - start));
-                pos = end;
-            }
-            return tokens;
         }
 
         struct fetch_result {
@@ -129,20 +109,22 @@ namespace dana {
         // `"$curdir/yt.links" "$url" | xargs "$curdir/subtitle" | "$curdir/srt2text"`
         // (under `set -o pipefail`, so any failing stage fails the whole pipeline). The
         // pipeline stops at its first failing stage and reports which one it was.
-        fetch_result transform_url(std::string_view url, std::span<std::string const> tools) {
-            auto reason = [](std::string_view stage, std::chrono::milliseconds timeout, command_output const& out) {
-                if (out.timed_out) {
-                    return std::format("{} timed out after {}s", stage, timeout.count() / 1000);
-                }
-                return std::format("{} exited {}", stage, out.status);
-            };
+        fetch_result transform_url(std::string_view url, text::string_views tools) {
+            auto const reason =
+              [](std::string_view const stage, std::chrono::milliseconds const timeout, command_output const& out) {
+                  if (out.timed_out) {
+                      return std::format("{} timed out after {}s", stage, timeout.count() / 1000);
+                  }
+                  return std::format("{} exited {}", stage, out.status);
+              };
 
-            auto links = run_tool(tools[0], {std::string(url)}, {}, kLinksTimeout);
+            auto const links = run_tool(tools[0], {std::string(url)}, {}, kLinksTimeout);
             if (links.status != 0 || links.timed_out) {
                 return {.ok = false, .text = {}, .failure = reason("yt.links", kLinksTimeout, links)};
             }
 
-            auto subtitle = run_tool(tools[1], xargs_tokens(links.stdout_data), {}, kSubtitleTimeout);
+            auto const xargs    = process::xargs_tokens(links.stdout_data);
+            auto       subtitle = run_tool(tools[1], xargs, {}, kSubtitleTimeout);
             if (subtitle.status != 0 || subtitle.timed_out) {
                 return {.ok = false, .text = {}, .failure = reason("subtitle", kSubtitleTimeout, subtitle)};
             }

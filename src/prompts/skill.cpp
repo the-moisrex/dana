@@ -21,27 +21,27 @@ namespace dana {
 
     namespace {
 
-        std::string env_or(std::string const& key, std::string const& fallback) {
-            if (char const* v = std::getenv(key.c_str())) {
+        std::string_view env_or(std::string_view const key, std::string_view const fallback) {
+            if (char const* v = std::getenv(key.data())) {
                 return v;
             }
             return fallback;
         }
 
-        std::string home_dir() {
+        std::string_view home_dir() {
             return env_or("HOME", "");
         }
 
         std::string skills_dir() {
-            std::string xdg = env_or("XDG_DATA_HOME", std::string());
+            std::string xdg = std::string(env_or("XDG_DATA_HOME", ""));
             if (xdg.empty()) {
-                xdg = home_dir() + "/.local/share";
+                xdg = std::string(home_dir()) + "/.local/share";
             }
             return xdg + "/agents/skills";
         }
 
         std::vector<std::string> legacy_dirs() {
-            return {home_dir() + "/.agents/skills", home_dir() + "/.claude/skills"};
+            return {std::string(home_dir()) + "/.agents/skills", std::string(home_dir()) + "/.claude/skills"};
         }
 
         std::vector<std::string> cache_dirs() {
@@ -54,18 +54,36 @@ namespace dana {
         // capture, or discarded (`2>/dev/null`) when the bash call site redirects it.
         // Returns stdout and the exit code.
         std::string run_capture(
-          std::vector<std::string> const& cmd,
-          std::string const&              stdin_data,
-          int&                            exit_code,
-          bool                            discard_stderr = false) {
-            dana::process::command c(cmd);
-            c.stdin_data(stdin_data);
+          text::string_views     cmd,
+          std::string_view const stdin_data,
+          int&                   exit_code,
+          bool                   discard_stderr = false) {
+            process::command c(cmd);
+            c.stdin_data(std::string(stdin_data));
             if (discard_stderr) {
                 c.discard_stderr();
             }
-            auto r    = c.run();
-            exit_code = r.exit_code;
-            return r.stdout_data;
+            auto const res = c.run();
+            exit_code      = res.exit_code;
+            return res.stdout_data;
+        }
+
+        template <std::size_t N>
+        std::string run_capture(
+          std::array<std::string, N> cmd,
+          std::string_view const     stdin_data,
+          int&                       exit_code,
+          bool                       discard_stderr = false) {
+            return run_capture(text::string_views(cmd), stdin_data, exit_code, discard_stderr);
+        }
+
+        template <std::size_t N>
+        std::string run_capture(
+          std::array<std::string_view, N> cmd,
+          std::string_view const          stdin_data,
+          int&                            exit_code,
+          bool                            discard_stderr = false) {
+            return run_capture(text::string_views(cmd), stdin_data, exit_code, discard_stderr);
         }
 
         std::string strip_trailing_nl(std::string s) {
@@ -76,10 +94,10 @@ namespace dana {
         }
 
         // jq -r '<filter>' over $meta (bash feeds meta + a newline via <<<).
-        std::string jq_extract(std::string const& meta, std::string const& filter) {
-            int         ec  = 0;
-            std::string out = run_capture({"jq", "-r", filter}, meta + "\n", ec);
-            return strip_trailing_nl(out);
+        std::string jq_extract(std::string_view meta, std::string_view const filter) {
+            int                                   ec = 0;
+            std::array<std::string_view, 3> const cmdline{"jq", "-r", filter};
+            return strip_trailing_nl(run_capture(cmdline, std::string(meta) + "\n", ec));
         }
 
         // Port of parse_frontmatter: collect lines between the first two "---" lines,
@@ -147,194 +165,7 @@ namespace dana {
             return data.dump();
         }
 
-        // bash_infer_lang (same table as _common.sh).
-        std::string bash_infer_lang(std::string const& filename) {
-            std::string base  = filename;
-            auto        slash = base.find_last_of('/');
-            if (slash != std::string::npos) {
-                base = base.substr(slash + 1);
-            }
-            std::string ext;
-            auto        dot = base.find_last_of('.');
-            ext             = (dot != std::string::npos) ? base.substr(dot + 1) : base;
-
-            if (base == "Dockerfile") {
-                return "dockerfile";
-            }
-            if (base == "Makefile" || base == "makefile" || base == "GNUmakefile") {
-                return "makefile";
-            }
-            if (base == "CMakeLists.txt") {
-                return "cmake";
-            }
-            if (ext == "c" || ext == "h") {
-                return "c";
-            }
-            if (ext == "cc" || ext == "cp" || ext == "cpp" || ext == "cxx" || ext == "c++" || ext == "hpp" ||
-                ext == "hxx" || ext == "hh" || ext == "h++")
-            {
-                return "cpp";
-            }
-            if (ext == "m") {
-                return "objectivec";
-            }
-            if (ext == "mm") {
-                return "objective-cpp";
-            }
-            if (ext == "rs") {
-                return "rust";
-            }
-            if (ext == "py" || ext == "pyi") {
-                return "python";
-            }
-            if (ext == "sh" || ext == "bash") {
-                return "bash";
-            }
-            if (ext == "zsh") {
-                return "zsh";
-            }
-            if (ext == "fish") {
-                return "fish";
-            }
-            if (ext == "nu") {
-                return "nu";
-            }
-            if (ext == "js" || ext == "cjs" || ext == "mjs") {
-                return "javascript";
-            }
-            if (ext == "ts" || ext == "mts" || ext == "cts") {
-                return "typescript";
-            }
-            if (ext == "jsx") {
-                return "jsx";
-            }
-            if (ext == "tsx") {
-                return "tsx";
-            }
-            if (ext == "java") {
-                return "java";
-            }
-            if (ext == "kt" || ext == "kts") {
-                return "kotlin";
-            }
-            if (ext == "swift") {
-                return "swift";
-            }
-            if (ext == "go") {
-                return "go";
-            }
-            if (ext == "rb") {
-                return "ruby";
-            }
-            if (ext == "php") {
-                return "php";
-            }
-            if (ext == "lua") {
-                return "lua";
-            }
-            if (ext == "pl" || ext == "pm") {
-                return "perl";
-            }
-            if (ext == "r") {
-                return "r";
-            }
-            if (ext == "scala") {
-                return "scala";
-            }
-            if (ext == "cs") {
-                return "csharp";
-            }
-            if (ext == "fs" || ext == "fsx") {
-                return "fsharp";
-            }
-            if (ext == "vb") {
-                return "vbnet";
-            }
-            if (ext == "dart") {
-                return "dart";
-            }
-            if (ext == "ex" || ext == "exs") {
-                return "elixir";
-            }
-            if (ext == "erl" || ext == "hrl") {
-                return "erlang";
-            }
-            if (ext == "clj" || ext == "cljs" || ext == "cljc") {
-                return "clojure";
-            }
-            if (ext == "ml" || ext == "mli") {
-                return "ocaml";
-            }
-            if (ext == "sql") {
-                return "sql";
-            }
-            if (ext == "html" || ext == "htm") {
-                return "html";
-            }
-            if (ext == "css") {
-                return "css";
-            }
-            if (ext == "scss") {
-                return "scss";
-            }
-            if (ext == "sass") {
-                return "sass";
-            }
-            if (ext == "less") {
-                return "less";
-            }
-            if (ext == "xml") {
-                return "xml";
-            }
-            if (ext == "xsl" || ext == "xslt") {
-                return "xslt";
-            }
-            if (ext == "svg") {
-                return "svg";
-            }
-            if (ext == "json" || ext == "stock" || ext == "tse") {
-                return "json";
-            }
-            if (ext == "jsonc") {
-                return "jsonc";
-            }
-            if (ext == "yaml" || ext == "yml") {
-                return "yaml";
-            }
-            if (ext == "toml") {
-                return "toml";
-            }
-            if (ext == "ini" || ext == "cfg" || ext == "conf") {
-                return "ini";
-            }
-            if (ext == "env") {
-                return "dotenv";
-            }
-            if (ext == "md") {
-                return "markdown";
-            }
-            if (ext == "txt" || ext == "log") {
-                return "text";
-            }
-            if (ext == "diff" || ext == "patch") {
-                return "diff";
-            }
-            if (ext == "proto") {
-                return "proto";
-            }
-            if (ext == "asm" || ext == "s" || ext == "S") {
-                return "asm";
-            }
-            if (ext == "tex") {
-                return "tex";
-            }
-            if (ext == "vim") {
-                return "vim";
-            }
-            return "text";
-        }
-
-        std::string find_cached_skill(std::string const& name) {
+        std::string find_cached_skill(std::string_view name) {
             for (auto const& dir : cache_dirs()) {
                 std::error_code ec;
                 auto            f = std::filesystem::path(dir) / name / "SKILL.md";
@@ -426,17 +257,19 @@ namespace dana {
         // search_skills: run ai-find-skills --json --no-scan <query>. The download path
         // calls it as `search_skills ... 2>/dev/null`, so callers can discard its
         // stderr (which carries the tool's `# full JSON: <tmpfile>` note).
-        std::string search_skills(std::string const& query, std::string const& tool, bool discard_stderr = false) {
+        std::string search_skills(std::string_view query, std::string_view tool, bool discard_stderr = false) {
+            using namespace std::string_view_literals;
             std::error_code ec;
             if (!std::filesystem::is_regular_file(tool, ec) || ec) {
                 return {};
             }
             int ec2 = 0;
-            return run_capture({tool, "--json", "--no-scan", query}, "", ec2, discard_stderr);
+            return run_capture({tool, "--json"sv, "--no-scan"sv, query}, "", ec2, discard_stderr);
         }
 
-        std::string merge_results(std::string const& json) {
-            std::string const filter =
+        std::string merge_results(std::string_view json) {
+            using namespace std::string_view_literals;
+            std::string_view const filter =
               "[\n"
               "  (.skills_sh // [])[] | {name, board, repo, slug, url, installs, stars, match, summary},\n"
               "  (.clawhub    // [])[] | {name, board, repo:null, slug, url, installs, stars, match, summary},\n"
@@ -445,17 +278,18 @@ namespace dana {
               "stars, "
               "match, summary})\n";
             int ec = 0;
-            return run_capture({"jq", "-c", filter}, json, ec);
+            return run_capture({"jq"sv, "-c"sv, filter}, json, ec);
         }
 
-        std::string find_rec(std::string const& results, std::string const& name) {
-            std::string q1  = "[.[] | select(.name == $n)] | .[0] // empty";
-            int         ec  = 0;
-            std::string rec = run_capture({"jq", "-c", "--arg", "n", name, q1}, results, ec);
-            rec             = strip_trailing_nl(rec);
+        std::string find_rec(std::string_view results, std::string_view name) {
+            using namespace std::string_view_literals;
+            std::string_view const q1  = "[.[] | select(.name == $n)] | .[0] // empty";
+            int                    ec  = 0;
+            std::string            rec = run_capture({"jq"sv, "-c"sv, "--arg"sv, "n"sv, name, q1}, results, ec);
+            rec                        = strip_trailing_nl(rec);
             if (rec.empty()) {
-                std::string q2 = "[.[] | select(.name | test($n; \"i\"))] | .[0] // empty";
-                rec            = strip_trailing_nl(run_capture({"jq", "-c", "--arg", "n", name, q2}, results, ec));
+                std::string_view const q2 = "[.[] | select(.name | test($n; \"i\"))] | .[0] // empty";
+                rec = strip_trailing_nl(run_capture({"jq"sv, "-c"sv, "--arg"sv, "n"sv, name, q2}, results, ec));
             }
             return rec;
         }
@@ -463,6 +297,7 @@ namespace dana {
     } // namespace
 
     static void execute_skill(view const& v, result& r) {
+        using namespace std::string_literals;
         auto opts = file_options_or_throw(v);
 
         // command -v jq is required before anything else.
@@ -546,10 +381,12 @@ namespace dana {
                 std::string     skill_name = jq_extract(rec, ".name");
                 std::error_code ec;
                 std::filesystem::create_directories(std::filesystem::path(skills_dir()) / skill_name, ec);
-                err              += std::format("Downloading {}...\n", skill_name);
+                err     += std::format("Downloading {}...\n", skill_name);
                 // download_skill_md is network/curl/unzip/gh dependent.
-                int         dec   = 0;
-                std::string body  = run_capture({"curl", "-sS", "--max-time", "15", jq_extract(rec, ".url")}, "", dec);
+                int dec  = 0;
+                // todo: use curl functions directly instead of this
+                auto const body =
+                  run_capture({"curl"s, "-sS"s, "--max-time"s, "15"s, jq_extract(rec, ".url")}, "", dec);
                 if (body.empty()) {
                     std::filesystem::remove_all(std::filesystem::path(skills_dir()) / skill_name, ec);
                     throw soft_error{err + "error: failed to download SKILL.md for '" + skill_name + "'\n"};
@@ -617,7 +454,7 @@ namespace dana {
         }
 
         for (std::size_t i = 1; i < pos.size(); ++i) {
-            std::string const&    file = pos[i];
+            std::string_view      file = pos[i];
             std::error_code       ec;
             std::filesystem::path fp(file);
             if (std::filesystem::is_regular_file(fp, ec)) {
@@ -625,7 +462,7 @@ namespace dana {
                 out                   += '\n';
                 out                   += std::format("File: {}\n", file_name);
                 out                   += '\n';
-                out                   += std::format("```{}\n", bash_infer_lang(file_name));
+                out                   += std::format("```{}\n", infer_lang(std::string_view{file_name}));
                 out                   += number_lines(trim_context_nl(read_file(fp), opts.head_lines), opts.numbered);
                 out                   += "```\n";
             } else {

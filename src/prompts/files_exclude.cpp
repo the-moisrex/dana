@@ -57,9 +57,11 @@ namespace dana {
                     for (auto const& pattern : patterns) {
                         report += "  " + pattern + "\n";
                     }
-                    for (auto const& pattern : filter.exclude()) {
+                    for (auto const pattern : filter.exclude()) {
                         if (std::ranges::find(patterns, pattern) == patterns.end()) {
-                            report += "  " + pattern + "\n";
+                            report += "  ";
+                            report += pattern;
+                            report += '\n';
                         }
                     }
                 }

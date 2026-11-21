@@ -711,7 +711,7 @@ Notes:
 
     // `.history.purge` protects the run that is being written right now.
     if (history.enabled() && !history.id().empty()) {
-        ::setenv("PROMPT_HISTORY_CURRENT", history.id().c_str(), 1);
+        ::setenv("PROMPT_HISTORY_CURRENT", history.id().data(), 1);
     }
 
     auto record_segment =

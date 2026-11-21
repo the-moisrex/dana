@@ -726,7 +726,7 @@ namespace dana {
             return;
         }
 
-        auto clean_args = [](std::vector<std::string> const& args) {
+        auto clean_args = [](text::string_views args) {
             std::vector<std::string> out;
             out.reserve(args.size());
             for (auto const& arg : args) {

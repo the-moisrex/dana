@@ -113,8 +113,9 @@ namespace dana::ai::state {
             return record;
         }
 
-        std::string debate_key(std::vector<std::string> names) {
-            std::ranges::sort(names);
+        std::string debate_key(text::string_views names) {
+            std::vector<std::string> sorted_names{names.begin(), names.end()};
+            std::ranges::sort(sorted_names);
             std::string key = "debate";
             for (auto const& name : names) {
                 key += '-';
@@ -184,13 +185,11 @@ namespace dana::ai::state {
         fs::remove(terminal_path(provider, actual_scope), ec);
     }
 
-    fs::path debate_path(std::vector<std::string> names) {
-        return directory() / (debate_key(std::move(names)) + ".json");
+    fs::path debate_path(text::string_views names) {
+        return directory() / (debate_key(names) + ".json");
     }
 
-    std::optional<std::map<std::string, conversation_record>> load_debate(
-      std::vector<std::string> const& names,
-      double                          max_age) {
+    std::optional<std::map<std::string, conversation_record>> load_debate(text::string_views names, double max_age) {
         std::ifstream stream(debate_path(names));
         if (!stream) {
             return std::nullopt;
@@ -215,7 +214,7 @@ namespace dana::ai::state {
         return out;
     }
 
-    void save_debate(std::vector<std::string> const&                   names,
+    void save_debate(text::string_views                                names,
                      std::map<std::string, conversation_record> const& participants,
                      std::string_view                                  scope) {
         std::string const actual_scope = scope.empty() ? terminal_scope() : std::string(scope);
@@ -224,9 +223,9 @@ namespace dana::ai::state {
             records[name] = record_to_json(record);
         }
         json data{
-          {     "updated",      now_seconds()},
-          {   "providers",              names},
-          {"participants", std::move(records)},
+          {     "updated",                          now_seconds()},
+          {   "providers", names | std::ranges::to<std::vector>()},
+          {"participants",                     std::move(records)},
         };
         write_json(debate_path(names), data);
         for (auto const& [name, record] : participants) {
@@ -236,7 +235,7 @@ namespace dana::ai::state {
         write_text(last_path(), "debate");
     }
 
-    void clear_debate(std::vector<std::string> const& names, std::string_view scope) {
+    void clear_debate(text::string_views names, std::string_view scope) {
         std::string const actual_scope = scope.empty() ? terminal_scope() : std::string(scope);
         std::error_code   ec;
         fs::remove(debate_path(names), ec);

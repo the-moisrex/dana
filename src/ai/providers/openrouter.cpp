@@ -9,8 +9,7 @@ namespace dana::ai {
 
     namespace {
 
-        class openrouter_provider : public openai_compat {
-          public:
+        struct openrouter_provider : openai_compat {
             openrouter_provider()
               : openai_compat(provider_info{
                   .name                = "openrouter",
@@ -34,9 +33,9 @@ namespace dana::ai {
                   .default_base_url    = "https://openrouter.ai/api/v1",
                 }) {}
 
-            std::string resolve_model(std::string const& requested, std::string const& /*base*/) override {
-                std::string wanted = requested;
-                char const* model  = std::getenv("OPENROUTER_MODEL");
+            std::string resolve_model(std::string_view requested, std::string_view /*base*/) override {
+                std::string_view wanted = requested;
+                char const*      model  = std::getenv("OPENROUTER_MODEL");
                 if (wanted.empty() && model != nullptr) {
                     wanted = model;
                 }
@@ -50,7 +49,7 @@ namespace dana::ai {
                     wanted = m_info.default_model;
                 }
                 if (!wanted.empty()) {
-                    return wanted;
+                    return std::string(wanted);
                 }
                 throw std::runtime_error(
                   "choose a model with -m/--model, OPENROUTER_MODEL=… or OPENAI_MODEL=… "

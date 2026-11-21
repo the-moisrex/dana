@@ -26,7 +26,7 @@ namespace dana::agent {
     [[nodiscard]] std::vector<std::string> split_command(std::string_view line);
 
     // Human-readable shell-quoting for the approval prompt and `--print`.
-    [[nodiscard]] std::string join_argv(std::span<std::string const> argv);
+    [[nodiscard]] std::string join_argv(text::string_views argv);
 
     // `.exec`'s CLI. Flags are read until the first non-flag token; after that
     // everything is the command, so `--version` reaches the program unchanged.
@@ -45,14 +45,14 @@ namespace dana::agent {
     // `prompt`), including nested `.each` bodies and `prompt` chains run through
     // `.exec`. A `{placeholder}` program is dynamic and is not reported: the child
     // checks it when the value exists.
-    [[nodiscard]] std::vector<std::vector<std::string>> static_exec_commands(std::span<std::string const> chain_tokens);
+    [[nodiscard]] std::vector<std::vector<std::string>> static_exec_commands(text::string_views chain_tokens);
 
     // Validate a loop body template before any item is substituted, including
     // nested bodies. Throws usage_error on a malformed `.exec` (e.g. a selector
     // mixed with a command). A `{placeholder}` program is allowed: it is dynamic,
     // so it is not pre-approved and the child's policy checks the resolved
     // program.
-    void validate_exec_template(std::span<std::string const> chain_tokens);
+    void validate_exec_template(text::string_views chain_tokens);
 
     // Basename of a program token (`/usr/bin/git` -> `git`).
     [[nodiscard]] std::string program_name(std::string_view program);

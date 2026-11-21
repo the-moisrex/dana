@@ -69,7 +69,7 @@ namespace dana::extract {
             return newline == std::string_view::npos ? std::string{} : std::string(text.substr(newline + 1));
         }
 
-        std::string join_blocks(std::vector<std::string> const& parts) {
+        std::string join_blocks(text::string_views parts) {
             std::string out;
             for (auto const& part : parts) {
                 if (!out.empty()) {

@@ -18,7 +18,7 @@ namespace dana::ai::pow {
 
     namespace {
 
-        constexpr int       kMaxWorkers        = 16;
+        constexpr int          kMaxWorkers        = 16;
         constexpr std::int64_t kSingleThreadLimit = 2048;
 
         char hex_digit(std::uint8_t value) {
@@ -80,11 +80,11 @@ namespace dana::ai::pow {
         // Search `[start, stop)` for the nonce; the first worker to find one stops the
         // rest.  Returns the nonce or -1.
         std::int64_t search_range(
-          std::string const&                  prefix,
+          std::string_view                    prefix,
           std::array<std::uint8_t, 32> const& target,
-          std::int64_t                           start,
-          std::int64_t                           stop_at,
-          std::atomic<std::int64_t>&             found,
+          std::int64_t                        start,
+          std::int64_t                        stop_at,
+          std::atomic<std::int64_t>&          found,
           std::atomic<bool>&                  stopped) {
             for (std::int64_t nonce = start; nonce < stop_at; ++nonce) {
                 if (stopped.load(std::memory_order_relaxed)) {
@@ -109,15 +109,15 @@ namespace dana::ai::pow {
     }
 
     std::int64_t solve_deepseek(
-      std::string const& salt,
-      std::int64_t          expire_at,
-      std::int64_t          difficulty,
-      std::string const& challenge,
-      int                workers) {
-        std::string const prefix = salt + "_" + std::to_string(expire_at) + "_";
-        auto const        target = from_hex(challenge);
-        std::int64_t const   limit  = difficulty > 0 ? difficulty : 1;
-        int               count  = workers > 0 ? workers : auto_workers();
+      std::string_view salt,
+      std::int64_t     expire_at,
+      std::int64_t     difficulty,
+      std::string_view challenge,
+      int              workers) {
+        std::string const  prefix = std::format("{}_{}_", salt, expire_at);
+        auto const         target = from_hex(challenge);
+        std::int64_t const limit  = difficulty > 0 ? difficulty : 1;
+        int                count  = workers > 0 ? workers : auto_workers();
         if (static_cast<std::int64_t>(count) > limit) {
             count = static_cast<int>(limit);
         }
@@ -126,11 +126,11 @@ namespace dana::ai::pow {
         }
 
         std::atomic<std::int64_t> found{-1};
-        std::atomic<bool>      stopped{false};
+        std::atomic<bool>         stopped{false};
         if (count == 1 || limit < kSingleThreadLimit) {
             search_range(prefix, target, 0, limit, found, stopped);
         } else {
-            std::int64_t const          size = (limit + count - 1) / count;
+            std::int64_t const       size = (limit + count - 1) / count;
             std::vector<std::thread> pool;
             pool.reserve(static_cast<std::size_t>(count));
             for (std::int64_t start = 0; start < limit; start += size) {
@@ -151,11 +151,11 @@ namespace dana::ai::pow {
     }
 
     std::string deepseek_response(
-      std::string const& salt,
-      std::string const& challenge,
-      std::string const& signature,
-      std::int64_t          answer,
-      std::string const& target_path) {
+      std::string_view salt,
+      std::string_view challenge,
+      std::string_view signature,
+      std::int64_t     answer,
+      std::string_view target_path) {
         nlohmann::ordered_json const payload{
           {  "algorithm", "DeepSeekHashV1"},
           {  "challenge",        challenge},

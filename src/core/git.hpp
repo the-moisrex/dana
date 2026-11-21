@@ -1,14 +1,15 @@
 #pragma once
 
+#include "strings.hpp"
+
 #include <initializer_list>
 #include <string>
 #include <string_view>
-#include <vector>
 
 namespace dana::git {
 
     // Run a git command and return stdout with trailing newlines stripped.
-    std::string run(std::vector<std::string> const& args);
+    std::string run(text::string_views args);
 
     std::string run(std::initializer_list<char const*> args);
 
@@ -20,8 +21,5 @@ namespace dana::git {
     //   * `includes` non-empty => only blocks whose path matches one of them are kept.
     //   * `excludes`          => blocks whose path matches any of them are dropped.
     // Paths are matched both verbatim and by basename, using `detail::glob_match`.
-    std::string filter_diff_by_path(
-      std::string_view                diff,
-      std::vector<std::string> const& includes,
-      std::vector<std::string> const& excludes);
+    std::string filter_diff_by_path(std::string_view diff, text::string_views includes, text::string_views excludes);
 } // namespace dana::git

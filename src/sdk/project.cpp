@@ -77,7 +77,7 @@ namespace dana::project {
             return std::nullopt;
         }
 
-        std::string run_git(path const& root, std::vector<std::string> const& args, std::chrono::milliseconds timeout) {
+        std::string run_git(path const& root, text::string_views args, std::chrono::milliseconds timeout) {
             std::vector<std::string> argv{"git", "-C", root.string()};
             argv.insert(argv.end(), args.begin(), args.end());
             auto result = process::command{argv}.capture_stderr().discard_stderr().timeout(timeout).run();
@@ -90,13 +90,11 @@ namespace dana::project {
 
         // `git grep -E -l <patterns> -- <globs>`: one command instead of reading the
         // tree; empty when nothing matches (git grep exits 1).
-        bool git_grep(path const&                     root,
-                      std::vector<std::string> const& patterns,
-                      std::span<char const* const>    globs = {}) {
+        bool git_grep(path const& root, text::string_views patterns, std::span<char const* const> globs = {}) {
             std::vector<std::string> argv{"grep", "-E", "-l", "--no-color"};
             for (auto const& pattern : patterns) {
                 argv.emplace_back("-e");
-                argv.push_back(pattern);
+                argv.emplace_back(pattern);
             }
             argv.emplace_back("--");
             if (globs.empty()) {
@@ -119,8 +117,8 @@ namespace dana::project {
         }
 
         std::string extension_of(std::string_view line) {
-            std::size_t slash = line.rfind('/');
-            std::size_t dot   = line.rfind('.');
+            auto const slash = line.rfind('/');
+            auto const dot   = line.rfind('.');
             if (dot == std::string_view::npos || (slash != std::string_view::npos && dot < slash)) {
                 return {};
             }

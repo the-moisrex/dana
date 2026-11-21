@@ -4,6 +4,7 @@
 // yields normalised stream events, so the CLI, renderer and sinks never need
 // to know which site is behind them.
 
+#include "../../core/strings.hpp"
 #include "../events.hpp"
 #include "../session.hpp"
 
@@ -39,13 +40,13 @@ namespace dana::ai {
     };
 
     struct [[nodiscard]] model_record {
-        std::string id;
-        std::string name;
-        std::string type;
-        std::string state;
-        std::int64_t   context = 0;
-        std::string prompt_price;
-        std::string completion_price;
+        std::string  id;
+        std::string  name;
+        std::string  type;
+        std::string  state;
+        std::int64_t context = 0;
+        std::string  prompt_price;
+        std::string  completion_price;
     };
 
     struct [[nodiscard]] open_options {
@@ -63,9 +64,9 @@ namespace dana::ai {
     };
 
     struct [[nodiscard]] conversation {
-        conversation(session::match match, std::string model, open_options options)
+        conversation(session::match match, std::string_view model, open_options options)
           : match_(std::move(match)),
-            model_(std::move(model)),
+            model_(std::string(model)),
             system_(options.system),
             debug_(options.debug),
             timeout_(options.timeout),
@@ -75,15 +76,15 @@ namespace dana::ai {
 
         virtual ~conversation() = default;
 
-        virtual void send(std::string const& prompt, std::vector<std::string> const& files, event_sink const& sink) = 0;
+        virtual void send(std::string_view prompt, text::string_views files, event_sink const& sink) = 0;
 
         virtual void close() {}
 
-        [[nodiscard]] std::string const& conversation_id() const {
+        [[nodiscard]] std::string_view conversation_id() const {
             return conversation_id_;
         }
 
-        [[nodiscard]] std::string const& model() const {
+        [[nodiscard]] std::string_view model() const {
             return model_;
         }
 
@@ -125,22 +126,22 @@ namespace dana::ai {
 
         [[nodiscard]] virtual provider_info const& info() const = 0;
         virtual std::unique_ptr<conversation>
-        open(session::match const& match, std::string const& model, open_options const& options) = 0;
+        open(session::match const& match, std::string_view model, open_options const& options) = 0;
 
         // API providers override these; the web providers use the defaults.
-        virtual std::string                                      base_url(std::string const& requested);
-        virtual std::string                                      api_key(std::string const& requested);
+        virtual std::string                                      base_url(std::string_view requested);
+        virtual std::string                                      api_key(std::string_view requested);
         virtual std::vector<std::pair<std::string, std::string>> headers(
-          std::string const& key,
-          std::string const& base = {});
-        virtual std::string               chat_url(std::string const& base);
-        virtual std::vector<model_record> chat_models(std::string const& base, long timeout);
+          std::string_view key,
+          std::string_view base = {});
+        virtual std::string               chat_url(std::string_view base);
+        virtual std::vector<model_record> chat_models(std::string_view base, long timeout);
         virtual std::vector<model_record>
-        chat_models_with_key(std::string const& base, long timeout, std::string const& key);
+        chat_models_with_key(std::string_view base, long timeout, std::string_view key);
         virtual std::vector<std::string> available_models();
-        virtual std::string              resolve_model(std::string const& requested, std::string const& base);
+        virtual std::string              resolve_model(std::string_view requested, std::string_view base);
         virtual nlohmann::json           session_descriptor(open_options const& options);
-        virtual std::string              error_hint(std::string const& message, std::string const& base);
+        virtual std::string              error_hint(std::string_view message, std::string_view base);
     };
 
 } // namespace dana::ai

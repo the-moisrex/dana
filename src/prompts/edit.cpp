@@ -463,8 +463,8 @@ namespace dana {
         // ---- Line-ending-preserving replacement ----------------------------------
 
         [[nodiscard]] std::vector<std::optional<std::size_t>> align_lines(
-          std::span<std::string const> before,
-          std::span<std::string const> after) {
+          text::string_views before,
+          text::string_views after) {
             using cell_type = std::uint32_t;
 
             if (before.size() >= std::numeric_limits<cell_type>::max() ||
@@ -853,23 +853,23 @@ namespace dana {
             return out;
         }
 
-        [[nodiscard]] std::string read_checked(std::string const& path) {
+        [[nodiscard]] std::string read_checked(std::string_view path) {
             std::error_code ec;
 
             auto const exists = std::filesystem::exists(path, ec);
-            if (ec) {
-                throw soft_error{"Cannot access " + path + ": " + ec.message() + "\n"};
+            if (ec) [[unlikely]] {
+                throw soft_error{std::format("Cannot access {}: {}\n", path, ec.message())};
             }
             if (!exists) [[unlikely]] {
-                throw soft_error{"File not found: " + path + "\n"};
+                throw soft_error{std::format("File not found: {}\n", path)};
             }
 
             auto const is_directory = std::filesystem::is_directory(path, ec);
-            if (ec) {
-                throw soft_error{"Cannot inspect " + path + ": " + ec.message() + "\n"};
+            if (ec) [[unlikely]] {
+                throw soft_error{std::format("Cannot inspect {}: {}\n", path, ec.message())};
             }
             if (is_directory) [[unlikely]] {
-                throw soft_error{"Path is a directory, not a file: " + path + "\n"};
+                throw soft_error{std::format("Path is a directory, not a file: {}\n", path)};
             }
 
             return read_file(path);
@@ -880,22 +880,22 @@ namespace dana {
         // replacement is atomic on the usual local POSIX/Windows filesystems. Basic
         // permission bits are retained; ACLs, extended attributes, and hard-link
         // relationships are not preserved by replacing an inode.
-        void write_file_atomically(std::string const& path, std::string_view contents) {
+        void write_file_atomically(std::string_view path, std::string_view contents) {
             namespace fs = std::filesystem;
 
             if (contents.size() > static_cast<std::size_t>(std::numeric_limits<std::streamsize>::max())) [[unlikely]] {
-                throw soft_error{"Replacement file is too large to write: " + path + "\n"};
+                throw soft_error{std::format("Replacement file is too large to write: {}\n", path)};
             }
 
             std::error_code ec;
-            auto            destination = fs::canonical(fs::path{path}, ec);
+            auto const      destination = fs::canonical(fs::path{path}, ec);
             if (ec) {
-                throw soft_error{"Cannot resolve " + path + ": " + ec.message() + "\n"};
+                throw soft_error{std::format("Cannot resolve {}: {}\n", path, ec.message())};
             }
 
             auto const original_status = fs::status(destination, ec);
-            if (ec) {
-                throw soft_error{"Cannot inspect " + path + ": " + ec.message() + "\n"};
+            if (ec) [[unlikely]] {
+                throw soft_error{std::format("Cannot inspect {}: {}\n", path, ec.message())};
             }
             auto const original_permissions = original_status.permissions();
 
@@ -917,13 +917,13 @@ namespace dana {
                     created = true;
                     break;
                 }
-                if (ec && ec != std::errc::file_exists) {
-                    throw soft_error{"Cannot create temporary file for " + path + ": " + ec.message() + "\n"};
+                if (ec && ec != std::errc::file_exists) [[unlikely]] {
+                    throw soft_error{std::format("Cannot create temporary file for {}: {}\n", path, ec.message())};
                 }
             }
 
             if (!created) [[unlikely]] {
-                throw soft_error{"Cannot create a unique temporary file for " + path + ".\n"};
+                throw soft_error{std::format("Cannot create a unique temporary file for {}.\n", path)};
             }
 
             auto const temporary_file = temporary_directory / "replacement";
@@ -942,25 +942,26 @@ namespace dana {
             {
                 std::ofstream output(temporary_file, std::ios::binary | std::ios::out);
                 if (!output) [[unlikely]] {
-                    throw soft_error{"Cannot open temporary file for " + path + " for writing.\n"};
+                    throw soft_error{std::format("Cannot open temporary file for {} for writing.\n", path)};
                 }
 
                 output.write(contents.data(), static_cast<std::streamsize>(contents.size()));
                 output.flush();
                 if (!output) [[unlikely]] {
-                    throw soft_error{"Failed writing temporary file for " + path + ".\n"};
+                    throw soft_error{std::format("Failed writing temporary file for {}.\n", path)};
                 }
 
                 output.close();
                 if (!output) [[unlikely]] {
-                    throw soft_error{"Failed closing temporary file for " + path + ".\n"};
+                    throw soft_error{std::format("Failed closing temporary file for {}.\n", path)};
                 }
             }
 
             if (original_permissions != fs::perms::unknown) {
                 fs::permissions(temporary_file, original_permissions, fs::perm_options::replace, ec);
                 if (ec) [[unlikely]] {
-                    throw soft_error{"Cannot preserve permissions while editing " + path + ": " + ec.message() + "\n"};
+                    throw soft_error{
+                      std::format("Cannot preserve permissions while editing {}: {}\n", path, ec.message())};
                 }
             }
 
@@ -975,7 +976,7 @@ namespace dana {
 #else
             fs::rename(temporary_file, destination, ec);
             if (ec) [[unlikely]] {
-                throw soft_error{"Cannot replace " + path + ": " + ec.message() + "\n"};
+                throw soft_error{std::format("Cannot replace {}: {}\n", path, ec.message())};
             }
 #endif
         }

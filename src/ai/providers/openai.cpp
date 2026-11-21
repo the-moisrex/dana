@@ -34,8 +34,8 @@ namespace dana::ai {
                   .default_base_url    = "https://api.openai.com/v1",
                 }) {}
 
-            std::string resolve_model(std::string const& requested, std::string const& /*base*/) override {
-                std::string wanted = requested;
+            std::string resolve_model(std::string_view const requested, std::string_view /*base*/) override {
+                std::string wanted = std::string(requested);
                 if (wanted.empty()) {
                     char const* raw = std::getenv("OPENAI_MODEL");
                     if (raw != nullptr) {
@@ -50,10 +50,10 @@ namespace dana::ai {
                   "the endpoint offers)");
             }
 
-            std::vector<std::pair<std::string, std::string>> headers(std::string const& key,
-                                                                     std::string const& base = {}) override {
+            std::vector<std::pair<std::string, std::string>> headers(std::string_view key,
+                                                                     std::string_view base = {}) override {
                 auto              out  = openai_compat::headers(key, base);
-                std::string const host = base.empty() ? base_url({}) : base;
+                std::string const host = base.empty() ? base_url({}) : std::string(base);
                 if (api_key(key).empty() && host.contains("api.openai.com")) {
                     throw std::runtime_error("no API key: set OPENAI_API_KEY or pass --api-key");
                 }
@@ -66,6 +66,6 @@ namespace dana::ai {
     // Registration runs at static-init time; a failed allocation aborts the
     // provider catalog rather than silently dropping it.
     // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
-    bool const openai_registered = register_provider(std::make_unique<openai_provider>());
+    [[maybe_unused]] bool const openai_registered = register_provider(std::make_unique<openai_provider>());
 
 } // namespace dana::ai

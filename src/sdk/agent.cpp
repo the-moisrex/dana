@@ -43,7 +43,7 @@ namespace dana::agent {
             return out;
         }
 
-        void walk_tokens(std::span<std::string const> tokens, std::vector<std::vector<std::string>>& commands);
+        void walk_tokens(text::string_views tokens, std::vector<std::vector<std::string>>& commands);
 
         // NOLINTNEXTLINE(misc-no-recursion) — a body is a tree; the depth is bounded by the parse.
         void walk_invocation(dana::prompt_invocation const& inv, std::vector<std::vector<std::string>>& commands) {
@@ -74,14 +74,15 @@ namespace dana::agent {
         }
 
         // NOLINTNEXTLINE(misc-no-recursion) — walks nested `.each` bodies.
-        void walk_tokens(std::span<std::string const> tokens, std::vector<std::vector<std::string>>& commands) {
+        void walk_tokens(text::string_views tokens, std::vector<std::vector<std::string>>& commands) {
             std::vector<char const*> argv;
             argv.reserve(tokens.size() + 1);
             argv.push_back("prompt");
             for (auto const& token : tokens) {
-                argv.push_back(token.c_str());
+                // todo: is this safe?
+                argv.emplace_back(token.data());
             }
-            auto chain = dana::parse_chain(argv, dana::get_all_prompts());
+            auto const chain = parse_chain(argv, get_all_prompts());
             if (!chain.error.empty()) {
                 return;
             }
@@ -91,15 +92,16 @@ namespace dana::agent {
         }
 
         // NOLINTNEXTLINE(misc-no-recursion) — validates nested `.each` bodies.
-        void validate_tokens(std::span<std::string const> tokens) {
+        void validate_tokens(text::string_views tokens) {
             std::vector<char const*> argv;
             argv.reserve(tokens.size() + 1);
             argv.push_back("prompt");
             for (auto const& token : tokens) {
-                argv.push_back(token.c_str());
+                // todo: is this safe?
+                argv.emplace_back(token.data());
             }
-            auto chain = dana::parse_chain(argv, dana::get_all_prompts());
-            if (!chain.error.empty()) {
+            auto const chain = parse_chain(argv, get_all_prompts());
+            if (!chain.error.empty()) [[unlikely]] {
                 throw usage_error{chain.error + "\n"};
             }
 
@@ -191,7 +193,7 @@ namespace dana::agent {
         return words;
     }
 
-    std::string join_argv(std::span<std::string const> argv) {
+    std::string join_argv(text::string_views argv) {
         std::string out;
         for (auto const& word : argv) {
             if (!out.empty()) {
@@ -242,9 +244,9 @@ namespace dana::agent {
                     value = arg.substr(std::string_view("--timeout=").size());
                 }
                 std::uint64_t seconds = 0;
-                auto const*        begin   = value.data();
-                auto const*        end     = value.data() + value.size();
-                auto [ptr, ec]             = std::from_chars(begin, end, seconds);
+                auto const*   begin   = value.data();
+                auto const*   end     = value.data() + value.size();
+                auto [ptr, ec]        = std::from_chars(begin, end, seconds);
                 if (ec != std::errc{} || ptr != end || seconds == 0) {
                     throw usage_error{"prompt exec: --timeout needs a positive number of seconds\n"};
                 }
@@ -271,13 +273,13 @@ namespace dana::agent {
         return std::string(slash == std::string_view::npos ? program : program.substr(slash + 1));
     }
 
-    std::vector<std::vector<std::string>> static_exec_commands(std::span<std::string const> chain_tokens) {
+    std::vector<std::vector<std::string>> static_exec_commands(text::string_views chain_tokens) {
         std::vector<std::vector<std::string>> commands;
         walk_tokens(chain_tokens, commands);
         return commands;
     }
 
-    void validate_exec_template(std::span<std::string const> chain_tokens) {
+    void validate_exec_template(text::string_views chain_tokens) {
         validate_tokens(chain_tokens);
     }
 

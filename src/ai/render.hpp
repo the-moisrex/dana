@@ -38,15 +38,15 @@ namespace dana::ai {
         // (empty when the turn succeeded).
         std::string finish();
 
-        [[nodiscard]] std::string const& text() const {
+        [[nodiscard]] std::string_view text() const {
             return text_;
         }
 
-        [[nodiscard]] std::string const& thinking() const {
+        [[nodiscard]] std::string_view thinking() const {
             return thinking_;
         }
 
-        [[nodiscard]] std::string const& error() const {
+        [[nodiscard]] std::string_view error() const {
             return error_;
         }
 

@@ -14,18 +14,18 @@ namespace dana {
     namespace {
 
         // git -C <root> ls-files -- <patterns...> 2>/dev/null, non-empty lines only.
-        std::vector<std::string> git_ls_files(view const& v, std::vector<std::string> const& patterns) {
+        std::vector<std::string> git_ls_files(view const& v, text::string_views patterns) {
             std::vector<std::string> storage = {"bash", "-c", R"(git -C "$0" ls-files -- "$@" 2>/dev/null)"};
             storage.push_back(v.env.git_root.string());
             for (auto const& p : patterns) {
-                storage.push_back(p);
+                storage.emplace_back(p);
             }
 
-            auto                     result = dana::process::run_command(storage);
+            auto const               result = process::run_command(storage);
             std::vector<std::string> lines;
             std::size_t              start = 0;
             while (start <= result.stdout_data.size()) {
-                std::size_t end = result.stdout_data.find('\n', start);
+                auto const end = result.stdout_data.find('\n', start);
                 if (end == std::string::npos) {
                     if (start < result.stdout_data.size()) {
                         lines.push_back(result.stdout_data.substr(start));
@@ -40,7 +40,7 @@ namespace dana {
             return lines;
         }
 
-        bool contains_ci_path(std::string const& line) {
+        bool contains_ci_path(std::string_view line) {
             static std::string const needle = ".github/workflows/";
             std::string              lower;
             lower.reserve(line.size());
@@ -67,30 +67,28 @@ namespace dana {
 
         std::vector<std::string> ci_files;
         if (!v.env.git_root.empty()) {
-            auto append = [&](std::span<std::string const> lines) {
-                for (auto const& f : lines) {
-                    ci_files.push_back(v.env.git_root.string() + "/" + f);
+            auto const append = [&](auto const& lines) {
+                for (auto const& line : lines) {
+                    ci_files.push_back(v.env.git_root.string() + "/" + line);
                 }
             };
-            for (auto const& f : git_ls_files(v, std::vector<std::string>{"*.yml", "*.yaml"})) {
+            for (auto const& f : git_ls_files(v, {"*.yml", "*.yaml"})) {
                 if (contains_ci_path(f)) {
                     ci_files.push_back(v.env.git_root.string() + "/" + f);
                 }
             }
             append(git_ls_files(
               v,
-              std::vector<std::string>{
+              {
                 ".gitlab-ci.yml",
                 ".gitlab-ci.yaml",
                 "**/.gitlab-ci.yml",
                 "**/.gitlab-ci.yaml",
               }));
-            append(git_ls_files(v, std::vector<std::string>{"*Jenkinsfile*"}));
-            append(git_ls_files(
-              v,
-              std::vector<std::string>{"*Dockerfile*", "*dockerfile*", "*docker-compose*", "*compose.y*"}));
-            append(git_ls_files(v, std::vector<std::string>{".circleci/config.yml", "**/.circleci/config.yml"}));
-            append(git_ls_files(v, std::vector<std::string>{".travis.yml", "**/.travis.yml"}));
+            append(git_ls_files(v, {"*Jenkinsfile*"}));
+            append(git_ls_files(v, {"*Dockerfile*", "*dockerfile*", "*docker-compose*", "*compose.y*"}));
+            append(git_ls_files(v, {".circleci/config.yml", "**/.circleci/config.yml"}));
+            append(git_ls_files(v, {".travis.yml", "**/.travis.yml"}));
         }
 
         if (ci_files.empty()) {

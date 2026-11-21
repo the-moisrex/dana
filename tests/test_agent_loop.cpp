@@ -24,7 +24,7 @@ namespace {
         }
     }
 
-    void check_equal(std::string const& actual, std::string const& expected, std::string_view what) {
+    void check_equal(std::string_view actual, std::string_view expected, std::string_view what) {
         if (actual != expected) {
             std::cerr << "FAIL: " << what << "\n  expected: " << expected << "\n  actual:   " << actual << '\n';
             ++failures;
@@ -48,8 +48,8 @@ namespace {
         std::vector<std::string>     prompts;
         dana::ai::agent_loop_options options;
         dana::ai::agent_loop_io      io;
-        io.turn = [&](std::string const& prompt) {
-            prompts.push_back(prompt);
+        io.turn = [&](std::string_view prompt) {
+            prompts.emplace_back(prompt);
             return answered("done");
         };
         io.run_tools = [](std::string_view) {
@@ -71,8 +71,8 @@ namespace {
         std::vector<std::string>     seen;
         dana::ai::agent_loop_options options;
         dana::ai::agent_loop_io      io;
-        io.turn = [&](std::string const& prompt) {
-            prompts.push_back(prompt);
+        io.turn = [&](std::string_view prompt) {
+            prompts.emplace_back(prompt);
             return answered(prompts.size() == 1 ? "calling" : "finished");
         };
         io.run_tools = [&](std::string_view answer) -> std::optional<std::string> {
@@ -99,7 +99,7 @@ namespace {
         dana::ai::agent_loop_options options;
         options.max_turns = 3;
         dana::ai::agent_loop_io io;
-        io.turn = [&](std::string const&) {
+        io.turn = [&](std::string_view) {
             ++turns;
             return answered("still calling");
         };
@@ -117,7 +117,7 @@ namespace {
     void test_failed_turn() {
         dana::ai::agent_loop_options options;
         dana::ai::agent_loop_io      io;
-        io.turn = [](std::string const&) {
+        io.turn = [](std::string_view) {
             dana::ai::turn_result result;
             result.status = 1;
             result.answer = "partial";
@@ -139,7 +139,7 @@ namespace {
         dana::ai::agent_loop_options options;
         options.show_tools = true;
         dana::ai::agent_loop_io io;
-        io.turn = [](std::string const&) {
+        io.turn = [](std::string_view) {
             return answered("answer");
         };
         io.run_tools = [](std::string_view) {

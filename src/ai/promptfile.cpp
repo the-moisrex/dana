@@ -171,7 +171,7 @@ namespace dana::ai {
         while (!out.empty() && (out.back() == '\n' || out.back() == '\r')) {
             out.pop_back();
         }
-        auto add = [&out](std::string const& line) {
+        auto add = [&out](std::string_view line) {
             out += '\n';
             out += line;
         };

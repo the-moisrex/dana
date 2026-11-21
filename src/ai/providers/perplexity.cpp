@@ -95,9 +95,9 @@ namespace dana::ai {
         }
 
         // Friendly names accepted by --model; the site's own ids also work.
-        std::string model_alias(std::string const& requested) {
+        std::string_view model_alias(std::string_view const requested) {
             if (auto const alias = models::resolve_alias("perplexity", requested)) {
-                return std::string(*alias);
+                return *alias;
             }
             return requested;
         }
@@ -199,9 +199,9 @@ namespace dana::ai {
             return out;
         }
 
-        bool is_answer_usage(std::string const& usage) {
+        bool is_answer_usage(std::string_view usage) {
             static std::regex const pattern(R"(^ask_text(?:_\d+(?:_markdown)?)?$)");
-            return std::regex_match(usage, pattern);
+            return std::regex_match(std::string(usage), pattern);
         }
 
         bool is_answer_item(json const& item) {
@@ -412,7 +412,7 @@ namespace dana::ai {
         }
 
         // Recover the answer from the COMPLETED frame's double-encoded step blob.
-        std::optional<std::string> answer_from_final_text(std::string const& text) {
+        std::optional<std::string> answer_from_final_text(std::string_view text) {
             std::string trimmed = trim(text);
             if (trimmed.empty()) {
                 return std::nullopt;
@@ -741,9 +741,9 @@ namespace dana::ai {
             }
 
             std::unique_ptr<conversation>
-            open(session::match const& match, std::string const& model, open_options const& options) override;
+            open(session::match const& match, std::string_view model, open_options const& options) override;
 
-            [[nodiscard]] std::string const& origin() const {
+            [[nodiscard]] std::string_view origin() const {
                 return info_.origin;
             }
 
@@ -787,12 +787,12 @@ namespace dana::ai {
               bool                                                    debug) const {
                 std::string const file_uuid = uuid4();
                 json const        entry{
-                  {    "filename",                                file.name},
-                  {"content_type",                                file.mime},
-                  {      "source",                                "default"},
+                  {    "filename",                                   file.name},
+                  {"content_type",                                   file.mime},
+                  {      "source",                                   "default"},
                   {   "file_size", static_cast<std::int64_t>(file.data.size())},
-                  { "force_image",                                    false},
-                  {"skip_parsing",                                    false},
+                  { "force_image",                                       false},
+                  {"skip_parsing",                                       false},
                 };
                 json const body{
                   {"files", json{{file_uuid, entry}}}
@@ -874,14 +874,13 @@ namespace dana::ai {
             provider_info info_;
         };
 
-        class perplexity_conversation : public conversation {
-          public:
+        struct [[nodiscard]] perplexity_conversation : conversation {
             perplexity_conversation(
-              perplexity_provider& owner,
-              session::match       match,
-              std::string          model,
-              open_options const&  options)
-              : conversation(std::move(match), std::move(model), options),
+              perplexity_provider&   owner,
+              session::match         match,
+              std::string_view const model,
+              open_options const&    options)
+              : conversation(std::move(match), model, options),
                 owner_(owner),
                 headers_(owner_.ask_headers(match_)) {
                 std::string const requested = model_.empty() ? owner_.info().default_model : model_;
@@ -894,9 +893,7 @@ namespace dana::ai {
                 }
             }
 
-            void send(std::string const&              prompt,
-                      std::vector<std::string> const& files,
-                      event_sink const&               sink) override {
+            void send(std::string_view prompt, text::string_views files, event_sink const& sink) override {
                 bool has_cookie        = false;
                 bool has_authorization = false;
                 for (auto const& header : headers_) {
@@ -1015,15 +1012,15 @@ namespace dana::ai {
             }
 
             // The text the site searches/answers, folding in a system prompt.
-            [[nodiscard]] std::string build_query(std::string const& prompt) const {
+            [[nodiscard]] std::string build_query(std::string_view prompt) const {
                 if (!backend_uuid_.empty()) {
                     if (!system_.empty() && turns_ == 0) {
                         return system_ + "\n\n" + prompt;
                     }
-                    return prompt;
+                    return std::string(prompt);
                 }
                 if (system_.empty() && history_.empty()) {
-                    return prompt;
+                    return std::string(prompt);
                 }
                 std::vector<std::string> parts;
                 if (turns_ == 0 && !system_.empty()) {
@@ -1041,10 +1038,11 @@ namespace dana::ai {
                         std::string const who  = turn.value("role", "") == "user" ? "User" : "Assistant";
                         lines                 += who + ": " + turn.value("text", "") + "\n";
                     }
-                    lines += "\nUser: " + prompt;
-                    parts.push_back(lines);
+                    lines += "\nUser: ";
+                    lines += prompt;
+                    parts.emplace_back(lines);
                 } else {
-                    parts.push_back(prompt);
+                    parts.emplace_back(prompt);
                 }
                 std::string query;
                 for (auto const& part : parts) {
@@ -1059,15 +1057,14 @@ namespace dana::ai {
                 return query;
             }
 
-            [[nodiscard]] json build_body(std::string const&              query,
-                                          std::string const&              prompt,
-                                          std::vector<std::string> const& attachments) const {
+            [[nodiscard]] json
+            build_body(std::string_view query, std::string_view prompt, text::string_views attachments) const {
                 json cases = json::array();
                 for (auto const& value : kSupportedBlockUseCases) {
                     cases.push_back(std::string(value));
                 }
                 json params{
-                  {                         "attachments",                                           attachments},
+                  {                         "attachments",          attachments | std::ranges::to<std::vector>()},
                   {                            "language",                                               "en-US"},
                   {                            "timezone",                                       timezone_name()},
                   {                        "search_focus",                                            "internet"},
@@ -1124,7 +1121,7 @@ namespace dana::ai {
         };
 
         std::unique_ptr<conversation>
-        perplexity_provider::open(session::match const& match, std::string const& model, open_options const& options) {
+        perplexity_provider::open(session::match const& match, std::string_view model, open_options const& options) {
             return std::make_unique<perplexity_conversation>(*this, match, model, options);
         }
 

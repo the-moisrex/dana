@@ -69,7 +69,7 @@ namespace dana::compress::include_map {
 
         // Resolve an include target against the usual project-relative roots, keeping
         // only a regular file that lives under the project root.
-        std::optional<path> resolve_header(path const& root, path const& file_dir, std::string const& target) {
+        std::optional<path> resolve_header(path const& root, path const& file_dir, std::string_view target) {
             std::vector<path> const bases{file_dir, root, root / "include", root / "src", root / "inc"};
             for (auto const& base : bases) {
                 std::error_code ec;
@@ -151,8 +151,7 @@ namespace dana::compress::include_map {
         return out;
     }
 
-    std::string
-    render(region const& r, signals const& s, std::span<std::string const> includes, std::size_t max_headers) {
+    std::string render(region const& r, signals const& s, text::string_views includes, std::size_t max_headers) {
         if (includes.empty() || max_headers == 0) {
             return {};
         }
@@ -225,7 +224,8 @@ namespace dana::compress::include_map {
     }
 
     std::string render(region const& r, signals const& s) {
-        return render(r, s, cpp::scan(r.text).includes);
+        auto const includes = cpp::scan(r.text).includes;
+        return render(r, s, includes);
     }
 
     namespace {

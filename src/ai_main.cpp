@@ -12,9 +12,9 @@
 
 namespace {
 
-    std::string base_name(std::string const& path) {
+    std::string_view base_name(std::string_view path) {
         auto const slash = path.find_last_of('/');
-        return slash == std::string::npos ? path : path.substr(slash + 1);
+        return slash == std::string_view::npos ? path : path.substr(slash + 1);
     }
 
 } // namespace
@@ -22,7 +22,7 @@ namespace {
 int main(int argc, char** argv) {
     std::signal(SIGPIPE, SIG_DFL);
 
-    std::string              command = argc > 0 ? base_name(argv[0]) : "ai.cli";
+    std::string              command = argc > 0 ? std::string(base_name(argv[0])) : "ai.cli";
     std::vector<std::string> args;
     for (int i = 1; i < argc; ++i) {
         args.emplace_back(argv[i]);
@@ -47,13 +47,13 @@ int main(int argc, char** argv) {
     if (!args.empty()) {
         std::string const first = args.front();
         if (first == "keys") {
-            return dana::ai::run_keys_cli({args.begin() + 1, args.end()});
+            return dana::ai::run_keys_cli(std::span{args}.subspan(1));
         }
         if (first == "debate") {
-            return dana::ai::run_debate_cli({args.begin() + 1, args.end()});
+            return dana::ai::run_debate_cli(std::span{args}.subspan(1));
         }
         if (dana::ai::canonical_provider(first)) {
-            return dana::ai::run_provider_cli(first, {args.begin() + 1, args.end()});
+            return dana::ai::run_provider_cli(first, std::span{args.begin() + 1, args.end()});
         }
     }
 

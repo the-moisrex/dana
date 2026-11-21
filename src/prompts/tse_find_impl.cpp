@@ -423,7 +423,7 @@ print(command)
         };
 
         // Resolve a file token: as given, then under the git root.
-        std::optional<std::filesystem::path> resolve_exact_file(std::string const&           file,
+        std::optional<std::filesystem::path> resolve_exact_file(std::string_view             file,
                                                                 std::filesystem::path const& git_root) {
             std::error_code ec;
             if (std::filesystem::is_regular_file(std::filesystem::path(file), ec)) {
@@ -749,12 +749,10 @@ print(command)
                 for (auto const& file : input.review_files) {
                     // `$(cat -- "$resolved")`: its stderr is inherited and its
                     // trailing newlines are dropped by the capture.
-                    auto const payload = process::captured(dana::process::run_command({"cat", "--", file}).stdout_data);
-                    auto       rendered = emit_review(
-                      "doc",
-                      dana::fs::relative_path(file, v.env.git_root).string(),
-                      payload,
-                      parsed.head_lines);
+                    std::array<std::string, 3> const cmdline{"cat", "--", file.string()};
+                    auto const payload = process::captured(process::run_command(cmdline).stdout_data);
+                    auto       rendered =
+                      emit_review("doc", fs::relative_path(file, v.env.git_root).string(), payload, parsed.head_lines);
                     output += rendered.output;
                     if (rendered.exit_code != 0) {
                         throw usage_error{std::move(rendered.error), std::move(output)};
@@ -810,7 +808,8 @@ print(command)
         }
 
         // Generator: embed the tool's own --help as the flag reference.
-        auto help_run = dana::process::run_command({"bash", "-c", R"(NO_COLOR=1 "$0" "$@" 2>&1)", tool, "--help"});
+        std::array<std::string, 5> const cmdline{"bash", "-c", R"(NO_COLOR=1 "$0" "$@" 2>&1)", tool, "--help"};
+        auto const                       help_run = process::run_command(cmdline);
         if (help_run.exit_code != 0) {
             throw soft_error{
               "prompt tse.find: tse.find --help failed:\n" + process::captured(help_run.stdout_data) + "\n",

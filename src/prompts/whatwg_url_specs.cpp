@@ -27,12 +27,13 @@ Ensure that any code, fixes, or analysis strictly adhere to these standard algor
         if (sections.empty()) {
             // No queries: the tool's --help is streamed verbatim inside a code
             // fence (no --head applied here), preceded by the stderr warning.
-            auto result  = dana::process::run_command({tool, "--help"});
-            output      += "```text\n";
-            output      += result.stdout_data;
-            output      += "```\n\n";
-            r.out        = std::move(output);
-            r.err        = "Warning: No queries provided. Use 'list' to see sections or provide specific keywords.\n";
+            std::array<std::string, 2> const cmdline{tool.string(), "--help"};
+            auto const                       result  = process::run_command(cmdline);
+            output                                  += "```text\n";
+            output                                  += result.stdout_data;
+            output                                  += "```\n\n";
+            r.out                                    = std::move(output);
+            r.err = "Warning: No queries provided. Use 'list' to see sections or provide specific keywords.\n";
             return;
         }
 
@@ -51,7 +52,7 @@ Ensure that any code, fixes, or analysis strictly adhere to these standard algor
         for (auto const& s : sections) {
             storage.push_back(s);
         }
-        auto result  = dana::process::run_command(storage);
+        auto result  = process::run_command(storage);
         output      += trim_context_nl(result.stdout_data, head_lines);
         output      += "```\n\n";
 

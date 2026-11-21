@@ -27,7 +27,7 @@ namespace dana {
 
     // No fixed limits: the arguments are views into argv, so an arbitrary chain
     // costs one small vector per invocation and nothing is silently truncated.
-    chain_result parse_chain(std::span<char const* const> argv, std::span<prompt_descriptor const> registry);
+    chain_result parse_chain(text::string_views argv, std::span<prompt_descriptor const> registry);
 
     // A maximal run of ordinary prompts or sinks, in argv order. A normal run is
     // one batch (parallel when no stdin is pending); a sink run chains its sinks

@@ -9,10 +9,9 @@
 
 namespace dana {
 
-    std::string
-    parse_head_option(text::string_views args, std::optional<std::size_t>& head_lines, bool strict) {
+    std::string parse_head_option(text::string_views args, std::optional<std::size_t>& head_lines, bool strict) {
         for (std::size_t i = 0; i < args.size(); ++i) {
-            if (args[i] != "--head") {
+            if (args.at(i) != "--head") {
                 continue;
             }
             if (i + 1 >= args.size()) {
@@ -32,9 +31,9 @@ namespace dana {
             if (value.empty() || value.find_first_not_of("0123456789") != std::string_view::npos) {
                 return "--head requires a non-negative integer\n";
             }
-            std::string        copy(value);
-            char const*        begin  = copy.c_str();
-            char*              end    = nullptr;
+            std::string   copy(value);
+            char const*   begin  = copy.c_str();
+            char*         end    = nullptr;
             std::uint64_t parsed = std::strtoull(begin, &end, 10);
             if (end != begin + copy.size()) {
                 return "--head requires a non-negative integer\n";
@@ -101,14 +100,14 @@ namespace dana {
         std::vector<std::string> out;
         out.reserve(args.size());
         for (std::size_t i = 0; i < args.size(); ++i) {
-            if (args[i] == "--head") {
+            if (args.at(i) == "--head") {
                 ++i;
                 continue;
             }
-            if (is_number_flag(args[i]) || args[i] == kNoDedupFlag) {
+            if (is_number_flag(args.at(i)) || args.at(i) == kNoDedupFlag) {
                 continue;
             }
-            out.emplace_back(args[i]);
+            out.emplace_back(args.at(i));
         }
         return out;
     }
@@ -120,18 +119,18 @@ namespace dana {
     file_args collect_file_args(text::string_views args) {
         file_args result;
         for (std::size_t i = 0; i < args.size(); ++i) {
-            if (args[i] == "--head") {
+            if (args.at(i) == "--head") {
                 ++i;
                 continue;
             }
-            if (is_number_flag(args[i]) || args[i] == kNoDedupFlag) {
+            if (is_number_flag(args.at(i)) || args.at(i) == kNoDedupFlag) {
                 continue;
             }
-            std::filesystem::path file(args[i]);
+            std::filesystem::path file(args.at(i));
             if (std::filesystem::is_regular_file(file)) {
                 result.files.push_back(std::move(file));
             } else {
-                result.missing.push_back(args[i]);
+                result.missing.push_back(args.at(i));
             }
         }
         return result;

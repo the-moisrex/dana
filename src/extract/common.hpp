@@ -73,7 +73,7 @@ namespace dana::extract {
             }
             return false;
         }
-        return std::ranges::any_of(families, [&](std::string const& f) {
+        return std::ranges::any_of(families, [&](std::string_view f) {
             return b.lang == f;
         });
     }

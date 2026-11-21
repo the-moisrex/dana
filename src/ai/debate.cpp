@@ -39,16 +39,16 @@ namespace dana::ai {
             using std::runtime_error::runtime_error;
         };
 
-        std::string trim(std::string_view value) {
-            std::size_t first = value.find_first_not_of(" \t\r\n");
+        std::string trim(std::string_view const value) {
+            auto const first = value.find_first_not_of(" \t\r\n");
             if (first == std::string_view::npos) {
                 return {};
             }
-            std::size_t last = value.find_last_not_of(" \t\r\n");
+            auto const last = value.find_last_not_of(" \t\r\n");
             return std::string(value.substr(first, last - first + 1));
         }
 
-        std::string join(std::vector<std::string> const& parts, std::string_view separator) {
+        std::string join(text::string_views parts, std::string_view const separator) {
             std::string text;
             for (std::size_t i = 0; i < parts.size(); ++i) {
                 if (i != 0) {
@@ -59,7 +59,7 @@ namespace dana::ai {
             return text;
         }
 
-        std::string join_words(std::vector<std::string> const& words) {
+        std::string join_words(text::string_views words) {
             std::string text;
             for (auto const& word : words) {
                 if (!text.empty()) {
@@ -88,13 +88,13 @@ namespace dana::ai {
             return true;
         }
 
-        std::string expand_user(std::string const& path) {
+        std::string expand_user(std::string_view path) {
             if (path.size() >= 2 && path[0] == '~' && path[1] == '/') {
                 if (char const* home = std::getenv("HOME"); home != nullptr) {
                     return std::string(home) + path.substr(1);
                 }
             }
-            return path;
+            return std::string(path);
         }
 
         // ---------------------------------------------------------------------------
@@ -110,20 +110,20 @@ namespace dana::ai {
                 if (end == std::string_view::npos) {
                     end = answer.size();
                 }
-                std::string_view line  = answer.substr(position, end - position);
-                std::size_t      start = 0;
+                auto const  line  = answer.substr(position, end - position);
+                std::size_t start = 0;
                 while (start < line.size() && std::isspace(static_cast<unsigned char>(line[start])) != 0) {
                     ++start;
                 }
-                std::string_view           rest   = line.substr(start);
+                auto const                 rest   = line.substr(start);
                 constexpr std::string_view prefix = "verdict:";
                 if (rest.size() >= prefix.size() && equals_ignore_case(rest.substr(0, prefix.size()), prefix)) {
                     std::size_t value_at = prefix.size();
                     while (value_at < rest.size() && std::isspace(static_cast<unsigned char>(rest[value_at])) != 0) {
                         ++value_at;
                     }
-                    std::string_view value = rest.substr(value_at);
-                    for (std::string_view candidate : {"AGREE", "DISAGREE"}) {
+                    std::string_view const value = rest.substr(value_at);
+                    for (std::string_view const candidate : {"AGREE", "DISAGREE"}) {
                         if (value.size() < candidate.size()) {
                             continue;
                         }
@@ -164,10 +164,10 @@ namespace dana::ai {
 
         debate_result run_panel(
           std::vector<debate_participant> const& participants,
-          std::string const&                     question,
+          std::string_view                       question,
           int                                    rounds,
           bool                                   until_agree,
-          std::string const&                     instruction,
+          std::string_view                       instruction,
           debate_writer const&                   writer,
           debate_turn_observer const&            on_turn) {
             debate_result                                      result;
@@ -244,15 +244,14 @@ namespace dana::ai {
         // The plain side channel (`--context-file`) and the clipboard text
         // ---------------------------------------------------------------------------
 
-        struct written_turn {
+        struct [[nodiscard]] written_turn {
             std::string provider;
             int         round = 0;
             std::string answer;
         };
 
-        class context_writer {
-          public:
-            context_writer(std::string path, std::string const& mode, std::string const& question)
+        struct [[nodiscard]] context_writer {
+            context_writer(std::string path, std::string_view mode, std::string_view question)
               : path_(std::move(path)),
                 mode_(mode == "all" ? "all" : "last"),
                 question_(trim(question)) {
@@ -264,8 +263,8 @@ namespace dana::ai {
                 }
             }
 
-            void add(std::string const& provider, int round_no, std::string const& answer) {
-                turns_.push_back({.provider = provider, .round = round_no, .answer = trim(answer)});
+            void add(std::string_view provider, int round_no, std::string_view answer) {
+                turns_.emplace_back(std::string(provider), round_no, trim(answer));
                 flush();
             }
 
@@ -288,7 +287,7 @@ namespace dana::ai {
                 return !error_.empty();
             }
 
-            [[nodiscard]] std::string const& error() const {
+            [[nodiscard]] std::string_view error() const {
                 return error_;
             }
 
@@ -323,98 +322,98 @@ namespace dana::ai {
         // ---------------------------------------------------------------------------
 
         struct debate_options {
-            std::vector<std::string>   words;
-            int                        rounds      = 2;
-            bool                       until_agree = false;
-            std::optional<std::string> instruction;
-            bool                       no_instruction = false;
-            std::string                context        = "last";
-            bool                       transcript     = false;
-            bool                       continue_      = false;
-            bool                       new_           = false;
-            std::string                system;
-            std::vector<std::string>   model_specs;
-            std::vector<std::string>   files;
-            std::optional<bool>        prompt_file;
-            std::optional<std::int64_t>   prompt_limit;
-            std::optional<bool>        thinking;
-            bool                       json     = false;
-            bool                       raw      = false;
-            bool                       tty      = false;
-            bool                       copy     = false;
-            bool                       no_color = false;
-            bool                       debug    = false;
-            double                     timeout  = 600;
-            std::string                base_url;
-            std::string                api_key;
-            std::vector<std::string>   params;
-            std::vector<std::string>   browser;
-            std::string                profile;
-            std::string                family;
-            bool                       open_only     = false;
-            bool                       exact         = false;
-            bool                       print_session = false;
-            bool                       print_prompt  = false;
-            bool                       list          = false;
-            bool                       stdin_only    = false;
-            std::string                context_file;
-            int                        width  = 0;
-            int                        height = 0;
-            bool                       help   = false;
+            std::vector<std::string>    words;
+            int                         rounds      = 2;
+            bool                        until_agree = false;
+            std::optional<std::string>  instruction;
+            bool                        no_instruction = false;
+            std::string                 context        = "last";
+            bool                        transcript     = false;
+            bool                        continue_      = false;
+            bool                        new_           = false;
+            std::string                 system;
+            std::vector<std::string>    model_specs;
+            std::vector<std::string>    files;
+            std::optional<bool>         prompt_file;
+            std::optional<std::int64_t> prompt_limit;
+            std::optional<bool>         thinking;
+            bool                        json     = false;
+            bool                        raw      = false;
+            bool                        tty      = false;
+            bool                        copy     = false;
+            bool                        no_color = false;
+            bool                        debug    = false;
+            double                      timeout  = 600;
+            std::string                 base_url;
+            std::string                 api_key;
+            std::vector<std::string>    params;
+            std::vector<std::string>    browser;
+            std::string                 profile;
+            std::string                 family;
+            bool                        open_only     = false;
+            bool                        exact         = false;
+            bool                        print_session = false;
+            bool                        print_prompt  = false;
+            bool                        list          = false;
+            bool                        stdin_only    = false;
+            std::string                 context_file;
+            int                         width  = 0;
+            int                         height = 0;
+            bool                        help   = false;
         };
 
-        int parse_integer(std::string const& flag, std::string const& value) {
+        int parse_integer(std::string_view flag, std::string_view value) {
             try {
                 std::size_t used   = 0;
-                int const   number = std::stoi(value, &used);
+                int const   number = std::stoi(std::string(value), &used);
                 if (used != value.size()) {
-                    throw std::invalid_argument(value);
+                    throw std::invalid_argument(std::string(value));
                 }
                 return number;
             } catch (std::exception const&) {
-                throw debate_usage_error(flag + " expects an integer, got '" + value + "'");
+                throw debate_usage_error(std::format("{} expects an integer, got '{}'", flag, value));
             }
         }
 
-        double parse_number(std::string const& flag, std::string const& value) {
+        double parse_number(std::string_view flag, std::string_view value) {
             try {
                 std::size_t  used   = 0;
-                double const number = std::stod(value, &used);
+                double const number = std::stod(std::string(value), &used);
                 if (used != value.size()) {
-                    throw std::invalid_argument(value);
+                    throw std::invalid_argument(std::string(value));
                 }
                 return number;
             } catch (std::exception const&) {
-                throw debate_usage_error(flag + " expects a number, got '" + value + "'");
+                throw debate_usage_error(std::format("{} expects a number, got '{}'", flag, value));
             }
         }
 
-        debate_options parse_options(std::vector<std::string> const& argv) {
+        debate_options parse_options(text::string_views argv) {
             debate_options options;
-            auto           value_of = [&argv](std::size_t& index, std::string_view flag) -> std::string {
-                std::string const& token  = argv[index];
-                auto const         equals = token.find('=');
+            auto const     value_of = [&argv](std::size_t& index, std::string_view flag) -> std::string {
+                auto const token  = argv[index];
+                auto const equals = token.find('=');
                 if (equals != std::string::npos) {
-                    return token.substr(equals + 1);
+                    return std::string(token.substr(equals + 1));
                 }
                 if (index + 1 >= argv.size()) {
                     throw debate_usage_error(std::string(flag) + " needs a value");
                 }
-                return argv[++index];
+                return std::string(argv[++index]);
             };
 
             bool positional_only = false;
             for (std::size_t i = 0; i < argv.size(); ++i) {
-                std::string const& token = argv[i];
+                auto const token = argv[i];
                 if (positional_only || token.empty() || token.front() != '-' || token == "-") {
-                    options.words.push_back(token);
+                    options.words.emplace_back(token);
                     continue;
                 }
                 if (token == "--") {
                     positional_only = true;
                     continue;
                 }
-                std::string const name = token.substr(0, token.find('='));
+                auto const name = token.substr(0, token.find('='));
                 if (name == "-h" || name == "--help") {
                     options.help = true;
                 } else if (name == "--rounds") {
@@ -502,7 +501,7 @@ namespace dana::ai {
                 } else if (name == "--height") {
                     options.height = parse_integer(name, value_of(i, name));
                 } else {
-                    throw debate_usage_error("unrecognized argument: " + token);
+                    throw debate_usage_error(std::format("unrecognized argument: {}", token));
                 }
             }
             return options;
@@ -517,8 +516,7 @@ namespace dana::ai {
             return canonical_provider(name);
         }
 
-        std::pair<std::vector<std::string>, std::vector<std::string>> split_providers(
-          std::vector<std::string> const& words) {
+        std::pair<std::vector<std::string>, std::vector<std::string>> split_providers(text::string_views words) {
             std::vector<std::string> names;
             std::size_t              index = 0;
             while (index < words.size()) {
@@ -535,24 +533,23 @@ namespace dana::ai {
             };
         }
 
-        std::map<std::string, std::string> parse_models(std::vector<std::string> const& specs,
-                                                        std::vector<std::string> const& names) {
+        std::map<std::string, std::string> parse_models(text::string_views specs, text::string_views names) {
             std::map<std::string, std::string> models;
             for (auto const& spec : specs) {
                 auto const equals = spec.find('=');
-                if (equals == std::string::npos) {
-                    throw debate_usage_error("--model expects PROVIDER=MODEL, got '" + spec + "'");
+                if (equals == std::string::npos) [[unlikely]] {
+                    throw debate_usage_error(std::format("--model expects PROVIDER=MODEL, got '{}'", spec));
                 }
                 std::string const raw_name  = trim(spec.substr(0, equals));
                 std::string const model     = trim(spec.substr(equals + 1));
                 auto const        canonical = debate_alias(raw_name);
                 std::string const name      = canonical ? *canonical : raw_name;
-                if (std::ranges::find(names, name) == names.end()) {
+                if (std::ranges::find(names, name) == names.end()) [[unlikely]] {
                     throw debate_usage_error(
                       "--model names '" + name + "', which is not one of this debate's providers (" +
                       join(names, ", ") + ")");
                 }
-                if (model.empty()) {
+                if (model.empty()) [[unlikely]] {
                     throw debate_usage_error("--model " + name + "= needs a model name");
                 }
                 models[name] = model;
@@ -562,7 +559,7 @@ namespace dana::ai {
 
         std::string instruction_for(debate_options const& options) {
             if (options.no_instruction) {
-                if (options.until_agree) {
+                if (options.until_agree) [[unlikely]] {
                     throw debate_usage_error("--until-agree needs the verification instruction");
                 }
                 return {};
@@ -575,11 +572,9 @@ namespace dana::ai {
             return text;
         }
 
-        void print_plan(std::vector<std::string> const& names,
-                        std::string const&              question,
-                        std::string const&              instruction) {
+        void print_plan(text::string_views names, std::string_view const question, std::string_view const instruction) {
             std::vector<std::string> parts;
-            parts.emplace_back("# turn 1 → " + names.front());
+            parts.emplace_back("# turn 1 → " + std::string(names.front()));
             parts.emplace_back(trim(question));
             parts.emplace_back("# later turns");
             parts.emplace_back("Another AI said:");
@@ -678,9 +673,9 @@ namespace dana::ai {
                 if (line.size() < 10) {
                     line.append(10 - line.size(), ' ');
                 }
-                line              += ' ';
-                std::string label  = instance->info().label;
-                line              += label;
+                line             += ' ';
+                auto const label  = instance->info().label;
+                line             += label;
                 if (label.size() < 10) {
                     line.append(10 - label.size(), ' ');
                 }
@@ -695,15 +690,15 @@ namespace dana::ai {
         }
 
         std::map<std::string, session::match> load_sessions(
-          std::vector<std::string> const&         names,
+          text::string_views                      names,
           std::map<std::string, provider*> const& providers,
           debate_options const&                   options) {
             std::map<std::string, session::match> matches;
-            for (auto const& name : names) {
-                provider* instance = providers.at(name);
+            for (auto const name : names) {
+                provider* instance = providers.at(std::string(name));
                 if (!instance->info().needs_session) {
                     // An API provider is configured, not signed in.
-                    matches[name] = session::match{};
+                    matches[std::string(name)] = session::match{};
                     continue;
                 }
                 session::options session_options;
@@ -718,7 +713,7 @@ namespace dana::ai {
                         throw debate_error("no signed-in session found for " + instance->info().session_target +
                                            "; open " + instance->info().origin + " in a browser once");
                     }
-                    matches[name] = *found;
+                    matches[std::string(name)] = *found;
                 } catch (session::session_error const& failure) {
                     throw debate_error(failure.what());
                 }
@@ -753,25 +748,25 @@ namespace dana::ai {
             return report;
         }
 
-        void check_files(std::vector<std::string> const& paths) {
+        void check_files(text::string_views paths) {
             for (auto const& path : paths) {
                 std::string const full = expand_user(path);
                 std::error_code   ec;
-                if (!fs::exists(full, ec)) {
-                    throw debate_error(path + ": no such file");
+                if (!fs::exists(full, ec)) [[unlikely]] {
+                    throw debate_error(std::string(path) + ": no such file");
                 }
-                if (!fs::is_regular_file(full, ec)) {
-                    throw debate_error(path + ": not a regular file");
+                if (!fs::is_regular_file(full, ec)) [[unlikely]] {
+                    throw debate_error(std::string(path) + ": not a regular file");
                 }
-                if (::access(full.c_str(), R_OK) != 0) {
-                    throw debate_error(path + ": permission denied");
+                if (::access(full.c_str(), R_OK) != 0) [[unlikely]] {
+                    throw debate_error(std::string(path) + ": permission denied");
                 }
             }
         }
 
         std::optional<std::map<std::string, state::conversation_record>> saved_debate(
-          std::vector<std::string> const& names,
-          debate_options const&           options) {
+          text::string_views    names,
+          debate_options const& options) {
             if (options.new_) {
                 state::clear_debate(names);
                 return std::nullopt;
@@ -786,9 +781,11 @@ namespace dana::ai {
             }
             std::vector<std::string> continuing;
             std::vector<std::string> missing;
-            for (auto const& name : names) {
-                (saved->contains(name) ? continuing : missing).push_back(name);
+            for (auto const name : names) {
+                // todo: too many string copying
+                (saved->contains(std::string(name)) ? continuing : missing).emplace_back(name);
             }
+            // todo: don't use std::cerr, use println
             std::cerr << "[ai.debate] continuing " << join(continuing, ", ") << '\n';
             if (!missing.empty()) {
                 std::cerr << "[ai.debate] no saved chat for " << join(missing, ", ") << "; starting a new one\n";
@@ -811,7 +808,7 @@ namespace dana::ai {
                 args_(std::move(args)),
                 saver_(std::move(saver)) {}
 
-            [[nodiscard]] std::string const& name() const {
+            [[nodiscard]] std::string_view name() const {
                 return name_;
             }
 
@@ -825,7 +822,7 @@ namespace dana::ai {
                 return value;
             }
 
-            std::pair<int, std::string> ask(std::string const& prompt, json const& fields) {
+            std::pair<int, std::string> ask(std::string_view prompt, json const& fields) {
                 turn_options turn;
                 turn.json         = args_.json;
                 turn.raw          = args_.raw;
@@ -873,7 +870,7 @@ namespace dana::ai {
 
         void open_participants(
           std::vector<participant_impl>&                                          participants,
-          std::vector<std::string> const&                                         names,
+          text::string_views                                                      names,
           std::map<std::string, provider*> const&                                 providers,
           std::map<std::string, session::match> const&                            matches,
           std::map<std::string, std::string> const&                               models,
@@ -882,22 +879,25 @@ namespace dana::ai {
             std::function<void()> save_all = [&names, &participants] {
                 std::map<std::string, state::conversation_record> records;
                 for (auto const& participant : participants) {
-                    records[participant.name()] = participant.record();
+                    // todo: too many string copying
+                    records[std::string(participant.name())] = participant.record();
                 }
                 state::save_debate(names, records);
             };
             try {
-                for (auto const& name : names) {
-                    provider*                                 instance = providers.at(name);
+                for (auto const name : names) {
+                    // todo: too many string copying
+                    std::string const                         name_str(name);
+                    provider*                                 instance = providers.at(name_str);
                     std::optional<state::conversation_record> resume;
                     if (saved) {
-                        auto const found = saved->find(name);
+                        auto const found = saved->find(name_str);
                         if (found != saved->end()) {
                             resume = found->second;
                         }
                     }
                     std::string requested;
-                    auto const  chosen = models.find(name);
+                    auto const  chosen = models.find(name_str);
                     if (chosen != models.end()) {
                         requested = chosen->second;
                     } else if (resume) {
@@ -925,7 +925,7 @@ namespace dana::ai {
                     }
                     std::unique_ptr<conversation> chat;
                     try {
-                        chat = instance->open(matches.at(name), model, open);
+                        chat = instance->open(matches.at(name_str), model, open);
                     } catch (std::exception const& failure) {
                         throw debate_error(failure.what());
                     }
@@ -949,7 +949,7 @@ namespace dana::ai {
                         value.height       = options.height;
                         return value;
                     }();
-                    participants.emplace_back(name, *instance, std::move(chat), std::move(args), save_all);
+                    participants.emplace_back(name_str, *instance, std::move(chat), std::move(args), save_all);
                 }
             } catch (...) {
                 for (auto& participant : participants) {
@@ -964,7 +964,7 @@ namespace dana::ai {
             return [&options](int                               turn_no,
                               int                               total,
                               int                               round_no,
-                              std::string const&                name,
+                              std::string_view                  name,
                               std::optional<std::string> const& previous) {
                 if (turn_no > 1 && !options.json) {
                     std::cout << '\n';
@@ -998,16 +998,16 @@ namespace dana::ai {
 
     debate_result run_debate_panel(
       std::vector<debate_participant> const& participants,
-      std::string const&                     question,
+      std::string_view                       question,
       int                                    rounds,
       bool                                   until_agree,
-      std::string const&                     instruction,
+      std::string_view                       instruction,
       debate_writer const&                   writer,
       debate_turn_observer const&            on_turn) {
         return run_panel(participants, question, rounds, until_agree, instruction, writer, on_turn);
     }
 
-    int run_debate_cli(std::vector<std::string> const& argv) {
+    int run_debate_cli(text::string_views argv) {
         debate_options options;
         try {
             options = parse_options(argv);
@@ -1148,9 +1148,9 @@ namespace dana::ai {
             for (auto& participant : participants) {
                 participant_impl* entry = &participant;
                 panel.push_back({
-                  .name = participant.name(),
+                  .name = std::string(participant.name()),
                   .ask =
-                    [entry](std::string const& prompt, json const& fields) {
+                    [entry](std::string_view prompt, json const& fields) {
                         return entry->ask(prompt, fields);
                     },
                 });
@@ -1161,7 +1161,7 @@ namespace dana::ai {
               options.rounds,
               options.until_agree,
               instruction,
-              [&writer](std::string const& name, int round_no, std::string const& answer) {
+              [&writer](std::string_view name, int round_no, std::string_view answer) {
                   writer.add(name, round_no, answer);
               },
               header_printer(options));

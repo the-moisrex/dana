@@ -20,13 +20,13 @@ namespace dana {
 
     namespace {
 
-        std::string git_raw(std::vector<std::string> const& args) {
+        std::string git_raw(text::string_views args) {
             return dana::process::run_command(args).stdout_data;
         }
 
         // Port of `var="$(git ...)"` — trailing newlines stripped (matters for the
         // `[[ -n ]]` content checks and the `echo "$var"` renders).
-        std::string capture(std::vector<std::string> const& args) {
+        std::string capture(text::string_views args) {
             std::string out = git_raw(args);
             while (!out.empty() && out.back() == '\n') {
                 out.pop_back();
@@ -43,7 +43,7 @@ namespace dana {
             }
             std::size_t start = 0;
             while (true) {
-                std::size_t nl = s.find('\n', start);
+                auto const nl = s.find('\n', start);
                 if (nl == std::string_view::npos) {
                     out.emplace_back(s.substr(start));
                     break;
@@ -128,10 +128,7 @@ namespace dana {
             output_files = true;
         }
 
-        if (
-          dana::process::run_command(std::vector<std::string>{"git", "rev-parse", "--is-inside-work-tree"}).exit_code !=
-          0)
-        {
+        if (process::run_command({"git", "rev-parse", "--is-inside-work-tree"}).exit_code != 0) {
             throw soft_error{"prompt git-dirty: Error: Not inside a git repository.\n"};
         }
 
@@ -146,7 +143,7 @@ namespace dana {
                 spec.clear();
             }
         }
-        auto capture_in_scope = [&](std::vector<std::string> args) {
+        auto const capture_in_scope = [&](std::vector<std::string> args) {
             if (!spec.empty()) {
                 args.emplace_back("--");
                 args.push_back(spec);
@@ -268,7 +265,7 @@ namespace dana {
         // suffix (e.g. "(new)" or "(status: M)"); a no-op when the file is absent.
         // `track` marks a full-file emission for the chain-wide dedup; a diff-only
         // mode passes false, since a diff is not the file's content.
-        auto emit_file = [&](std::string const& filepath, std::string const& heading, bool track) {
+        auto emit_file = [&](std::string_view filepath, std::string_view heading, bool track) {
             std::filesystem::path full = git_root / filepath;
             std::error_code       ec;
             if (!std::filesystem::is_regular_file(full, ec) || ec) {
@@ -294,7 +291,7 @@ namespace dana {
 
         // Iterate a name-status list ("M\tpath" per line), splitting on the first
         // tab exactly like `IFS=$'\t' read -r status filepath`.
-        auto const each_name_status = [&](std::string const& files, auto&& fn) {
+        auto const each_name_status = [&](std::string_view files, auto&& fn) {
             for (auto const& line : split_lines(files)) {
                 std::size_t const tab      = line.find('\t');
                 std::string const status   = line.substr(0, tab);
@@ -330,14 +327,14 @@ namespace dana {
         } else if (output_full) {
             if (!staged_files.empty()) {
                 output += "Staged files:\n\n";
-                each_name_status(staged_files, [&](std::string const& st, std::string const& fp) {
-                    emit_file(fp, "(status: " + st + ")", true);
+                each_name_status(staged_files, [&](std::string_view const st, std::string_view const fp) {
+                    emit_file(fp, std::format("(status: {})", st), true);
                 });
             }
             if (!unstaged_files.empty()) {
                 output += "Unstaged files:\n\n";
-                each_name_status(unstaged_files, [&](std::string const& st, std::string const& fp) {
-                    emit_file(fp, "(status: " + st + ")", true);
+                each_name_status(unstaged_files, [&](std::string_view const st, std::string_view const fp) {
+                    emit_file(fp, std::format("(status: {})", st), true);
                 });
             }
             if (!untracked_files.empty()) {
@@ -349,8 +346,8 @@ namespace dana {
         } else if (output_full_diff) {
             if (!staged_files.empty()) {
                 output += "Staged files:\n\n";
-                each_name_status(staged_files, [&](std::string const& st, std::string const& fp) {
-                    emit_file(fp, "(status: " + st + ")", true);
+                each_name_status(staged_files, [&](std::string_view const st, std::string_view fp) {
+                    emit_file(fp, std::format("(status: {})", st), true);
                 });
                 if (!staged_diff.empty()) {
                     output += std::format("Diffs:\n\n```diff\n{}```\n\n", trim_context_nl(staged_diff, head_lines));
@@ -358,8 +355,8 @@ namespace dana {
             }
             if (!unstaged_files.empty()) {
                 output += "Unstaged files:\n\n";
-                each_name_status(unstaged_files, [&](std::string const& st, std::string const& fp) {
-                    emit_file(fp, "(status: " + st + ")", true);
+                each_name_status(unstaged_files, [&](std::string_view const st, std::string_view const fp) {
+                    emit_file(fp, std::format("(status: {})", st), true);
                 });
                 if (!unstaged_diff.empty()) {
                     output += std::format("Diffs:\n\n```diff\n{}```\n\n", trim_context_nl(unstaged_diff, head_lines));

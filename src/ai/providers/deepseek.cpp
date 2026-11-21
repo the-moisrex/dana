@@ -177,7 +177,7 @@ namespace dana::ai {
 
         // Find the `{"id": file_id, ..., "status": ...}` record inside a nested
         // response (iterative, so a deeply nested body cannot overflow the stack).
-        json find_file(json const& root, std::string const& file_id) {
+        json find_file(json const& root, std::string_view file_id) {
             std::vector<json const*> stack{&root};
             while (!stack.empty()) {
                 json const* node = stack.back();
@@ -337,7 +337,7 @@ namespace dana::ai {
                 return out;
             }
 
-            std::vector<stream_event> content(std::string const& text) {
+            std::vector<stream_event> content(std::string_view text) {
                 if (text.empty()) {
                     return {};
                 }
@@ -348,11 +348,11 @@ namespace dana::ai {
                 if (kind == "RESPONSE") {
                     return {text_event(text)};
                 }
-                return {tool_call(lowercase(kind), "delta", text)};
+                return {tool_call(lowercase(kind), "delta", std::string(text))};
             }
 
-            static stream_event text_event(std::string value) {
-                return dana::ai::text(std::move(value));
+            static stream_event text_event(std::string_view value) {
+                return text(value);
             }
 
             std::vector<std::string>            fragments_;
@@ -393,9 +393,9 @@ namespace dana::ai {
             }
 
             std::unique_ptr<conversation>
-            open(session::match const& match, std::string const& model, open_options const& options) override;
+            open(session::match const& match, std::string_view model, open_options const& options) override;
 
-            [[nodiscard]] std::string const& origin() const {
+            [[nodiscard]] std::string_view origin() const {
                 return info_.origin;
             }
 
@@ -564,14 +564,13 @@ namespace dana::ai {
             provider_info info_;
         };
 
-        class deepseek_conversation : public conversation {
-          public:
+        struct [[nodiscard]] deepseek_conversation : conversation {
             deepseek_conversation(
-              deepseek_provider&  owner,
-              session::match      match,
-              std::string         model,
-              open_options const& options)
-              : conversation(std::move(match), std::move(model), options),
+              deepseek_provider&     owner,
+              session::match         match,
+              std::string_view const model,
+              open_options const&    options)
+              : conversation(std::move(match), model, options),
                 owner_(owner),
                 headers_(owner.build_headers(match_)) {
                 if (auto const stored = deepseek_provider::token(match_)) {
@@ -583,9 +582,7 @@ namespace dana::ai {
                 }
             }
 
-            void send(std::string const&              prompt,
-                      std::vector<std::string> const& files,
-                      event_sink const&               sink) override {
+            void send(std::string_view prompt, text::string_views files, event_sink const& sink) override {
                 if (token_.empty()) {
                     sink(error("no DeepSeek token in web storage; log in to chat.deepseek.com"));
                     return;
@@ -631,9 +628,10 @@ namespace dana::ai {
                     sink(tool_call("upload", "done", file.name));
                 }
 
-                bool const        first   = turns_ == 0;
-                std::string const content = (first && !system_.empty()) ? system_ + "\n\n" + prompt : prompt;
-                json const        body{
+                bool const        first = turns_ == 0;
+                std::string const content =
+                  (first && !system_.empty()) ? system_ + "\n\n" + std::string(prompt) : std::string(prompt);
+                json const body{
                   {  "chat_session_id",   conversation_id_},
                   {"parent_message_id", parent_message_id_},
                   {       "model_type",          "default"},
@@ -737,7 +735,7 @@ namespace dana::ai {
                         }
                     }
                     if (debug_ && !line.empty() && !line.starts_with("data:") && !line.starts_with("event:")) {
-                        sink(raw(std::string(line)));
+                        sink(raw(line));
                     }
                 });
             }
@@ -750,7 +748,7 @@ namespace dana::ai {
         };
 
         std::unique_ptr<conversation>
-        deepseek_provider::open(session::match const& match, std::string const& model, open_options const& options) {
+        deepseek_provider::open(session::match const& match, std::string_view model, open_options const& options) {
             return std::make_unique<deepseek_conversation>(*this, match, model, options);
         }
 

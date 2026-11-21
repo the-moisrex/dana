@@ -522,10 +522,10 @@ namespace dana::extract {
             return out;
         }
 
-        std::string normalize_body(std::vector<std::string> const& lines, std::size_t quote_depth) {
+        std::string normalize_body(text::string_views lines, std::size_t quote_depth) {
             std::string joined;
             for (std::size_t i = 0; i < lines.size(); ++i) {
-                std::string line = lines[i];
+                auto line = lines[i];
                 for (std::size_t depth = 0; depth < quote_depth; ++depth) {
                     std::size_t j = 0;
                     while (j < line.size() && is_space(line[j])) {
@@ -569,8 +569,8 @@ namespace dana::extract {
                     while (end < body.size() && !is_space(body[end])) {
                         ++end;
                     }
-                    auto token = body.substr(begin, end - begin);
-                    begin      = end;
+                    auto const token = body.substr(begin, end - begin);
+                    begin            = end;
                     if (token.empty()) {
                         continue;
                     }
@@ -583,8 +583,8 @@ namespace dana::extract {
                             ident = std::string(token.substr(1));
                         }
                     } else if (auto const eq = token.find('='); eq != std::string_view::npos) {
-                        auto key   = lower(token.substr(0, eq));
-                        auto value = token.substr(eq + 1);
+                        auto const key   = lower(token.substr(0, eq));
+                        auto       value = token.substr(eq + 1);
                         if (value.size() >= 2 && value.front() == value.back() &&
                             (value.front() == '"' || value.front() == '\''))
                         {
@@ -600,19 +600,18 @@ namespace dana::extract {
                 return;
             }
             // `key=value` attributes outside braces; the first bare word is the language.
-            std::string      rest;
-            std::size_t      i    = 0;
-            std::string_view text = trim(raw);
+            std::size_t            i    = 0;
+            std::string_view const text = trim(raw);
             while (i < text.size()) {
-                auto sp    = text.find_first_of(" \t", i);
-                auto token = text.substr(i, (sp == std::string_view::npos ? text.size() : sp) - i);
-                i          = sp == std::string_view::npos ? text.size() : sp + 1;
+                auto const sp    = text.find_first_of(" \t", i);
+                auto const token = text.substr(i, (sp == std::string_view::npos ? text.size() : sp) - i);
+                i                = sp == std::string_view::npos ? text.size() : sp + 1;
                 if (token.empty()) {
                     continue;
                 }
                 if (auto const eq = token.find('='); eq != std::string_view::npos) {
-                    auto key   = lower(token.substr(0, eq));
-                    auto value = token.substr(eq + 1);
+                    auto const key   = lower(token.substr(0, eq));
+                    auto       value = token.substr(eq + 1);
                     if (value.size() >= 2 && value.front() == value.back() &&
                         (value.front() == '"' || value.front() == '\''))
                     {
@@ -625,7 +624,6 @@ namespace dana::extract {
                     lang = std::string(token);
                 }
             }
-            (void) rest;
         }
 
     } // namespace
@@ -646,13 +644,13 @@ namespace dana::extract {
     }
 
     std::string infer_family(std::string_view body) {
-        std::string text(trim(body));
+        std::string const text(trim(body));
         if (text.empty()) {
             return {};
         }
-        std::string head      = text.substr(0, std::min<std::size_t>(4000, text.size()));
-        auto const  first_end = head.find('\n');
-        std::string first(head.substr(0, first_end == std::string::npos ? head.size() : first_end));
+        std::string const head      = text.substr(0, std::min<std::size_t>(4000, text.size()));
+        auto const        first_end = head.find('\n');
+        std::string       first(head.substr(0, first_end == std::string::npos ? head.size() : first_end));
         first = std::string(trim(first));
 
         if (any_line(head,
@@ -674,7 +672,7 @@ namespace dana::extract {
             return "diff";
         }
         if (!first.empty() && (first.front() == '{' || first.front() == '[')) {
-            auto parsed = nlohmann::json::parse(text, nullptr, false);
+            auto const parsed = nlohmann::json::parse(text, nullptr, false);
             if (!parsed.is_discarded()) {
                 return "json";
             }

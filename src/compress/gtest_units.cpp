@@ -144,8 +144,8 @@ namespace dana::compress {
 
         // GTest names a parameterized failure `Inst/Suite.Test/0`; the display name is
         // always a substring, so a containment test matches both shapes.
-        bool held(test_case const& tc, std::vector<std::string> const& focus) {
-            return std::ranges::any_of(focus, [&](std::string const& entry) {
+        bool held(test_case const& tc, text::string_views focus) {
+            return std::ranges::any_of(focus, [&](std::string_view const entry) {
                 return entry.contains(tc.display);
             });
         }

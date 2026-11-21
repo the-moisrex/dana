@@ -9,11 +9,6 @@ namespace dana {
 
     namespace {
 
-        bool tool_exists(std::string const& name) {
-            std::string cmd = "command -v " + name + " >/dev/null 2>&1";
-            return dana::process::run_command({"bash", "-c", cmd}).exit_code == 0;
-        }
-
         std::string strip_trailing_newlines(std::string_view text) {
             while (!text.empty() && text.back() == '\n') {
                 text.remove_suffix(1);
@@ -22,8 +17,9 @@ namespace dana {
         }
 
         // gh issue view <num> --json <field> -q <query> 2>/dev/null || true
-        std::string gh_issue_field(std::string const& number, std::string const& field, std::string const& query) {
-            std::vector<std::string> storage = {
+        std::string
+        gh_issue_field(std::string_view const number, std::string_view const field, std::string_view const query) {
+            std::array<std::string_view, 6> storage = {
               "bash",
               "-c",
               R"(gh issue view "$0" --json "$1" -q "$2" 2>/dev/null)",
@@ -31,7 +27,7 @@ namespace dana {
               field,
               query,
             };
-            return strip_trailing_newlines(dana::process::run_command(storage).stdout_data);
+            return strip_trailing_newlines(process::run_command(storage).stdout_data);
         }
 
     } // namespace
@@ -42,17 +38,17 @@ namespace dana {
         head_lines_or_throw(v);
         auto rest = positional_args(v);
 
-        std::string issue_number = rest.empty() ? std::string{} : rest.front();
-        std::string issue_url;
-        std::string issue_title;
-        std::string issue_body;
-        std::string issue_labels;
-        std::string issue_comments;
-        std::string stdin_content = strip_trailing_newlines(v.in.text());
-        std::string error;
+        std::string       issue_number = rest.empty() ? std::string{} : rest.front();
+        std::string       issue_url;
+        std::string       issue_title;
+        std::string       issue_body;
+        std::string       issue_labels;
+        std::string       issue_comments;
+        std::string const stdin_content = strip_trailing_newlines(v.in.text());
+        std::string       error;
 
         if (!issue_number.empty()) {
-            if (tool_exists("gh")) {
+            if (process::tool_exists("gh")) {
                 issue_url      = gh_issue_field(issue_number, "url", ".url");
                 issue_title    = gh_issue_field(issue_number, "title", ".title");
                 issue_body     = gh_issue_field(issue_number, "body", ".body");

@@ -59,27 +59,27 @@ namespace dana::ai {
       std::string_view                                          instruction);
 
     // A participant the panel loop can drive without a network.
-    struct debate_participant {
-        std::string                                                                           name;
-        std::function<std::pair<int, std::string>(std::string const&, nlohmann::json const&)> ask;
+    struct [[nodiscard]] debate_participant {
+        std::string                                                                         name;
+        std::function<std::pair<int, std::string>(std::string_view, nlohmann::json const&)> ask;
     };
 
-    using debate_writer = std::function<void(std::string const& provider, int round, std::string const& answer)>;
+    using debate_writer = std::function<void(std::string_view provider, int round, std::string_view answer)>;
     using debate_turn_observer =
       std::function<void(int                               turn_no,
                          int                               total,
                          int                               round_no,
-                         std::string const&                provider,
+                         std::string_view                  provider,
                          std::optional<std::string> const& previous_provider)>;
 
     // Run the relay and return its result.  *writer* receives each completed answer;
     // *on_turn* (optional) is called before each turn.
     debate_result run_debate_panel(
       std::vector<debate_participant> const& participants,
-      std::string const&                     question,
+      std::string_view                       question,
       int                                    rounds,
       bool                                   until_agree,
-      std::string const&                     instruction,
+      std::string_view                       instruction,
       debate_writer const&                   writer,
       debate_turn_observer const&            on_turn);
 

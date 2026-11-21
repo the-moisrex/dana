@@ -204,22 +204,23 @@ Options:
            {.value = "help", .description = "Print bin/run help"},
            },
         };
-        auto exe    = dana::fs::self_path().value_or(std::filesystem::path{});
-        auto tool   = dana::fs::bin_tool("run", exe, dana::fs::find_git_root());
-        auto result = dana::process::command{tool.string(), "print-targets"}.discard_stderr().run();
+        auto const                       exe  = fs::self_path().value_or(std::filesystem::path{});
+        auto const                       tool = fs::bin_tool("run", exe, fs::find_git_root());
+        std::array<std::string, 2> const cmdline{tool.string(), "print-targets"};
+        auto const                       result = process::command{cmdline}.discard_stderr().run();
         if (result.exit_code == 0) {
             std::size_t start = 0;
             while (start < result.stdout_data.size()) {
-                auto             end  = result.stdout_data.find('\n', start);
-                std::size_t      stop = end == std::string::npos ? result.stdout_data.size() : end;
-                std::string_view line(result.stdout_data.data() + start, stop - start);
+                auto const             end  = result.stdout_data.find('\n', start);
+                auto const             stop = end == std::string::npos ? result.stdout_data.size() : end;
+                std::string_view const line(result.stdout_data.data() + start, stop - start);
                 start = end == std::string::npos ? result.stdout_data.size() : end + 1;
-                if (!line.empty() && dana::completion::matches(req.prefix, line)) {
-                    dana::completion::write_item(os, line, {});
+                if (!line.empty() && completion::matches(req.prefix, line)) {
+                    completion::write_item(os, line, {});
                 }
             }
         }
-        dana::completion::write_items(os, req.prefix, kRunArgs);
+        completion::write_items(os, req.prefix, kRunArgs);
     }
 
     // The tool declaration: a descriptor keeps a pointer to it, so it is a static.

@@ -18,7 +18,7 @@ namespace dana::compress::include_map {
     // is only considered when it resolves inside the project root, so system and
     // third-party headers stay out of the map. Empty when nothing was resolved.
     [[nodiscard]] std::string
-    render(region const& r, signals const& s, std::span<std::string const> includes, std::size_t max_headers = 8);
+    render(region const& r, signals const& s, text::string_views includes, std::size_t max_headers = 8);
 
     // Convenience: scan `r.text` for its `#include` lines first.
     [[nodiscard]] std::string render(region const& r, signals const& s);

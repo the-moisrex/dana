@@ -23,7 +23,7 @@ namespace dana::extract {
             return out;
         }
 
-        std::size_t header_index(std::vector<std::string> const& headers, std::string_view name) {
+        std::size_t header_index(text::string_views headers, std::string_view name) {
             auto const wanted = lowered(name);
             for (std::size_t i = 0; i < headers.size(); ++i) {
                 if (lowered(headers[i]) == wanted) {

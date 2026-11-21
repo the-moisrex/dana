@@ -360,9 +360,9 @@ namespace dana::tse_data {
         cfg.symbol = ident_inputs.empty() ? std::string{} : ident_inputs[0];
 
         if (!file_inputs.empty()) {
-            cfg.cache_mode       = true;
-            auto        git_root = dana::fs::find_git_root();
-            std::string tse_tool = dana::fs::bin_tool("tse", v.env.exe_path, std::nullopt).string();
+            cfg.cache_mode = true;
+            auto git_root  = dana::fs::find_git_root();
+            auto tse_tool  = fs::bin_tool("tse", v.env.exe_path, std::nullopt).string();
             for (auto const& input : file_inputs) {
                 std::filesystem::path resolved;
                 if (std::filesystem::is_regular_file(input)) {
@@ -383,8 +383,8 @@ namespace dana::tse_data {
                     cfg.error  = std::format("{}snapshot file not readable: {}\n", pfx, resolved.string());
                     return cfg;
                 }
-                auto probe =
-                  dana::process::command{"python3", tse_tool, "snapshot", resolved.string()}.stderr_to_stdout().run();
+                std::array<std::string, 4> const cmdline{"python3", tse_tool, "snapshot", resolved.string()};
+                auto const                       probe = process::command{cmdline}.stderr_to_stdout().run();
                 if (probe.exit_code != 0) {
                     cfg.failed    = true;
                     cfg.exit_code = 2;
@@ -405,11 +405,12 @@ namespace dana::tse_data {
       std::filesystem::path const& path,
       snapshot_info const&         info,
       std::optional<std::size_t>   head_lines,
-      std::string const&           tse_tool,
-      std::string const&           name,
+      std::string_view             tse_tool,
+      std::string_view             name,
       std::string&                 errors) {
+        using namespace std::string_literals;
         std::error_code ec;
-        auto            base = dana::fs::find_git_root().value_or(std::filesystem::current_path(ec));
+        auto const      base = fs::find_git_root().value_or(std::filesystem::current_path(ec));
         auto            rel  = std::filesystem::relative(std::filesystem::weakly_canonical(path, ec), base, ec);
         if (ec || rel.empty()) {
             rel = path;
@@ -430,7 +431,8 @@ namespace dana::tse_data {
             output += info.instrument + "\n";
         }
 
-        auto render = dana::process::command{"python3", tse_tool, "markdown", path.string()}.stderr_to_stdout().run();
+        std::array const cmdline{"python3"s, std::string(tse_tool), "markdown"s, path.string()};
+        auto const       render = process::command{cmdline}.stderr_to_stdout().run();
         if (render.exit_code == 0) {
             output += '\n';
             output += trim_context_nl(render.stdout_data, head_lines);
@@ -442,7 +444,7 @@ namespace dana::tse_data {
               rel_path,
               rstrip_newlines(render.stdout_data));
             output += std::format("\nFile: {}\n```json\n", rel_path);
-            output += trim_context_nl(dana::read_file(path), head_lines);
+            output += trim_context_nl(read_file(path), head_lines);
             output += "\n```\n";
         }
         return output;
@@ -461,10 +463,10 @@ namespace dana::tse_data {
     // produced no dataset — which would otherwise reach `.save`/an AI sink as an
     // empty context.
     inline dana::process::command_result run_tool(
-      std::string const&              name,
-      std::string const&              tool_label,
-      std::vector<std::string> const& argv,
-      std::chrono::milliseconds       timeout = kToolTimeout) {
+      std::string_view          name,
+      std::string_view          tool_label,
+      text::string_views        argv,
+      std::chrono::milliseconds timeout = kToolTimeout) {
         auto result = dana::process::command{argv}.timeout(timeout).run();
         if (result.timed_out) {
             throw soft_error{std::format(
@@ -487,7 +489,8 @@ namespace dana::tse_data {
     // `tse: <message>` on stderr (inherited, exactly like bash's `$(...)`) and
     // exits 1; the script runs under `set -e`, so the prompt aborts printing
     // nothing. `run_tool` makes every failure loud.
-    inline std::string fetch_live(config const& cfg, std::string const& tse_tool) {
+    inline std::string fetch_live(config const& cfg, std::string_view tse_tool) {
+        using namespace std::string_view_literals;
         std::vector<std::string> fetch_args = {"all", cfg.symbol, "--markdown"};
         if (cfg.days_set) {
             fetch_args.emplace_back("--days");
@@ -502,18 +505,18 @@ namespace dana::tse_data {
         if (cfg.unadjusted) {
             fetch_args.emplace_back("--unadjusted");
         }
-        std::vector<std::string> tool_argv = {"python3", tse_tool};
+        std::vector tool_argv = {"python3"sv, tse_tool};
         for (auto const& a : fetch_args) {
-            tool_argv.push_back(a);
+            tool_argv.emplace_back(a);
         }
-        auto fetch = run_tool(cfg.name, "bin/tse", tool_argv);
+        auto const fetch = run_tool(cfg.name, "bin/tse", tool_argv);
         return fetch.stdout_data;
     }
 
     // The collected data block: the live Markdown (capped by --head) or the
     // rendered snapshot files. Fetch failures throw, exactly as before.
     inline std::string collect(view const& v, config const& cfg, std::string& errors) {
-        std::string tse_tool = dana::fs::bin_tool("tse", v.env.exe_path, std::nullopt).string();
+        auto const tse_tool = fs::bin_tool("tse", v.env.exe_path, std::nullopt).string();
         if (cfg.cache_mode) {
             std::string out;
             for (std::size_t i = 0; i < cfg.snapshot_files.size(); ++i) {
@@ -536,14 +539,14 @@ namespace dana::tse_data {
     // touching the network. Flags are added by the dispatcher from the prompt's
     // help text, so only positional candidates are emitted here.
     inline void complete_instrument(completion_request const& req, std::ostream& os) {
+        using namespace std::string_literals;
         if (req.prefix.starts_with('-')) {
             return;
         }
-        auto exe    = dana::fs::self_path().value_or(std::filesystem::path{});
-        auto tool   = dana::fs::bin_tool("tse.resolve", exe, dana::fs::find_git_root());
-        auto result = dana::process::command{"python3", tool.string(), "--complete", std::string(req.prefix)}
-                        .discard_stderr()
-                        .run();
+        auto const       exe  = fs::self_path().value_or(std::filesystem::path{});
+        auto const       tool = fs::bin_tool("tse.resolve", exe, fs::find_git_root());
+        std::array const cmdline{"python3"s, tool.string(), "--complete"s, std::string(req.prefix)};
+        auto const       result = process::command{cmdline}.discard_stderr().run();
         if (result.exit_code == 0) {
             os << result.stdout_data;
         }

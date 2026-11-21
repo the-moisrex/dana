@@ -21,20 +21,15 @@ namespace dana {
             return s;
         }
 
-        // Realpath, invoked as the external tool so the printed path matches bash's
-        // `realpath "$check_path"` byte-for-byte.
-        std::string realpath_of(std::string const& p) {
-            return strip_trailing_newlines(dana::process::run_command({"realpath", p}).stdout_data);
-        }
-
         std::string git_toplevel() {
-            auto r = dana::process::run_command(std::vector<std::string>{"git", "rev-parse", "--show-toplevel"});
+            auto const r = process::run_command({"git", "rev-parse", "--show-toplevel"});
             return r.exit_code == 0 ? strip_trailing_newlines(r.stdout_data) : std::string{};
         }
 
     } // namespace
 
     static void execute_clang_tidy(view const& v, result& r) {
+        namespace fs    = std::filesystem;
         auto head_lines = head_lines_or_throw(v);
 
         auto file_args = positional_args(v);
@@ -68,10 +63,10 @@ namespace dana {
 
         // The chain-wide exclusions drop a file from both the run and the display.
         if (!filter.exclude().empty()) {
-            std::erase_if(run_args, [&](std::string const& a) {
+            std::erase_if(run_args, [&](std::string_view a) {
                 return filter.excluded(a);
             });
-            std::erase_if(display_args, [&](std::string const& a) {
+            std::erase_if(display_args, [&](std::string_view a) {
                 return filter.excluded(a);
             });
             if (run_args.empty() && display_args.empty()) {
@@ -104,10 +99,10 @@ namespace dana {
             for (auto const& base : bases) {
                 std::string found;
                 for (char const* dir : common_dirs) {
-                    std::filesystem::path check = std::filesystem::path(base) / dir / "compile_commands.json";
-                    std::error_code       ec;
-                    if (std::filesystem::is_regular_file(check, ec)) {
-                        found = realpath_of((std::filesystem::path(base) / dir).string());
+                    auto const      check = fs::path(base) / dir / "compile_commands.json";
+                    std::error_code ec;
+                    if (fs::is_regular_file(check, ec)) {
+                        found = fs::canonical(fs::path(base) / dir);
                         break;
                     }
                 }

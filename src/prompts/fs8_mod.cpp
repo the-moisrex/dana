@@ -10,199 +10,6 @@ namespace dana {
 
     namespace {
 
-        // The old infer_lang table (NOT the SDK's infer_lang, whose extension table
-        // differs — e.g. .ixx maps to "text" here but "cpp" in the SDK).
-        std::string legacy_infer_lang(std::string const& filename) {
-            std::string base  = filename;
-            auto        slash = base.find_last_of('/');
-            if (slash != std::string::npos) {
-                base = base.substr(slash + 1);
-            }
-            std::string ext;
-            auto        dot = base.find_last_of('.');
-            if (dot != std::string::npos) {
-                ext = base.substr(dot + 1);
-            } else {
-                ext = base;
-            }
-
-            if (base == "Dockerfile") {
-                return "dockerfile";
-            }
-            if (base == "Makefile" || base == "makefile" || base == "GNUmakefile") {
-                return "makefile";
-            }
-            if (base == "CMakeLists.txt") {
-                return "cmake";
-            }
-
-            if (ext == "c" || ext == "h") {
-                return "c";
-            }
-            if (ext == "cc" || ext == "cp" || ext == "cpp" || ext == "cxx" || ext == "c++" || ext == "hpp" ||
-                ext == "hxx" || ext == "hh" || ext == "h++")
-            {
-                return "cpp";
-            }
-            if (ext == "m") {
-                return "objectivec";
-            }
-            if (ext == "mm") {
-                return "objective-cpp";
-            }
-            if (ext == "rs") {
-                return "rust";
-            }
-            if (ext == "py" || ext == "pyi") {
-                return "python";
-            }
-            if (ext == "sh" || ext == "bash") {
-                return "bash";
-            }
-            if (ext == "zsh") {
-                return "zsh";
-            }
-            if (ext == "fish") {
-                return "fish";
-            }
-            if (ext == "nu") {
-                return "nu";
-            }
-            if (ext == "js" || ext == "cjs" || ext == "mjs") {
-                return "javascript";
-            }
-            if (ext == "ts" || ext == "mts" || ext == "cts") {
-                return "typescript";
-            }
-            if (ext == "jsx") {
-                return "jsx";
-            }
-            if (ext == "tsx") {
-                return "tsx";
-            }
-            if (ext == "java") {
-                return "java";
-            }
-            if (ext == "kt" || ext == "kts") {
-                return "kotlin";
-            }
-            if (ext == "swift") {
-                return "swift";
-            }
-            if (ext == "go") {
-                return "go";
-            }
-            if (ext == "rb") {
-                return "ruby";
-            }
-            if (ext == "php") {
-                return "php";
-            }
-            if (ext == "lua") {
-                return "lua";
-            }
-            if (ext == "pl" || ext == "pm") {
-                return "perl";
-            }
-            if (ext == "r") {
-                return "r";
-            }
-            if (ext == "scala") {
-                return "scala";
-            }
-            if (ext == "cs") {
-                return "csharp";
-            }
-            if (ext == "fs" || ext == "fsx") {
-                return "fsharp";
-            }
-            if (ext == "vb") {
-                return "vbnet";
-            }
-            if (ext == "dart") {
-                return "dart";
-            }
-            if (ext == "ex" || ext == "exs") {
-                return "elixir";
-            }
-            if (ext == "erl" || ext == "hrl") {
-                return "erlang";
-            }
-            if (ext == "clj" || ext == "cljs" || ext == "cljc") {
-                return "clojure";
-            }
-            if (ext == "ml" || ext == "mli") {
-                return "ocaml";
-            }
-            if (ext == "sql") {
-                return "sql";
-            }
-            if (ext == "html" || ext == "htm") {
-                return "html";
-            }
-            if (ext == "css") {
-                return "css";
-            }
-            if (ext == "scss") {
-                return "scss";
-            }
-            if (ext == "sass") {
-                return "sass";
-            }
-            if (ext == "less") {
-                return "less";
-            }
-            if (ext == "xml") {
-                return "xml";
-            }
-            if (ext == "xsl" || ext == "xslt") {
-                return "xslt";
-            }
-            if (ext == "svg") {
-                return "svg";
-            }
-            if (ext == "json" || ext == "stock" || ext == "tse") {
-                return "json";
-            }
-            if (ext == "jsonc") {
-                return "jsonc";
-            }
-            if (ext == "yaml" || ext == "yml") {
-                return "yaml";
-            }
-            if (ext == "toml") {
-                return "toml";
-            }
-            if (ext == "ini" || ext == "cfg" || ext == "conf") {
-                return "ini";
-            }
-            if (ext == "env") {
-                return "dotenv";
-            }
-            if (ext == "md") {
-                return "markdown";
-            }
-            if (ext == "txt" || ext == "log") {
-                return "text";
-            }
-            if (ext == "diff" || ext == "patch") {
-                return "diff";
-            }
-            if (ext == "proto") {
-                return "proto";
-            }
-            if (ext == "asm" || ext == "s" || ext == "S") {
-                return "asm";
-            }
-            if (ext == "tex") {
-                return "tex";
-            }
-            if (ext == "vim") {
-                return "vim";
-            }
-            return "text";
-        }
-
         // The embed_file shape this prompt uses: warns to stderr and emits nothing for
         // a missing file; otherwise a blank line, "File: <label>", ```lang fence, the
         // head-capped body, and a closing fence. infer_lang keys off the basename.
@@ -212,17 +19,17 @@ namespace dana {
                         std::string_view             label,
                         std::optional<std::size_t>   head_lines) {
             std::error_code ec;
-            if (!std::filesystem::is_regular_file(path, ec) || ec) {
+            if (!std::filesystem::is_regular_file(path, ec) || ec) [[unlikely]] {
                 err += std::format("Warning: context file not found: {}\n", path.string());
                 return;
             }
-            std::string base  = path.filename().string();
-            std::string name  = label.empty() ? base : std::string(label);
-            out              += '\n';
-            out              += std::format("File: {}\n", name);
-            out              += std::format("```{}\n", legacy_infer_lang(base));
-            out              += trim_context_nl(read_file(path), head_lines);
-            out              += "```\n";
+            std::string const base  = path.filename().string();
+            std::string       name  = label.empty() ? base : std::string(label);
+            out                    += '\n';
+            out                    += std::format("File: {}\n", name);
+            out                    += std::format("```{}\n", infer_lang(std::string_view{base}));
+            out                    += trim_context_nl(read_file(path), head_lines);
+            out                    += "```\n";
         }
 
         // Port of find_foresight_root: walk from $PWD to / looking for AGENTS.md + mods/.

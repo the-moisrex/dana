@@ -74,7 +74,7 @@ namespace dana {
 
     // The dispatcher's argv with every resolved `*.prompt` token inlined.
     expanded_argv
-    expand_prompt_files(std::span<char const* const> argv, std::filesystem::path const& git_root, bool expand = true);
+    expand_prompt_files(text::string_views argv, std::filesystem::path const& git_root, bool expand = true);
 
     // The same pass over a plain token list, with no `argv[0]` to preserve: every
     // token is eligible for `*.prompt` inlining. Whole-line completion uses it to

@@ -188,9 +188,9 @@ namespace dana {
             // `file` rejects a cycle before recursing and refuses depth >=
             // kMaxPromptFileDepth, so the nesting is at most that many frames.
             // NOLINTNEXTLINE(misc-no-recursion)
-            bool sequence(std::vector<std::string> const& tokens, std::size_t depth) {
+            bool sequence(text::string_views tokens, std::size_t depth) {
                 for (std::size_t i = 0; i < tokens.size(); ++i) {
-                    std::string const& token = tokens[i];
+                    auto const token = tokens[i];
                     if (token == "--") {
                         // Explicit end of expansion: the rest belongs to another tool
                         // (`.exec -- …`) and must reach it untouched.
@@ -198,7 +198,7 @@ namespace dana {
                         return true;
                     }
                     if (!has_prompt_file_suffix(token)) {
-                        storage_.push_back(token);
+                        storage_.emplace_back(token);
                         continue;
                     }
                     auto const resolved = resolve(token, base_dir_, git_root_);
@@ -210,7 +210,7 @@ namespace dana {
                             error_ = missing_file_message(token);
                             return false;
                         }
-                        storage_.push_back(token);
+                        storage_.emplace_back(token);
                         continue;
                     }
                     if (!file(*resolved, token, depth)) {
@@ -220,13 +220,13 @@ namespace dana {
                 return true;
             }
 
-            [[nodiscard]] std::string const& error() const {
+            [[nodiscard]] std::string_view error() const {
                 return error_;
             }
 
           private:
             // NOLINTNEXTLINE(misc-no-recursion) — see the depth/cycle guards in the body
-            bool file(std::filesystem::path const& path, std::string const& token, std::size_t depth) {
+            bool file(std::filesystem::path const& path, std::string_view const token, std::size_t const depth) {
                 auto const canonical = canonical_path(path);
 
                 auto const same = [&](frame const& open) {
@@ -262,14 +262,14 @@ namespace dana {
 
                 auto const previous_base = base_dir_;
                 base_dir_                = path.parent_path();
-                active_.push_back(frame{.canonical = canonical, .display = token});
+                active_.emplace_back(canonical, std::string(token));
                 bool const ok = sequence(tokens, depth + 1);
                 active_.pop_back();
                 base_dir_ = previous_base;
                 return ok;
             }
 
-            [[nodiscard]] std::string chain_from(std::size_t first, std::string const& current) const {
+            [[nodiscard]] std::string chain_from(std::size_t const first, std::string_view const current) const {
                 std::string out;
                 for (std::size_t i = first; i < active_.size(); ++i) {
                     out += active_[i].display;
@@ -279,12 +279,12 @@ namespace dana {
                 return out;
             }
 
-            [[nodiscard]] static std::string missing_file_message(std::string const& token) {
+            [[nodiscard]] static std::string missing_file_message(std::string_view token) {
                 std::error_code ec;
-                if (std::filesystem::exists(token, ec)) {
-                    return "prompt: '" + token + "' is not a regular file";
+                if (std::filesystem::exists(token, ec)) [[likely]] {
+                    return std::format("prompt: '{}' is not a regular file", token);
                 }
-                return "prompt: cannot find prompt file '" + token + "'";
+                return std::format("prompt: cannot find prompt file '{}'", token);
             }
 
             std::filesystem::path const& git_root_;
@@ -333,12 +333,11 @@ namespace dana {
 
     } // namespace
 
-    expanded_argv
-    expand_prompt_files(std::span<char const* const> argv, std::filesystem::path const& git_root, bool expand) {
+    expanded_argv expand_prompt_files(text::string_views argv, std::filesystem::path const& git_root, bool expand) {
         std::vector<std::string> tokens;
         tokens.reserve(argv.size());
-        for (char const* arg : argv) {
-            tokens.emplace_back(arg == nullptr ? "" : arg);
+        for (auto const arg : argv) {
+            tokens.emplace_back(arg);
         }
 
         std::size_t const        first = tokens.empty() ? 0 : 1;
@@ -350,10 +349,8 @@ namespace dana {
         return expand_token_list(std::move(rest), git_root, std::move(head), expand);
     }
 
-    expanded_argv expand_prompt_file_tokens(
-      text::string_views tokens,
-      std::filesystem::path const&      git_root,
-      bool                              expand) {
+    expanded_argv
+    expand_prompt_file_tokens(text::string_views tokens, std::filesystem::path const& git_root, bool expand) {
         std::vector<std::string> rest;
         rest.reserve(tokens.size());
         for (auto const token : tokens) {

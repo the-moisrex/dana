@@ -73,10 +73,10 @@ namespace dana {
             });
         }
 
-        int run_tool_status(std::filesystem::path const&    tool,
-                            std::vector<std::string> const& args,
-                            std::string_view                stdin_data,
-                            std::string&                    stdout_data) {
+        int run_tool_status(std::filesystem::path const& tool,
+                            text::string_views           args,
+                            std::string_view             stdin_data,
+                            std::string&                 stdout_data) {
             std::vector<std::string> cmd = {tool.string()};
             cmd.insert(cmd.end(), args.begin(), args.end());
             std::vector<char const*> argv;
@@ -90,41 +90,23 @@ namespace dana {
             return result.exit_code;
         }
 
-        // xargs: every whitespace-separated token becomes one subtitle argument (an
-        // empty token list still runs the command once, like GNU xargs without -r).
-        std::vector<std::string> xargs_tokens(std::string_view text) {
-            std::vector<std::string> tokens;
-            std::size_t              pos = 0;
-            while (pos < text.size()) {
-                std::size_t start = text.find_first_not_of(" \t\r\n", pos);
-                if (start == std::string_view::npos) {
-                    break;
-                }
-                std::size_t end = text.find_first_of(" \t\r\n", start);
-                if (end == std::string_view::npos) {
-                    end = text.size();
-                }
-                tokens.emplace_back(text.substr(start, end - start));
-                pos = end;
-            }
-            return tokens;
-        }
 
         // `"$curdir/yt.links" "$url" | xargs "$curdir/subtitle" | "$curdir/srt2text"`
         // (under `set -o pipefail`, so any failing stage fails the whole pipeline).
-        std::string transform_url(std::string_view url, std::span<std::string const> tools, bool& ok) {
-            std::size_t const links    = 0;
-            std::size_t const subtitle = 1;
-            std::size_t const srt2text = 2;
+        std::string transform_url(std::string_view const url, text::string_views tools, bool& ok) {
+            constexpr std::size_t links    = 0;
+            constexpr std::size_t subtitle = 1;
+            constexpr std::size_t srt2text = 2;
 
             std::string links_out;
-            int         links_status = run_tool_status(tools[links], {std::string(url)}, {}, links_out);
+            auto const  links_status = run_tool_status(tools.at(links), {std::string(url)}, {}, links_out);
 
             std::string sub_out;
-            int         sub_status = run_tool_status(tools[subtitle], xargs_tokens(links_out), {}, sub_out);
+            auto const  xargs      = process::xargs_tokens(links_out);
+            auto const  sub_status = run_tool_status(tools.at(subtitle), xargs, {}, sub_out);
 
             std::string text_out;
-            int         text_status = run_tool_status(tools[srt2text], {}, sub_out, text_out);
+            auto const  text_status = run_tool_status(tools.at(srt2text), {}, sub_out, text_out);
 
             ok = links_status == 0 && sub_status == 0 && text_status == 0;
             return drop_trailing_newlines(text_out);

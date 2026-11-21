@@ -216,7 +216,7 @@ namespace dana::ai::sentinel {
 
             kind                                type    = kind::none;
             bool                                boolean = false;
-            std::int64_t                           integer = 0;
+            std::int64_t                        integer = 0;
             double                              real    = 0.0;
             std::string                         text;
             std::shared_ptr<std::vector<value>> list;
@@ -229,11 +229,12 @@ namespace dana::ai::sentinel {
             std::vector<std::string>     keys;
             std::map<std::string, value> values;
 
-            void add(std::string const& key, value const& item) {
-                if (!values.contains(key)) {
-                    keys.push_back(key);
+            void add(std::string_view key, value const& item) {
+                // todo: too many allocations here
+                if (!values.contains(std::string(key))) {
+                    keys.emplace_back(key);
                 }
-                values[key] = item;
+                values[std::string(key)] = item;
             }
         };
 
@@ -705,7 +706,7 @@ namespace dana::ai::sentinel {
             }
 
             void op_invoke(std::vector<value> const& args) {
-                std::int64_t const    target = key_of(arg(args, 0));
+                std::int64_t const target = key_of(arg(args, 0));
                 value const&       callee = at(arg(args, 1));
                 std::vector<value> values;
                 for (std::size_t index = 2; index < args.size(); ++index) {
@@ -791,7 +792,7 @@ namespace dana::ai::sentinel {
               "UiState.isNavigationCollapsed.1",
             };
 
-            std::map<std::int64_t, value>            memory_;
+            std::map<std::int64_t, value>         memory_;
             json                                  program_;
             std::string                           result_;
             int                                   depth_ = 0;
@@ -876,8 +877,8 @@ namespace dana::ai::sentinel {
     }
 
     std::string solve_proof(
-      std::string const&    seed,
-      std::string const&    difficulty,
+      std::string_view      seed,
+      std::string_view      difficulty,
       nlohmann::json const& fingerprint,
       std::string_view      algo,
       int                   limit) {
@@ -901,7 +902,7 @@ namespace dana::ai::sentinel {
         throw error("proof-of-work unsolved after " + std::to_string(limit) + " attempts");
     }
 
-    std::optional<std::string> solve_turnstile(std::string const& dx, std::string const& key) {
+    std::optional<std::string> solve_turnstile(std::string_view dx, std::string_view key) {
         auto const decoded = decode_base64(dx);
         if (!decoded) {
             note("turnstile: could not decode dx", std::string_view{"sentinel"});
@@ -913,7 +914,7 @@ namespace dana::ai::sentinel {
             note("turnstile: could not decode dx", std::string_view{"sentinel"});
             return std::nullopt;
         }
-        turnstile_vm vm(std::move(program), key);
+        turnstile_vm vm(std::move(program), std::string(key));
         return vm.run();
     }
 

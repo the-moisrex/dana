@@ -19,7 +19,7 @@ namespace {
         ++failures;
     }
 
-    void check_hash(std::string const& input, char const* expected, char const* label) {
+    void check_hash(std::string_view input, char const* expected, char const* label) {
         std::string const actual = dana::ai::pow::deepseek_hash_hex(input);
         if (actual == expected) {
             return;

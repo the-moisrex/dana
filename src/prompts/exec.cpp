@@ -32,7 +32,7 @@ namespace dana {
             return extract::render_selection(matches, sel, false, {});
         }
 
-        [[nodiscard]] std::vector<std::string> command_lines(std::string const& text) {
+        [[nodiscard]] std::vector<std::string> command_lines(std::string_view text) {
             std::vector<std::string> lines;
             std::size_t              begin = 0;
             while (begin <= text.size()) {
@@ -96,15 +96,15 @@ namespace dana {
             return std::string(first);
         }
 
-        void validate_chain(std::vector<std::string> const& tokens) {
+        void validate_chain(text::string_views tokens) {
             if (tokens.empty()) {
                 throw usage_error{"prompt exec: the `prompt` command has no prompts\n"};
             }
-            std::vector<char const*> argv;
+            std::vector<std::string_view> argv;
             argv.reserve(tokens.size() + 1);
-            argv.push_back("prompt");
-            for (auto const& token : tokens) {
-                argv.push_back(token.c_str());
+            argv.emplace_back("prompt");
+            for (auto const token : tokens) {
+                argv.emplace_back(token);
             }
             auto const chain = parse_chain(argv, get_all_prompts());
             if (!chain.error.empty()) {

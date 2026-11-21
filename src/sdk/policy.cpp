@@ -57,7 +57,7 @@ namespace dana::policy {
 
         // Rule arguments are a prefix of the command's arguments (`allow git status`
         // also permits `git status --short`); `**` is a final wildcard for the rest.
-        bool args_match(std::span<std::string const> patterns, std::span<std::string const> argv) {
+        bool args_match(text::string_views patterns, text::string_views argv) {
             if (patterns.empty()) {
                 return true;
             }
@@ -216,7 +216,7 @@ namespace dana::policy {
         }
     }
 
-    engine::action engine::decide(std::span<std::string const> argv) const {
+    engine::action engine::decide(text::string_views argv) const {
         if (argv.empty()) {
             return action::ask;
         }
@@ -249,7 +249,7 @@ namespace dana::policy {
         return best == nullptr ? action::ask : best->verdict;
     }
 
-    void engine::require(std::span<std::string const> argv, std::string_view label) {
+    void engine::require(text::string_views argv, std::string_view label) {
         if (argv.empty()) {
             throw usage_error{"prompt: empty command\n"};
         }
@@ -296,12 +296,12 @@ namespace dana::policy {
         throw soft_error{"prompt: command cancelled: " + display + "\n"};
     }
 
-    void engine::require_chain(std::span<std::string const> chain_tokens) {
+    void engine::require_chain(text::string_views chain_tokens) {
         std::vector<std::string> argv;
         argv.reserve(chain_tokens.size() + 1);
         argv.emplace_back("prompt");
         for (auto const& token : chain_tokens) {
-            argv.push_back(token);
+            argv.emplace_back(token);
         }
         require(argv, agent::join_argv(argv));
     }

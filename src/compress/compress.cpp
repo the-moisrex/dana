@@ -193,11 +193,11 @@ namespace dana::compress {
             return basename_of(a) == basename_of(b);
         }
 
-        bool is_focused(region const& r, std::vector<std::string> const& focus) {
+        bool is_focused(region const& r, text::string_views focus) {
             if (r.path.empty()) {
                 return false;
             }
-            return std::ranges::any_of(focus, [&](std::string const& entry) {
+            return std::ranges::any_of(focus, [&](std::string_view const entry) {
                 std::string_view const path = strip_location(entry);
                 return !path.empty() && looks_like_path(path) && same_file(r.path, path);
             });
@@ -291,7 +291,7 @@ namespace dana::compress {
         return std::to_string(n) + " " + std::string(n == 1 ? singular : many);
     }
 
-    std::string first_items(std::span<std::string const> items, std::size_t limit) {
+    std::string first_items(text::string_views items, std::size_t limit) {
         std::string out;
         std::size_t shown = 0;
         for (auto const& item : items) {

@@ -79,11 +79,11 @@ namespace dana::ai {
         }
 
         // Translate the site's conversation-length error into a remedy.
-        std::string limit_message(std::string const& message) {
+        std::string_view limit_message(std::string_view const message) noexcept {
             if (message.contains("超过") && (message.contains("万字") || message.contains("对话"))) {
-                return "Kimi: this conversation has reached the site's 200,000-character limit; start a new chat "
-                       "(--new) "
-                       "or split the prompt.";
+                return {
+                  "Kimi: this conversation has reached the site's 200,000-character limit; start a new chat "
+                  "(--new) or split the prompt."};
             }
             return message;
         }
@@ -122,14 +122,14 @@ namespace dana::ai {
         }
 
         // The `exp` claim of a JWT, or 0 when it cannot be read.
-        double expires_at(std::string const& token) {
+        double expires_at(std::string_view token) {
             auto const first = token.find('.');
             if (first == std::string::npos) {
                 return 0.0;
             }
-            auto const  second = token.find('.', first + 1);
-            std::string payload =
-              token.substr(first + 1, second == std::string::npos ? std::string::npos : second - first - 1);
+            auto const  second  = token.find('.', first + 1);
+            std::string payload = std::string(
+              token.substr(first + 1, second == std::string::npos ? std::string::npos : second - first - 1));
             while (payload.size() % 4 != 0) {
                 payload += '=';
             }
@@ -157,14 +157,14 @@ namespace dana::ai {
 
         void set_header(std::vector<std::pair<std::string, std::string>>& headers,
                         std::string_view                                  name,
-                        std::string                                       value) {
+                        std::string_view                                  value) {
             for (auto& header : headers) {
                 if (std::string_view(header.first) == name) {
-                    header.second = std::move(value);
+                    header.second = value;
                     return;
                 }
             }
-            headers.emplace_back(std::string(name), std::move(value));
+            headers.emplace_back(name, value);
         }
 
         void apply_headers(http_request& request, std::vector<std::pair<std::string, std::string>> const& headers) {
@@ -218,9 +218,9 @@ namespace dana::ai {
             }
 
             std::unique_ptr<conversation>
-            open(session::match const& match, std::string const& model, open_options const& options) override;
+            open(session::match const& match, std::string_view model, open_options const& options) override;
 
-            [[nodiscard]] std::string const& origin() const {
+            [[nodiscard]] std::string_view origin() const {
                 return info_.origin;
             }
 
@@ -266,7 +266,7 @@ namespace dana::ai {
             }
 
             [[nodiscard]] std::string create_chat(std::vector<std::pair<std::string, std::string>> const& values,
-                                                  std::string const& prompt) const {
+                                                  std::string_view prompt) const {
                 http_request request;
                 request.url       = info_.origin + std::string(kChatPath);
                 request.method    = "POST";
@@ -311,7 +311,7 @@ namespace dana::ai {
 
             static std::vector<std::pair<std::string, std::string>> connect_headers(
               std::vector<std::pair<std::string, std::string>> values,
-              std::string const&                               content_type) {
+              std::string_view                                 content_type) {
                 set_header(values, "Accept", content_type);
                 set_header(values, "Content-Type", content_type);
                 set_header(values, "Connect-Protocol-Version", "1");
@@ -321,8 +321,8 @@ namespace dana::ai {
             // The stored status of one message ("" when it cannot be read).
             [[nodiscard]] std::string message_status(
               std::vector<std::pair<std::string, std::string>> const& values,
-              std::string const&                                      chat_id,
-              std::string const&                                      message_id) const {
+              std::string_view                                        chat_id,
+              std::string_view                                        message_id) const {
                 http_request request;
                 request.url       = info_.origin + std::string(kListMessagesPath);
                 request.method    = "POST";
@@ -357,22 +357,19 @@ namespace dana::ai {
             provider_info info_;
         };
 
-        class kimi_conversation : public conversation {
-          public:
+        struct [[nodiscard]] kimi_conversation : conversation {
             kimi_conversation(kimi_provider&      owner,
                               session::match      match,
-                              std::string         model,
+                              std::string_view    model,
                               open_options const& options)
-              : conversation(std::move(match), std::move(model), options),
+              : conversation(std::move(match), model, options),
                 owner_(owner) {
                 if (auto const stored = kimi_provider::token(match_)) {
                     token_ = *stored;
                 }
             }
 
-            void send(std::string const&              prompt,
-                      std::vector<std::string> const& files,
-                      event_sink const&               sink) override {
+            void send(std::string_view prompt, text::string_views files, event_sink const& sink) override {
                 ensure_token();
                 if (token_.empty()) {
                     sink(error("no Kimi token in web storage; log in to www.kimi.ai"));
@@ -399,9 +396,10 @@ namespace dana::ai {
                     sink(tool_call("upload", "done", file.name));
                 }
 
-                bool const        first   = turns_ == 0 && conversation_id_.empty();
-                std::string const content = (first && !system_.empty()) ? system_ + "\n\n" + prompt : prompt;
-                json              body{
+                bool const        first = turns_ == 0 && conversation_id_.empty();
+                std::string const content =
+                  (first && !system_.empty()) ? system_ + "\n\n" + prompt : std::string(prompt);
+                json body{
                   {  "messages", json::array({json{{"role", "user"}, {"content", content}}})},
                   {      "refs",                                                        refs},
                   {"use_search",                                                       false},
@@ -519,12 +517,13 @@ namespace dana::ai {
 
           private:
             std::string status(std::vector<std::pair<std::string, std::string>> const& values,
-                               std::string const&                                      message_id) {
+                               std::string_view                                        message_id) {
                 try {
                     return owner_.message_status(values, conversation_id_, message_id);
                 } catch (std::exception const& failure) {
-                    note("status lookup for message " + message_id + " failed: " + failure.what() +
-                           "; not asking for a continuation",
+                    note(std::format("status lookup for message {} failed: {}; not asking for a continuation",
+                                     message_id,
+                                     failure.what()),
                          debug_,
                          "kimi");
                     return {};
@@ -538,7 +537,7 @@ namespace dana::ai {
             // patches carry the text.
             std::pair<std::string, std::string> continue_stream(
               std::vector<std::pair<std::string, std::string>> const& values,
-              std::string const&                                      message_id,
+              std::string_view                                        message_id,
               std::string&                                            answer,
               event_sink const&                                       sink) {
                 auto const        request_headers = kimi_provider::connect_headers(values, "application/connect+json");
@@ -557,7 +556,7 @@ namespace dana::ai {
 
                 std::string                        buffer;
                 std::map<std::string, std::string> texts;
-                std::string                        new_id = message_id;
+                auto                               new_id = message_id;
                 std::string                        final_status;
                 bool                               finished = false;
 
@@ -633,7 +632,7 @@ namespace dana::ai {
                         }
                     }
                 });
-                return {new_id, final_status};
+                return {std::string(new_id), final_status};
             }
 
             // Renew an expiring access token (best effort; keep the old one).
@@ -655,7 +654,7 @@ namespace dana::ai {
         };
 
         std::unique_ptr<conversation>
-        kimi_provider::open(session::match const& match, std::string const& model, open_options const& options) {
+        kimi_provider::open(session::match const& match, std::string_view model, open_options const& options) {
             return std::make_unique<kimi_conversation>(*this, match, model, options);
         }
 

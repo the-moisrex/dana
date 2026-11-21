@@ -271,7 +271,7 @@ namespace dana {
         // NOLINTNEXTLINE(misc-no-recursion)
         bool sequence(string_list const& tokens, string_list& out, expand_context& ctx) {
             for (std::size_t i = 0; i < tokens.size();) {
-                std::string const& token = tokens[i];
+                std::string_view token = tokens[i];
 
                 if (token == ".func") {
                     if (ctx.body_depth != 0 || !ctx.active.empty()) {
@@ -321,13 +321,13 @@ namespace dana {
                         return false;
                     }
                     --ctx.body_depth;
-                    out.push_back(token);
+                    out.emplace_back(token);
                     ++i;
                     continue;
                 }
 
-                if (!ctx.allow_chain) {
-                    ctx.error = "prompt: unexpected '" + token + "' in a function file (only .func blocks)";
+                if (!ctx.allow_chain) [[unlikely]] {
+                    ctx.error = std::format("prompt: unexpected '{}' in a function file (only .func blocks)", token);
                     return false;
                 }
 
@@ -347,23 +347,23 @@ namespace dana {
                         args.push_back(tokens[j]);
                         ++j;
                     }
-                    if (std::ranges::find(ctx.active, *call) != ctx.active.end()) {
-                        ctx.error = "prompt: function recursion in ." + std::string(*call);
+                    if (std::ranges::find(ctx.active, *call) != ctx.active.end()) [[unlikely]] {
+                        ctx.error = std::format("prompt: function recursion in .{}", *call);
                         return false;
                     }
-                    if (ctx.active.size() >= kMaxFunctionDepth) {
+                    if (ctx.active.size() >= kMaxFunctionDepth) [[unlikely]] {
                         ctx.error = "prompt: functions nested too deep";
                         return false;
                     }
                     string_list substituted;
-                    if (!substitute(*def, args, substituted, ctx.error)) {
-                        ctx.error = "prompt: " + ctx.error;
+                    if (!substitute(*def, args, substituted, ctx.error)) [[unlikely]] {
+                        ctx.error = std::format("prompt: {}", ctx.error);
                         return false;
                     }
                     ctx.active.emplace_back(*call);
                     bool const ok = sequence(substituted, out, ctx);
                     ctx.active.pop_back();
-                    if (!ok) {
+                    if (!ok) [[unlikely]] {
                         return false;
                     }
                     i = j;
@@ -375,7 +375,7 @@ namespace dana {
                         ++ctx.body_depth;
                     }
                 }
-                out.push_back(token);
+                out.emplace_back(token);
                 ++i;
             }
 
@@ -568,7 +568,7 @@ namespace dana {
         return true;
     }
 
-    expanded_argv expand_functions(std::span<std::string const> argv, function_table& table, bool allow_chain) {
+    expanded_argv expand_functions(text::string_views argv, function_table& table, bool allow_chain) {
         expanded_argv out;
         if (argv.empty()) {
             return out;

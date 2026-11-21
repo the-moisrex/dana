@@ -39,7 +39,7 @@ namespace dana {
             return root_;
         }
 
-        [[nodiscard]] std::vector<std::string> const& exclude() const {
+        [[nodiscard]] text::string_views exclude() const {
             return exclude_;
         }
 
@@ -66,7 +66,7 @@ namespace dana {
 
         // The `keys::excluded_files` value: the prior patterns plus `patterns`,
         // newline-separated and deduplicated.
-        [[nodiscard]] std::string exclude_fact(std::vector<std::string> const& patterns) const;
+        [[nodiscard]] std::string exclude_fact(text::string_views patterns) const;
 
       private:
         std::vector<std::string> exclude_;

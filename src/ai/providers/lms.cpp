@@ -66,7 +66,7 @@ namespace dana::ai {
             return data.value("base_url", "");
         }
 
-        void remember_endpoint(std::string const& base) {
+        void remember_endpoint(std::string_view base) {
             std::error_code ec;
             std::filesystem::create_directories(state::path(kCacheName).parent_path(), ec);
             std::filesystem::path const path      = state::path(kCacheName);
@@ -113,7 +113,7 @@ namespace dana::ai {
                   .default_base_url    = "",
                 }) {}
 
-            std::string base_url(std::string const& requested) override {
+            std::string base_url(std::string_view requested) override {
                 std::string explicit_url = trim(requested);
                 if (explicit_url.empty()) {
                     explicit_url = trim(env_value(m_info.base_url_env));
@@ -142,15 +142,15 @@ namespace dana::ai {
                 return endpoint;
             }
 
-            std::vector<model_record> chat_models(std::string const& base, long timeout) override {
+            std::vector<model_record> chat_models(std::string_view base, long timeout) override {
                 return chat_models_with_key(base, timeout, {});
             }
 
             std::vector<model_record>
-            chat_models_with_key(std::string const& base, long timeout, std::string const& key) override {
+            chat_models_with_key(std::string_view base, long timeout, std::string_view key) override {
                 // An empty base means "discover the endpoint", exactly like the Python
                 // provider's `base or self.base_url()`.
-                std::string const resolved = base.empty() ? base_url({}) : base;
+                std::string const resolved = base.empty() ? base_url({}) : std::string(base);
                 std::string const root = resolved.ends_with("/v1") ? resolved.substr(0, resolved.size() - 3) : resolved;
                 http_request      request;
                 request.url             = root + "/api/v0/models";
@@ -187,7 +187,7 @@ namespace dana::ai {
                 return out;
             }
 
-            std::string resolve_model(std::string const& requested, std::string const& base) override {
+            std::string resolve_model(std::string_view requested, std::string_view base) override {
                 std::string wanted = trim(requested);
                 if (wanted.empty()) {
                     wanted = trim(env_value(m_info.model_env));
@@ -200,8 +200,9 @@ namespace dana::ai {
                 for (auto const& model : models) {
                     std::string const type      = model.type;
                     std::string const id        = model.id;
-                    auto              has_embed = [](std::string const& value) {
-                        std::string lowered = value;
+                    auto              has_embed = [](std::string_view value) {
+                        std::string lowered(value);
+                        // todo: we can make a utility for this
                         std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](unsigned char c) {
                             return static_cast<char>(std::tolower(c));
                         });
@@ -248,7 +249,7 @@ namespace dana::ai {
                 }
             }
 
-            std::string error_hint(std::string const& message, std::string const& base) override {
+            std::string error_hint(std::string_view message, std::string_view base) override {
                 std::string text    = openai_compat::error_hint(message, base);
                 std::string lowered = text;
                 std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](unsigned char c) {
@@ -257,14 +258,17 @@ namespace dana::ai {
                 if (lowered.contains("connect") || lowered.contains("refused") || lowered.contains("timed out") ||
                     lowered.contains("timeout") || lowered.contains("unreachable"))
                 {
-                    text += "\nCheck that LM Studio's server is running (`lms server start`) and that " + base +
-                            " is the right endpoint; --base-url and " + m_info.base_url_env + " set it.";
+                    text += "\nCheck that LM Studio's server is running (`lms server start`) and that ";
+                    text += base;
+                    text += " is the right endpoint; --base-url and ";
+                    text += m_info.base_url_env;
+                    text += " set it.";
                 }
                 return text;
             }
 
           private:
-            bool alive(std::string const& base) {
+            bool alive(std::string_view base) {
                 try {
                     http_request request;
                     request.url             = normalise_base(base) + "/models";
@@ -301,19 +305,14 @@ namespace dana::ai {
             }
 
             static std::string cli_endpoint() {
-                auto const executable = dana::fs::bin_tool(
-                  "lms",
-                  dana::fs::self_path().value_or(std::filesystem::path{}),
-                  dana::fs::find_git_root());
+                auto const executable =
+                  fs::bin_tool("lms", fs::self_path().value_or(std::filesystem::path{}), fs::find_git_root());
                 if (executable.empty()) {
                     return {};
                 }
-                auto const result = process::run_command(
-                  std::vector<std::string>{executable.string(), "status"},
-                  {},
-                  {},
-                  std::chrono::milliseconds(10'000));
-                std::string             text = result.stdout_data + result.stderr_data;
+                std::array<std::string, 2> const cmdline{executable.string(), "status"};
+                auto const  result = process::run_command(cmdline, {}, {}, std::chrono::milliseconds(10'000));
+                std::string text   = result.stdout_data + result.stderr_data;
                 static std::regex const ansi(R"(\x1b\[[0-9;]*m)");
                 text = std::regex_replace(text, ansi, "");
                 static std::regex const port(R"(port\s*:?\s*(\d+))", std::regex::icase);
@@ -345,6 +344,6 @@ namespace dana::ai {
     // Registration runs at static-init time; a failed allocation aborts the
     // provider catalog rather than silently dropping it.
     // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
-    bool const lms_registered = register_provider(std::make_unique<lms_provider>());
+    [[maybe_unused]] bool const lms_registered = register_provider(std::make_unique<lms_provider>());
 
 } // namespace dana::ai

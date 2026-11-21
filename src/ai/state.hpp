@@ -6,6 +6,8 @@
 // mirrored per terminal under .../terminals/<scope>/<provider>.json, and a
 // plain-text `last` file names the provider that talked most recently there.
 
+#include "../core/strings.hpp"
+
 #include <filesystem>
 #include <map>
 #include <nlohmann/json.hpp>
@@ -52,11 +54,11 @@ namespace dana::ai::state {
     // The state file for the last debate between `names` (order-insensitive).
     std::filesystem::path                                     debate_path(std::vector<std::string> names);
     std::optional<std::map<std::string, conversation_record>> load_debate(
-      std::vector<std::string> const& names,
-      double                          max_age = kMaxAge);
-    void save_debate(std::vector<std::string> const&                   names,
+      text::string_views names,
+      double             max_age = kMaxAge);
+    void save_debate(text::string_views                                names,
                      std::map<std::string, conversation_record> const& participants,
                      std::string_view                                  scope = {});
-    void clear_debate(std::vector<std::string> const& names, std::string_view scope = {});
+    void clear_debate(text::string_views names, std::string_view scope = {});
 
 } // namespace dana::ai::state

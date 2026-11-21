@@ -17,14 +17,14 @@ namespace dana {
 
         // Run `git <args>` in the inherited cwd (git.sh never uses -C / find_git_root
         // for its own git calls, so the output is cwd-relative exactly like the script).
-        std::string git_raw(std::vector<std::string> const& args) {
-            return dana::process::run_command(args).stdout_data;
+        std::string git_raw(text::string_views args) {
+            return process::run_command(args).stdout_data;
         }
 
         // ```bash echo "$(git branch --show-current ... || echo detached)"``` only
         // substitutes 'detached' on a non-zero exit, so the exit code matters here.
         std::string git_branch() {
-            auto result = dana::process::run_command(std::vector<std::string>{"git", "branch", "--show-current"});
+            auto const result = process::run_command({"git", "branch", "--show-current"});
             if (result.exit_code != 0) {
                 return "detached";
             }
@@ -41,7 +41,7 @@ namespace dana {
             std::size_t pos   = 0;
             std::size_t count = 0;
             while (pos < s.size() && count < n) {
-                std::size_t nl = s.find('\n', pos);
+                auto const nl = s.find('\n', pos);
                 if (nl == std::string_view::npos) {
                     return std::string(s);
                 }
@@ -82,16 +82,13 @@ Common scenarios you can help with:
 
         // Embed git status context if in a git repo.
         std::vector<char const*> rev = {"git", "rev-parse", "--is-inside-work-tree", nullptr};
-        if (
-          dana::process::run_command(std::vector<std::string>{"git", "rev-parse", "--is-inside-work-tree"}).exit_code ==
-          0)
-        {
+        if (process::run_command({"git", "rev-parse", "--is-inside-work-tree"}).exit_code == 0) {
             output += "Current git context:\n\n```text\n";
             output += std::format("Branch: {}\n", git_branch());
             output += "Status:\n";
-            output += head_lines_raw(git_raw(std::vector<std::string>{"git", "status", "--short"}), 20);
+            output += head_lines_raw(git_raw({"git", "status", "--short"}), 20);
             output += "\nRecent commits:\n";
-            output += git_raw(std::vector<std::string>{"git", "log", "--oneline", "-10"});
+            output += git_raw({"git", "log", "--oneline", "-10"});
             output += "```\n\n";
         }
 

@@ -25,7 +25,7 @@ namespace dana {
             bool                     prompt_only = false;
         };
 
-        commit_options parse_commit_options(std::vector<std::string> const& args) {
+        commit_options parse_commit_options(text::string_views args) {
             commit_options opts;
             for (std::size_t i = 0; i < args.size(); ++i) {
                 std::string_view a          = args[i];
@@ -73,17 +73,18 @@ Keep it specific and practical, not generic. Only return copyable commit message
     } // namespace
 
     static void execute_commit(view const& v, result& r) {
-        auto head_lines = head_lines_or_throw(v);
-        auto opts       = parse_commit_options(positional_args(v));
+        auto       head_lines = head_lines_or_throw(v);
+        auto const pos_args   = positional_args(v);
+        auto       opts       = parse_commit_options(pos_args);
 
         // The chain-wide filter: exclusions join --exclude, and a scope becomes an
         // implicit --only prefix.
         file_filter const filter = file_filter::from(v.prior, v.env);
         for (auto const& pattern : filter.exclude()) {
-            opts.exclude.push_back(pattern);
+            opts.exclude.emplace_back(pattern);
         }
         if (filter.has_root() && !v.env.git_root.empty()) {
-            auto spec = filter.root().lexically_relative(v.env.git_root).generic_string();
+            auto const spec = filter.root().lexically_relative(v.env.git_root).generic_string();
             if (!spec.empty() && spec != ".") {
                 opts.only.push_back(spec + "/*");
             }
@@ -98,23 +99,20 @@ Keep it specific and practical, not generic. Only return copyable commit message
             return;
         }
 
-        if (
-          dana::process::run_command(std::vector<std::string>{"git", "rev-parse", "--is-inside-work-tree"}).exit_code !=
-          0)
-        {
+        if (process::run_command({"git", "rev-parse", "--is-inside-work-tree"}).exit_code != 0) {
             throw soft_error{"prompt commit: Error: Not inside a git repository.\n"};
         }
 
         std::string diff_type = "staged changes";
-        std::string diff      = dana::git::run({"git", "diff", "--cached"});
+        std::string diff      = git::run({"git", "diff", "--cached"});
 
         if (diff.empty()) {
             diff_type = "unstaged and untracked changes";
-            diff      = dana::git::run({"git", "diff"});
+            diff      = git::run({"git", "diff"});
 
             // Run both operations from the root so subdirectory invocations
             // include all untracked files and resolve their paths consistently.
-            auto root_result = dana::process::run_command(std::vector<std::string>{"git", "rev-parse", "--show-cdup"});
+            auto root_result = process::run_command({"git", "rev-parse", "--show-cdup"});
             if (root_result.exit_code != 0) {
                 throw soft_error{"prompt commit: Error: Could not locate repository root.\n"};
             }
@@ -128,8 +126,9 @@ Keep it specific and practical, not generic. Only return copyable commit message
             }
 
             // NUL-delimited names preserve newlines and other special characters.
-            auto listing = dana::process::run_command(
-              std::vector<std::string>{"git", "-C", root, "ls-files", "--others", "--exclude-standard", "-z"});
+            std::array<std::string, 7> const
+                       cmdline{"git", "-C", root, "ls-files", "--others", "--exclude-standard", "-z"};
+            auto const listing = process::run_command(cmdline);
             if (listing.exit_code != 0) {
                 throw soft_error{"prompt commit: Error: Could not list untracked files.\n"};
             }
@@ -153,8 +152,9 @@ Keep it specific and practical, not generic. Only return copyable commit message
                 }
 
                 // Let Git handle modes, symlinks, binary files, and newline markers.
-                auto file_diff = dana::process::run_command(
-                  std::vector<std::string>{"git", "-C", root, "diff", "--no-index", "--", "/dev/null", "./" + path});
+                std::array<std::string, 8> const
+                     diff_cmdline{"git", "-C", root, "diff", "--no-index", "--", "/dev/null", "./" + path};
+                auto file_diff = process::run_command(diff_cmdline);
 
                 // --no-index returns 1 when it finds a difference.
                 if (file_diff.exit_code != 0 && file_diff.exit_code != 1) {
@@ -169,15 +169,15 @@ Keep it specific and practical, not generic. Only return copyable commit message
         }
 
         if (!opts.exclude.empty() || !opts.only.empty()) {
-            diff = dana::git::filter_diff_by_path(diff, opts.only, opts.exclude);
+            diff = git::filter_diff_by_path(diff, opts.only, opts.exclude);
         }
 
         if (diff.empty()) {
             throw soft_error{"prompt commit: No changes found in the repository.\n"};
         }
 
-        std::string trimmed_diff  = trim_context_nl(diff, head_lines);
-        std::string numbered_diff = dana::git::add_line_numbers_to_diff(trimmed_diff);
+        auto const trimmed_diff  = trim_context_nl(diff, head_lines);
+        auto const numbered_diff = git::add_line_numbers_to_diff(trimmed_diff);
 
         std::string output;
         output += std::format("Write a clear, descriptive Git commit message for the following {}.\n", diff_type);

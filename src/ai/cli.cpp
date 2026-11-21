@@ -77,26 +77,21 @@ namespace dana::ai {
             }
         }
 
-        std::string base_name(std::string const& path) {
+        std::string_view base_name(std::string_view path) {
             auto const slash = path.find_last_of('/');
             return slash == std::string::npos ? path : path.substr(slash + 1);
         }
 
-        bool copy_answer_text(std::string const& text) {
-            auto const exe = dana::fs::bin_tool(
-              "clipboard",
-              dana::fs::self_path().value_or(std::filesystem::path{}),
-              dana::fs::find_git_root());
+        bool copy_answer_text(std::string_view const text) {
+            auto const exe =
+              fs::bin_tool("clipboard", fs::self_path().value_or(std::filesystem::path{}), fs::find_git_root());
             if (exe.empty()) {
                 warn("--copy: no clipboard tool found");
                 return false;
             }
-            auto const result = process::run_command(
-              std::vector<std::string>{exe.string(), "copy"},
-              text,
-              {},
-              std::chrono::milliseconds(30'000));
-            if (result.exit_code != 0) {
+            std::array<std::string, 2> const cmdline{exe.string(), "copy"};
+            auto const result = process::run_command(cmdline, text, {}, std::chrono::milliseconds(30'000));
+            if (result.exit_code != 0) [[unlikely]] {
                 warn("--copy failed");
                 return false;
             }
@@ -149,7 +144,7 @@ namespace dana::ai {
             return open;
         }
 
-        void save_conversation(std::string const& provider_name, conversation const& chat, std::string const& scope) {
+        void save_conversation(std::string_view provider_name, conversation const& chat, std::string_view scope) {
             state::conversation_record record;
             record.conversation_id = chat.conversation_id();
             record.model           = chat.model();
@@ -226,9 +221,9 @@ namespace dana::ai {
                 out(array.dump(2) + "\n");
                 return 0;
             }
-            auto price = [](std::string const& value) {
+            auto price = [](std::string_view value) {
                 try {
-                    double const number = std::stod(value);
+                    double const number = std::stod(std::string(value));
                     if (number <= 0) {
                         return std::string("free");
                     }
@@ -263,11 +258,11 @@ namespace dana::ai {
 
     } // namespace
 
-    bool copy_answer(std::string const& text) {
+    bool copy_answer(std::string_view text) {
         return copy_answer_text(text);
     }
 
-    std::string read_prompt(std::vector<std::string> const& parts) {
+    std::string read_prompt(text::string_views parts) {
         std::string text;
         for (auto const& part : parts) {
             if (!text.empty()) {
@@ -282,33 +277,33 @@ namespace dana::ai {
         return text;
     }
 
-    cli_options parse_cli_options(provider const& instance, std::vector<std::string> const& argv) {
+    cli_options parse_cli_options(provider const& instance, text::string_views argv) {
         cli_options options;
         auto const& info     = instance.info();
         auto        value_of = [&argv](std::size_t& index, std::string_view flag) -> std::string {
-            std::string const& token  = argv[index];
-            auto const         equals = token.find('=');
+            std::string_view token  = argv[index];
+            auto const       equals = token.find('=');
             if (equals != std::string::npos) {
-                return token.substr(equals + 1);
+                return std::string(token.substr(equals + 1));
             }
             if (index + 1 >= argv.size()) {
                 throw std::runtime_error(std::string(flag) + " needs a value");
             }
-            return argv[++index];
+            return std::string(argv[++index]);
         };
 
         bool positional_only = false;
         for (std::size_t i = 0; i < argv.size(); ++i) {
-            std::string const& token = argv[i];
+            auto token = argv[i];
             if (positional_only || token.empty() || token.front() != '-' || token == "-") {
-                options.prompt.push_back(token);
+                options.prompt.emplace_back(token);
                 continue;
             }
             if (token == "--") {
                 positional_only = true;
                 continue;
             }
-            std::string const name = token.substr(0, token.find('='));
+            auto const name = token.substr(0, token.find('='));
             if (name == "-f" || name == "--file") {
                 options.files.push_back(value_of(i, name));
             } else if (name == "--prompt-file") {
@@ -384,8 +379,8 @@ namespace dana::ai {
             } else if (name == "-h" || name == "--help") {
                 usage(instance, std::cout);
                 std::exit(0);
-            } else {
-                throw std::runtime_error("unknown option " + token + " (see ai." + info.name + " --help)");
+            } else [[unlikely]] {
+                throw std::runtime_error(std::format("unknown option {} (see ai.{} --help)", token, info.name));
             }
         }
         return options;
@@ -394,7 +389,7 @@ namespace dana::ai {
     turn_result run_turn(
       conversation&           chat,
       provider const&         instance,
-      std::string const&      prompt,
+      std::string_view        prompt,
       turn_options const&     options,
       renderer::writer        out,
       renderer::writer const& err) {
@@ -420,14 +415,13 @@ namespace dana::ai {
         }
 
         std::filesystem::path temporary;
-        std::string           message = prompt;
+        std::string           message = std::string(prompt);
         if (attach) {
             std::size_t const count = prompt_size(prompt);
             try {
                 temporary = write_prompt_file(prompt);
             } catch (std::exception const& failure) {
-                stream_event problem =
-                  dana::ai::error(std::string("could not write the prompt file: ") + failure.what());
+                stream_event const problem = error(std::string("could not write the prompt file: ") + failure.what());
                 if (options.json) {
                     emit_json(out, problem, options.json_fields);
                 } else {
@@ -561,8 +555,8 @@ namespace dana::ai {
         int run_once(conversation&      chat,
                      provider const&    instance,
                      cli_options const& options,
-                     std::string const& provider_name,
-                     std::string const& scope) {
+                     std::string_view   provider_name,
+                     std::string_view   scope) {
             renderer::writer out = [](std::string_view chunk) {
                 std::cout.write(chunk.data(), static_cast<std::streamsize>(chunk.size()));
                 std::cout.flush();
@@ -603,11 +597,11 @@ namespace dana::ai {
         int run_repl(conversation&      initial,
                      provider&          instance,
                      cli_options const& options,
-                     std::string const& provider_name,
-                     std::string const& scope) {
-            conversation*     chat  = &initial;
-            std::string const model = chat->model();
-            std::string       where = "ai." + provider_name + ": " + model;
+                     std::string_view   provider_name,
+                     std::string_view   scope) {
+            conversation* chat  = &initial;
+            auto const    model = chat->model();
+            std::string   where = std::format("ai.{}: {}", provider_name, model);
             if (!chat->history().empty() && chat->history().is_array()) {
                 where += " (continuing, " + std::to_string(chat->history().size()) + " message(s) in context)";
             }
@@ -695,15 +689,15 @@ namespace dana::ai {
 
     } // namespace
 
-    int run_provider_cli(std::string const& provider_name, std::vector<std::string> const& argv) {
+    int run_provider_cli(std::string_view provider_name, text::string_views argv) {
         auto const canonical = canonical_provider(provider_name);
-        if (!canonical) {
-            warn("ai: unknown provider '" + provider_name + "'", "ai");
+        if (!canonical) [[unlikely]] {
+            warn(std::format("ai: unknown provider '{}'", provider_name), "ai");
             return 2;
         }
         provider* instance = find_provider(*canonical);
-        if (instance == nullptr) {
-            warn("ai: unknown provider '" + provider_name + "'", "ai");
+        if (instance == nullptr) [[unlikely]] {
+            warn(std::format("ai: unknown provider '{}'", provider_name), "ai");
             return 2;
         }
 
@@ -872,35 +866,34 @@ namespace dana::ai {
         return instance.session_descriptor(open).dump(2) + "\n";
     }
 
-    int run_keys_cli(std::vector<std::string> const& argv) {
-        std::vector<std::string> wanted;
+    int run_keys_cli(text::string_views argv) {
+        std::vector<std::string_view> names;
         for (auto const& token : argv) {
             if (!token.empty() && token.front() != '-') {
-                wanted.push_back(token);
+                names.emplace_back(token);
             }
         }
-        std::vector<std::string> names = wanted;
         if (names.empty()) {
             for (auto* instance : all_providers()) {
                 if (instance->info().api) {
-                    names.push_back(instance->info().name);
+                    names.emplace_back(instance->info().name);
                 }
             }
         }
         std::size_t width = 12;
-        for (auto const& name : names) {
+        for (auto const name : names) {
             width = std::max(width, name.size());
         }
-        for (auto const& name : names) {
+        for (auto const name : names) {
             auto const canonical = canonical_provider(name);
             provider*  instance  = canonical ? find_provider(*canonical) : nullptr;
-            if (instance == nullptr) {
-                warn(name + ": unknown provider", "ai");
+            if (instance == nullptr) [[unlikely]] {
+                warn(std::string(name) + ": unknown provider", "ai");
                 continue;
             }
-            std::vector<std::string> env_names{instance->info().key_env};
+            std::array<std::string_view, 1> const env_names{instance->info().key_env};
             auto const [source, masked]  = keys::describe(instance->info().name, env_names);
-            std::string line             = name;
+            std::string line             = std::string(name);
             line                        += std::string(width - name.size() + 2, ' ');
             line                        += source;
             line                        += std::string(source.size() < 32 ? 32 - source.size() + 2 : 2, ' ');

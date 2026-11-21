@@ -23,7 +23,7 @@ namespace {
         }
     }
 
-    void check_equal(std::string const& actual, std::string const& expected, std::string_view what) {
+    void check_equal(std::string_view actual, std::string_view expected, std::string_view what) {
         if (actual != expected) {
             std::cerr << "FAIL: " << what << "\n  expected: " << expected << "\n  actual:   " << actual << '\n';
             ++failures;
@@ -47,8 +47,8 @@ namespace {
             return {
               .name = name,
               .ask =
-                [this](std::string const& prompt, nlohmann::json const& turn_fields) {
-                    prompts.push_back(prompt);
+                [this](std::string_view prompt, nlohmann::json const& turn_fields) {
+                    prompts.emplace_back(prompt);
                     fields.push_back(turn_fields);
                     auto const answer = answers.front();
                     answers.erase(answers.begin());
@@ -72,10 +72,10 @@ namespace {
 
     dana::ai::debate_result run(
       std::vector<fake_participant>& fakes,
-      std::string const&             question,
+      std::string_view               question,
       int                            rounds,
       bool                           until_agree,
-      std::string const&             instruction,
+      std::string_view               instruction,
       collected&                     writer) {
         std::vector<dana::ai::debate_participant> participants;
         participants.reserve(fakes.size());
@@ -88,9 +88,9 @@ namespace {
           rounds,
           until_agree,
           instruction,
-          [&writer](std::string const& provider, int round, std::string const& answer) {
+          [&writer](std::string_view provider, int round, std::string_view answer) {
               writer.providers.emplace_back(provider, round);
-              writer.answers.push_back(answer);
+              writer.answers.emplace_back(answer);
           },
           {});
     }

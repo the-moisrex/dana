@@ -196,8 +196,8 @@ namespace dana {
             return opts;
         }
 
-        bool names_contain(std::vector<std::string> const& names, std::string_view wanted) {
-            return std::ranges::any_of(names, [wanted](std::string const& name) {
+        bool names_contain(text::string_views names, std::string_view wanted) {
+            return std::ranges::any_of(names, [wanted](std::string_view name) {
                 return name == wanted;
             });
         }

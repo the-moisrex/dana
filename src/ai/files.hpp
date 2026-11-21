@@ -4,8 +4,9 @@
 // uploads the bytes itself (the flow differs per site), so this only turns a
 // path into the (name, bytes, mime) triple they all need.
 
+#include "../core/strings.hpp"
+
 #include <cstddef>
-#include <span>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -35,7 +36,7 @@ namespace dana::ai {
     attachment read_attachment(std::string_view path);
 
     // Read every path, preserving order.
-    std::vector<attachment> read_attachments(std::span<std::string const> paths);
+    std::vector<attachment> read_attachments(text::string_views paths);
 
     std::string guess_mime(std::string_view name);
 

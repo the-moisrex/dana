@@ -41,14 +41,14 @@ namespace dana::ai::sentinel {
 
     // The `gAAAAAB…` proof token for `seed` / `difficulty`.
     std::string solve_proof(
-      std::string const&    seed,
-      std::string const&    difficulty,
+      std::string_view    seed,
+      std::string_view    difficulty,
       nlohmann::json const& fingerprint,
       std::string_view      algo  = kProofHash,
       int                   limit = 500'000);
 
     // Decode and run a `dx` program; return its base64 result (or nullopt).
-    std::optional<std::string> solve_turnstile(std::string const& dx, std::string const& key);
+    std::optional<std::string> solve_turnstile(std::string_view dx, std::string_view key);
 
     // Standard base64 (the VM's atob/btoa and the token encoding).
     std::string                encode_base64(std::string_view data);

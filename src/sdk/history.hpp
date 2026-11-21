@@ -143,7 +143,7 @@ namespace dana {
             return fd_ >= 0;
         }
 
-        [[nodiscard]] std::string const& id() const {
+        [[nodiscard]] std::string_view id() const {
             return id_;
         }
 

@@ -7,24 +7,12 @@
 #include <vector>
 
 namespace dana {
-
-    namespace {
-
-        // bash: command -v <name> >/dev/null 2>&1 — mirrors whether the shell can find
-        // the tool on PATH.
-        bool tool_exists(std::string const& name) {
-            std::string cmd = "command -v " + name + " >/dev/null 2>&1";
-            return dana::process::run_command({"bash", "-c", cmd}).exit_code == 0;
-        }
-
-    } // namespace
-
     static void execute_cppman(view const& v, result& r) {
         auto head_lines = head_lines_or_throw(v);
 
         auto pages = positional_args(v);
 
-        if (!tool_exists("cppman")) {
+        if (!process::tool_exists("cppman")) {
             throw soft_error{
               "Error: cppman is not installed. Please install it (e.g., pip install cppman or your "
               "package manager).\n"};

@@ -87,14 +87,14 @@ namespace dana::ai {
             return text.empty() ? "New chat" : text;
         }
 
-        std::optional<std::string> model_alias(std::string const& requested) {
+        std::optional<std::string> model_alias(std::string_view const requested) {
             if (auto const alias = models::resolve_alias("claude", requested)) {
                 if (alias->empty()) {
                     return std::nullopt;
                 }
                 return std::string(*alias);
             }
-            return requested;
+            return std::string(requested);
         }
 
         void apply_headers(http_request& request, std::vector<std::pair<std::string, std::string>> const& headers) {
@@ -117,15 +117,15 @@ namespace dana::ai {
             return "Claude returned an error";
         }
 
-        std::string friendly(std::string const& message) {
-            std::string lowered = message;
+        std::string friendly(std::string_view message) {
+            std::string lowered = std::string(message);
             std::transform(lowered.begin(), lowered.end(), lowered.begin(), [](unsigned char c) {
                 return static_cast<char>(std::tolower(c));
             });
-            if (lowered.contains("model_not_available") || lowered.contains("model not available")) {
-                return message + " (this account cannot use that model; try --model auto)";
+            if (lowered.contains("model_not_available") || lowered.contains("model not available")) [[unlikely]] {
+                return std::format("{} (this account cannot use that model; try --model auto)", message);
             }
-            return message;
+            return std::string(message);
         }
 
         class claude_provider : public provider {
@@ -158,23 +158,23 @@ namespace dana::ai {
             }
 
             std::unique_ptr<conversation>
-            open(session::match const& match, std::string const& model, open_options const& options) override;
+            open(session::match const& match, std::string_view model, open_options const& options) override;
 
             std::string org_uuid(std::vector<std::pair<std::string, std::string>> const& headers,
                                  session::match const&                                   match);
 
             json create_chat(std::vector<std::pair<std::string, std::string>> const& headers,
-                             std::string const&                                      org,
-                             std::string const&                                      prompt);
+                             std::string_view                                        org,
+                             std::string_view                                        prompt);
             json fetch_chat(std::vector<std::pair<std::string, std::string>> const& headers,
-                            std::string const&                                      org,
-                            std::string const&                                      chat);
+                            std::string_view                                        org,
+                            std::string_view                                        chat);
             json upload(std::vector<std::pair<std::string, std::string>> const& headers,
-                        std::string const&                                      org,
-                        std::string const&                                      chat,
+                        std::string_view                                        org,
+                        std::string_view                                        chat,
                         attachment const&                                       file);
 
-            [[nodiscard]] std::string const& origin() const {
+            [[nodiscard]] std::string_view origin() const {
                 return info_.origin;
             }
 
@@ -185,16 +185,16 @@ namespace dana::ai {
 
         std::vector<std::pair<std::string, std::string>> base_headers(
           session::match const& match,
-          std::string const&    origin) {
+          std::string_view      origin) {
             return session::build_headers(
               match,
               {
-                {                   "Accept", "application/json"},
-                {             "Content-Type", "application/json"},
-                {                   "Origin",             origin},
-                {                  "Referer",  origin + "/chats"},
-                {"anthropic-client-platform",    "web_claude_ai"},
-                { "anthropic-client-version",            "1.0.0"},
+                {                   "Accept",             "application/json"},
+                {             "Content-Type",             "application/json"},
+                {                   "Origin",            std::string(origin)},
+                {                  "Referer", std::string(origin) + "/chats"},
+                {"anthropic-client-platform",                "web_claude_ai"},
+                { "anthropic-client-version",                        "1.0.0"},
             });
         }
 
@@ -247,8 +247,8 @@ namespace dana::ai {
 
         json claude_provider::create_chat(
           std::vector<std::pair<std::string, std::string>> const& headers,
-          std::string const&                                      org,
-          std::string const&                                      prompt) {
+          std::string_view                                        org,
+          std::string_view                                        prompt) {
             http_request request;
             request.url       = info_.origin + replace_all(std::string(kChatsPath), "{org}", org);
             request.method    = "POST";
@@ -271,8 +271,8 @@ namespace dana::ai {
 
         json claude_provider::fetch_chat(
           std::vector<std::pair<std::string, std::string>> const& headers,
-          std::string const&                                      org,
-          std::string const&                                      chat) {
+          std::string_view                                        org,
+          std::string_view                                        chat) {
             std::string path = replace_all(std::string(kChatPath), "{org}", org);
             path             = replace_all(std::move(path), "{chat}", chat);
             http_request request;
@@ -280,16 +280,16 @@ namespace dana::ai {
             request.timeout_seconds = 60;
             apply_headers(request, headers);
             json data = request_json(request);
-            if (!data.is_object()) {
-                throw std::runtime_error("could not read Claude chat " + chat + ": " + data.dump());
+            if (!data.is_object()) [[unlikely]] {
+                throw std::runtime_error(std::format("could not read Claude chat {}: {}", chat, data.dump()));
             }
             return data;
         }
 
         json claude_provider::upload(
           std::vector<std::pair<std::string, std::string>> const& headers,
-          std::string const&                                      org,
-          std::string const&                                      chat,
+          std::string_view                                        org,
+          std::string_view                                        chat,
           attachment const&                                       file) {
             std::string path = replace_all(std::string(kUploadPath), "{org}", org);
             path             = replace_all(std::move(path), "{chat}", chat);
@@ -317,13 +317,12 @@ namespace dana::ai {
             return data;
         }
 
-        class claude_conversation : public conversation {
-          public:
-            claude_conversation(claude_provider&    owner,
-                                session::match      match,
-                                std::string         model,
-                                open_options const& options)
-              : conversation(std::move(match), std::move(model), options),
+        struct [[nodiscard]] claude_conversation : conversation {
+            claude_conversation(claude_provider&       owner,
+                                session::match         match,
+                                std::string_view const model,
+                                open_options const&    options)
+              : conversation(std::move(match), model, options),
                 owner_(owner),
                 headers_(base_headers(match_, owner_.origin())) {
                 std::string const requested = model_.empty() ? owner_.info().default_model : model_;
@@ -335,9 +334,7 @@ namespace dana::ai {
                 }
             }
 
-            void send(std::string const&              prompt,
-                      std::vector<std::string> const& files,
-                      event_sink const&               sink) override {
+            void send(std::string_view prompt, text::string_views files, event_sink const& sink) override {
                 bool has_cookie = false;
                 for (auto const& header : headers_) {
                     if (header.first == "Cookie" && !header.second.empty()) {
@@ -449,8 +446,8 @@ namespace dana::ai {
 
           private:
             json ensure_chat(std::vector<std::pair<std::string, std::string>> const& headers,
-                             std::string const&                                      org,
-                             std::string const&                                      prompt) {
+                             std::string_view                                        org,
+                             std::string_view                                        prompt) {
                 if (!conversation_id_.empty()) {
                     if (!model_preference_ || parent_uuid_.empty()) {
                         json data = owner_.fetch_chat(headers, org, conversation_id_);
@@ -481,7 +478,7 @@ namespace dana::ai {
                 return data;
             }
 
-            json request_body(std::string const& prompt, json const& created, std::vector<json> const& attachments) {
+            json request_body(std::string_view prompt, json const& created, std::vector<json> const& attachments) {
                 std::string query;
                 if (!system_.empty() && turns_ == 0) {
                     query = system_;
@@ -492,7 +489,7 @@ namespace dana::ai {
                     std::string lines =
                       "This is a continuation of the conversation so far. Reply to the final user "
                       "message below.\n\n";
-                    std::size_t start = history_.size() > kMaxReplay ? history_.size() - kMaxReplay : 0;
+                    auto const start = history_.size() > kMaxReplay ? history_.size() - kMaxReplay : 0;
                     for (std::size_t i = start; i < history_.size(); ++i) {
                         auto const& turn = history_[i];
                         if (!turn.is_object()) {
@@ -501,7 +498,8 @@ namespace dana::ai {
                         std::string const who  = turn.value("role", "") == "user" ? "User" : "Assistant";
                         lines                 += who + ": " + turn.value("text", "") + "\n";
                     }
-                    lines += "\nUser: " + prompt;
+                    lines += "\nUser: ";
+                    lines += prompt;
                     if (!query.empty()) {
                         query += "\n\n";
                     }
@@ -602,7 +600,7 @@ namespace dana::ai {
         };
 
         std::unique_ptr<conversation>
-        claude_provider::open(session::match const& match, std::string const& model, open_options const& options) {
+        claude_provider::open(session::match const& match, std::string_view model, open_options const& options) {
             return std::make_unique<claude_conversation>(*this, match, model, options);
         }
 

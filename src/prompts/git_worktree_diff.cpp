@@ -17,7 +17,7 @@ namespace dana {
 
         // bash captures with `2>/dev/null` — the tool's diagnostics never reach the
         // user (git_raw is for `$(...)` of a command that may legitimately fail).
-        std::string git_raw(std::vector<std::string> const& args) {
+        std::string git_raw(text::string_views args) {
             return dana::process::command{args}.discard_stderr().run().stdout_data;
         }
 
@@ -31,12 +31,11 @@ namespace dana {
 
         // Detect the base branch exactly like the script: upstream (@{u}), falling
         // back to origin/main. `|| true` means a failing rev-parse yields "".
-        std::string detect_base_branch(std::string const& given) {
+        std::string detect_base_branch(std::string_view given) {
             if (!given.empty()) {
-                return given;
+                return std::string(given);
             }
-            std::string upstream =
-              strip_trailing_newlines(git_raw(std::vector<std::string>{"git", "rev-parse", "--abbrev-ref", "@{u}"}));
+            std::string upstream = strip_trailing_newlines(git_raw({"git", "rev-parse", "--abbrev-ref", "@{u}"}));
             if (upstream.empty()) {
                 return "origin/main";
             }
@@ -46,12 +45,9 @@ namespace dana {
     } // namespace
 
     static void execute_git_worktree_diff(view const& v, result& r) {
-        auto head_lines = head_lines_or_throw(v);
+        auto const head_lines = head_lines_or_throw(v);
 
-        if (
-          dana::process::run_command(std::vector<std::string>{"git", "rev-parse", "--is-inside-work-tree"}).exit_code !=
-          0)
-        {
+        if (process::run_command({"git", "rev-parse", "--is-inside-work-tree"}).exit_code != 0) {
             throw soft_error{"prompt git.worktree.diff: Error: Not inside a git repository.\n"};
         }
 

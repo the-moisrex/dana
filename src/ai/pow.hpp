@@ -24,18 +24,18 @@ namespace dana::ai::pow {
     // The nonce in `range(difficulty)` whose digest equals the hex `challenge`.
     // `workers` overrides the CPU count (0 = auto, `AI_POW_WORKERS` first).
     std::int64_t solve_deepseek(
-      std::string const& salt,
+      std::string_view salt,
       std::int64_t       expire_at,
       std::int64_t       difficulty,
-      std::string const& challenge,
+      std::string_view challenge,
       int                workers = 0);
 
     // The base64 `x-ds-pow-response` header value for a solved challenge.
     std::string deepseek_response(
-      std::string const& salt,
-      std::string const& challenge,
-      std::string const& signature,
+      std::string_view salt,
+      std::string_view challenge,
+      std::string_view signature,
       std::int64_t       answer,
-      std::string const& target_path);
+      std::string_view target_path);
 
 } // namespace dana::ai::pow

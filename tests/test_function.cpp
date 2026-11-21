@@ -23,12 +23,12 @@ namespace {
         }
     }
 
-    expanded_argv expand(std::vector<std::string> const& argv, bool allow_chain = true) {
+    expanded_argv expand(text::string_views argv, bool allow_chain = true) {
         function_table table;
         return expand_functions(argv, table, allow_chain);
     }
 
-    bool same(std::vector<std::string> const& a, std::vector<std::string> const& b) {
+    bool same(text::string_views a, text::string_views b) {
         return a == b;
     }
 
@@ -39,7 +39,7 @@ namespace {
         return dir;
     }
 
-    void write_file(std::filesystem::path const& path, std::string const& text) {
+    void write_file(std::filesystem::path const& path, std::string_view text) {
         std::filesystem::create_directories(path.parent_path());
         std::ofstream out(path, std::ios::binary);
         out << text;
@@ -149,12 +149,12 @@ namespace {
         check(load_function_files(table, {}, error), "global: loads cleanly");
         check(table.contains("global"), "global: the function is registered");
 
-        auto const called = expand_functions(std::vector<std::string>{"prompt", ".global", "x"}, table, true);
+        auto const called = expand_functions({"prompt", ".global", "x"}, table, true);
         check(called.error.empty(), "global: call expands");
         check(same(called.storage, {"prompt", ".note", "from funcs x"}), "global: tokenizer comments/quotes apply");
 
         // The bare first token also names a function.
-        auto const bare = expand_functions(std::vector<std::string>{"prompt", "global", "y"}, table, true);
+        auto const bare = expand_functions({"prompt", "global", "y"}, table, true);
         check(bare.error.empty(), "global: bare head call");
         check(same(bare.storage, {"prompt", ".note", "from funcs y"}), "global: bare head expands");
         ::unsetenv("PROMPT_FUNCS");
@@ -223,7 +223,7 @@ namespace {
         function_table table;
         std::string    error;
         check(load_function_files(table, {}, error), "override: loads both sources");
-        auto const r = expand_functions(std::vector<std::string>{"prompt", ".f"}, table, true);
+        auto const r = expand_functions({"prompt", ".f"}, table, true);
         check(same(r.storage, {"prompt", ".note", "project"}), "override: a later source replaces an earlier one");
         ::unsetenv("PROMPT_FUNCS");
     }

@@ -40,9 +40,9 @@ namespace dana::ai {
         // Open the socket: `url` must be ws:// or wss://.  `headers` reach the
         // handshake verbatim (User-Agent, Cookie, …) and a non-empty `origin`
         // becomes the Origin header.  Throws ws_error on any failure.
-        void connect(std::string const&                                      url,
+        void connect(std::string_view                                      url,
                      std::vector<std::pair<std::string, std::string>> const& headers,
-                     std::string const&                                      origin,
+                     std::string_view                                      origin,
                      long                                                    timeout_seconds);
 
         void send_text(std::string_view data);

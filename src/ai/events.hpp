@@ -31,17 +31,17 @@ namespace dana::ai {
         nlohmann::json data = nlohmann::json::object();
     };
 
-    inline stream_event thinking(std::string value) {
+    inline stream_event thinking(std::string_view const value) {
         stream_event event;
         event.kind = event_kind::thinking;
-        event.text = std::move(value);
+        event.text = std::string(value);
         return event;
     }
 
-    inline stream_event text(std::string value) {
+    inline stream_event text(std::string_view const value) {
         stream_event event;
         event.kind = event_kind::text;
-        event.text = std::move(value);
+        event.text = std::string(value);
         return event;
     }
 
@@ -72,21 +72,21 @@ namespace dana::ai {
         return event;
     }
 
-    inline stream_event error(std::string message) {
+    inline stream_event error(std::string_view const message) {
         stream_event event;
         event.kind = event_kind::error;
-        event.text = std::move(message);
+        event.text = std::string(message);
         return event;
     }
 
-    inline stream_event raw(std::string line) {
+    inline stream_event raw(std::string_view const line) {
         stream_event event;
         event.kind = event_kind::raw;
-        event.text = std::move(line);
+        event.text = std::string(line);
         return event;
     }
 
-    inline std::string_view kind_name(event_kind kind) {
+    inline std::string_view kind_name(event_kind const kind) {
         switch (kind) {
             case event_kind::thinking: return "thinking";
             case event_kind::text: return "text";

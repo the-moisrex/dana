@@ -361,9 +361,9 @@ namespace {
         terminal::id const a{.sid = 100, .tty = "/dev/pts/1", .key = {}};
         terminal::id const b{.sid = 200, .tty = "/dev/pts/2", .key = {}};
 
-        auto write = [&](std::string const& tag, terminal::id const& where) {
-            auto rec = make_recorder({"prompt", tag}, where);
-            rec.segment(segment(1, "note", "prompt", "append", tag + "\n", true));
+        auto write = [&](std::string_view tag, terminal::id const& where) {
+            auto rec = make_recorder({"prompt", std::string(tag)}, where);
+            rec.segment(segment(1, "note", "prompt", "append", std::string(tag) + "\n", true));
             rec.finish(0, false);
             std::this_thread::sleep_for(std::chrono::milliseconds(2));
         };

@@ -25,7 +25,7 @@ namespace dana::tool_exec {
         }
 
         std::string body_of(prompt_error const& err) {
-            std::string            body    = err.partial_output();
+            std::string            body    = std::string(err.partial_output());
             std::string_view const message = err.what();
             if (!message.empty()) {
                 if (!body.empty() && !body.ends_with('\n')) {

@@ -9,11 +9,11 @@
 //      back to $XDG_DATA_HOME/opencode/auth.json);
 //   5. options.apiKey of a provider in opencode.jsonc.
 
+#include "../core/strings.hpp"
+
 #include <optional>
-#include <span>
 #include <string>
 #include <string_view>
-#include <vector>
 
 namespace dana::ai::keys {
 
@@ -25,12 +25,11 @@ namespace dana::ai::keys {
     // A redacted preview (never the whole secret).
     std::string mask(std::string_view value);
 
-    resolved resolve(std::string_view             provider,
-                     std::span<std::string const> env_names    = {},
-                     std::optional<std::string>   explicit_key = std::nullopt);
+    resolved resolve(std::string_view                provider,
+                     text::string_views              env_names    = {},
+                     std::optional<std::string_view> explicit_key = std::nullopt);
 
     // (source, masked key) for a diagnostic listing.
-    std::pair<std::string, std::string> describe(std::string_view             provider,
-                                                 std::span<std::string const> env_names = {});
+    std::pair<std::string, std::string> describe(std::string_view provider, text::string_views env_names = {});
 
 } // namespace dana::ai::keys

@@ -39,18 +39,19 @@ namespace dana::sanitize {
         std::vector<redaction_rule> const& redaction_rules() {
             static std::vector<redaction_rule> const rules = [] {
                 std::vector<redaction_rule> built;
-                auto                        add = [&built](std::string const& pattern, std::string replacement) {
+                auto const                  add = [&built](std::string_view pattern, std::string replacement) {
                     // $HOME/$USER/$TMPDIR are interpolated into regular expressions:
                     // any regex metacharacter they contain would throw std::regex_error.
                     // Escaping keeps a hostile environment from aborting the
                     // dispatcher, and a pattern that still cannot compile is skipped.
                     try {
-                        built.push_back({.pattern = std::regex(pattern), .replacement = std::move(replacement)});
+                        built.push_back(
+                          {.pattern = std::regex(std::string(pattern)), .replacement = std::move(replacement)});
                     } catch (...) { // NOLINT(bugprone-empty-catch) — uncompilable pattern: ignored.
                     }
                 };
-                auto quote = [](std::string_view raw) {
-                    return dana::text::regex_escape(raw);
+                auto const quote = [](std::string_view raw) {
+                    return text::regex_escape(raw);
                 };
 
                 char const* user   = std::getenv("USER");
@@ -90,7 +91,7 @@ namespace dana::sanitize {
 
     } // namespace
 
-    static std::string clean_privacy_impl(std::string_view input, bool* redacted) {
+    static std::string clean_privacy_impl(std::string_view const input, bool* redacted) {
         std::string output(input);
         for (auto const& rule : redaction_rules()) {
             output = std::regex_replace(output, rule.pattern, rule.replacement);
@@ -102,11 +103,11 @@ namespace dana::sanitize {
         return output;
     }
 
-    std::string clean_privacy(std::string_view input) {
+    std::string clean_privacy(std::string_view const input) {
         return clean_privacy_impl(input, nullptr);
     }
 
-    result sanitize(std::string_view input) {
+    result sanitize(std::string_view const input) {
         bool        redacted = false;
         std::string text     = clean_privacy_impl(strip_osc(input), &redacted);
         return {.text = std::move(text), .redacted = redacted};

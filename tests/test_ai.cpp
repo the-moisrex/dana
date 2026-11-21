@@ -36,7 +36,7 @@ namespace {
         }
     }
 
-    void check_equal(std::string const& actual, std::string const& expected, std::string_view what) {
+    void check_equal(std::string_view actual, std::string_view expected, std::string_view what) {
         if (actual != expected) {
             std::cerr << "FAIL: " << what << "\n  expected: " << expected << "\n  actual:   " << actual << '\n';
             ++failures;

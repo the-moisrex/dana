@@ -53,7 +53,7 @@ namespace dana::compress {
 
         // The delimiter whose field count is at least two and holds for >= 80% of the
         // lines (so a stray comma in prose does not turn a paragraph into a table).
-        bool detect_delimiter(std::vector<std::string> const& lines, char& delim, std::size_t& columns) {
+        bool detect_delimiter(text::string_views lines, char& delim, std::size_t& columns) {
             static constexpr std::array<char, 4> candidates = {',', '\t', ';', '|'};
             for (char const candidate : candidates) {
                 std::size_t const cols = count_fields(lines.front(), candidate);

@@ -61,7 +61,7 @@ namespace {
         return std::string(text);
     }
 
-    std::string join_commas(std::vector<std::string> const& values) {
+    std::string join_commas(dana::text::string_views values) {
         std::string out;
         for (auto const& value : values) {
             if (!out.empty()) {
@@ -135,11 +135,11 @@ namespace {
         return out;
     }
 
-    std::vector<std::regex> compile_patterns(std::vector<std::string> const& values, bool literal) {
+    std::vector<std::regex> compile_patterns(dana::text::string_views values, bool literal) {
         std::vector<std::regex> out;
-        for (auto const& value : values) {
+        for (auto const value : values) {
             try {
-                out.emplace_back(literal ? regex_escape(value) : value, std::regex::icase);
+                out.emplace_back(literal ? regex_escape(value) : std::string(value), std::regex::icase);
             } catch (std::regex_error const& error) {
                 throw usage_error{std::format("{}: invalid pattern '{}': {}\n", kProg, value, error.what())};
             }
@@ -463,9 +463,9 @@ namespace {
     void write_matches(
       std::vector<match> const&         matches,
       bool                              has_output,
-      std::string const&                output,
+      std::string_view                  output,
       bool                              has_out_dir,
-      std::string const&                out_dir,
+      std::string_view                  out_dir,
       std::optional<std::string> const& ext,
       bool                              force,
       bool                              dry_run,
@@ -709,8 +709,8 @@ namespace {
         return out;
     }
 
-    std::string read_file(std::string const& path) {
-        std::ifstream file(path, std::ios::binary);
+    std::string read_file(std::string_view path) {
+        std::ifstream file(std::string(path), std::ios::binary);
         if (!file) {
             throw usage_error{std::format("{}: cannot read {}: {}\n", kProg, path, std::strerror(errno))};
         }

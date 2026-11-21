@@ -35,7 +35,7 @@ namespace dana::ai {
 
     struct [[nodiscard]] agent_loop_io {
         // One assistant turn. `status != 0` aborts the loop.
-        std::function<turn_result(std::string const&)> turn;
+        std::function<turn_result(std::string_view)> turn;
         // Execute the calls in an answer. nullopt means "no calls": the loop is done.
         std::function<std::optional<std::string>(std::string_view)> run_tools;
         // Progress lines for stderr (never part of the chain context).

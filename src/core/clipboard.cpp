@@ -206,12 +206,12 @@ namespace dana::clipboard {
             case backend::kde: {
                 // bash's bin/clipboard prefers the dbus-send/qdbus call over its
                 // python-dbus client; klipper takes the text as an argv element.
-                dana::process::command cmd{
-                  "qdbus",
-                  "org.kde.klipper",
-                  "/klipper",
-                  "org.kde.klipper.klipper.setClipboardContents",
-                  std::string(data),
+                process::command cmd{
+                  std::vector<std::string>{
+                                           "qdbus", "org.kde.klipper",
+                                           "/klipper", "org.kde.klipper.klipper.setClipboardContents",
+                                           std::string(data),
+                                           }
                 };
                 cmd.timeout(std::chrono::seconds(5));
                 auto const res = cmd.run();

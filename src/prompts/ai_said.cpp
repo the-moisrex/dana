@@ -30,15 +30,15 @@ namespace dana {
         // Port of ai-said.sh trim_context applied to an entry and captured through
         // $(...): first N lines joined by '\n', no trailing newline. sed's `1,0p`
         // means a --head of 0 keeps one line; an absent --head leaves the entry whole.
-        std::string head_n_lines(std::string const& s, std::optional<std::size_t> head) {
+        std::string head_n_lines(std::string_view s, std::optional<std::size_t> head) {
             if (!head) {
-                return s;
+                return std::string(s);
             }
-            std::size_t                   limit = *head == 0 ? 1 : *head;
+            auto const                    limit = *head == 0 ? 1 : *head;
             std::vector<std::string_view> lines;
             std::size_t                   start = 0;
             while (start <= s.size()) {
-                std::size_t nl = s.find('\n', start);
+                auto const nl = s.find('\n', start);
                 if (nl == std::string::npos) {
                     lines.push_back(std::string_view(s).substr(start));
                     break;
@@ -66,7 +66,7 @@ namespace dana {
             return s;
         }
 
-        bool only_whitespace(std::string const& s) {
+        bool only_whitespace(std::string_view s) {
             return std::ranges::all_of(s, [](char c) {
                 return std::isspace(static_cast<unsigned char>(c)) != 0;
             });
@@ -101,14 +101,14 @@ namespace dana {
             return ordinal_word(n) + " AI said:";
         }
 
-        std::string build_output(std::span<std::string const> entries, std::optional<std::size_t> head_lines) {
+        std::string build_output(text::string_views entries, std::optional<std::size_t> head_lines) {
             std::string out;
             for (std::size_t i = 0; i < entries.size(); ++i) {
-                std::string content  = head_n_lines(entries[i], head_lines);
-                out                 += entry_label(static_cast<long>(i) + 1);
-                out                 += "\n\n";
-                out                 += content;
-                out                 += "\n\n";
+                auto const content  = head_n_lines(entries[i], head_lines);
+                out                += entry_label(static_cast<long>(i) + 1);
+                out                += "\n\n";
+                out                += content;
+                out                += "\n\n";
                 if (i + 1 < entries.size()) {
                     out += "\n\n\n";
                     out += std::string(66, '-');
@@ -119,7 +119,7 @@ namespace dana {
         }
 
         // ^[0-9]+(\.[0-9]+)?$ — an integer or a dotted decimal (nothing else).
-        bool is_number_string(std::string const& s) {
+        bool is_number_string(std::string_view s) {
             if (s.empty()) {
                 return false;
             }
@@ -135,7 +135,7 @@ namespace dana {
                     return false;
                 }
                 ++i;
-                std::size_t frac = i;
+                auto const frac = i;
                 while (i < s.size() && (std::isdigit(static_cast<unsigned char>(s[i])) != 0)) {
                     ++i;
                 }
@@ -146,8 +146,9 @@ namespace dana {
             return i == s.size();
         }
 
-        double to_seconds(std::string const& s) {
-            return std::strtod(s.c_str(), nullptr);
+        double to_seconds(std::string_view s) {
+            // todo: is this safe?
+            return std::strtod(s.data(), nullptr);
         }
 
         std::string ai_said_help() {

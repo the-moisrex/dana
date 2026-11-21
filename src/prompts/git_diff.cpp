@@ -18,7 +18,7 @@ namespace dana {
 
     namespace {
 
-        std::string git_raw(std::vector<std::string> const& args) {
+        std::string git_raw(text::string_views args) {
             return dana::process::run_command(args).stdout_data;
         }
 
@@ -36,10 +36,7 @@ namespace dana {
     static void execute_git_diff(view const& v, result& r) {
         auto opts = file_options_or_throw(v);
 
-        if (
-          dana::process::run_command(std::vector<std::string>{"git", "rev-parse", "--is-inside-work-tree"}).exit_code !=
-          0)
-        {
+        if (process::run_command({"git", "rev-parse", "--is-inside-work-tree"}).exit_code != 0) {
             throw soft_error{"prompt git.diff: Error: Not inside a git repository.\n"};
         }
 

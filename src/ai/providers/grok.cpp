@@ -129,7 +129,7 @@ namespace dana::ai {
             auto const& storage = session::localstorage(match);
             if (storage.is_object()) {
                 for (auto const& item : storage.items()) {
-                    std::string const& key = item.key();
+                    auto const key = item.key();
                     if (!key.starts_with("dismissed:marketing-opt-in-prompt:")) {
                         continue;
                     }
@@ -178,7 +178,7 @@ namespace dana::ai {
 
         // Channels the site stamps on a `response.chunk`; anything unrecognised is
         // shown as reasoning rather than leaking into the answer.
-        stream_event chunk_event(std::string const& channel, std::string const& body) {
+        stream_event chunk_event(std::string_view channel, std::string_view body) {
             if (channel.contains("RESPONSE")) {
                 return text(body);
             }
@@ -186,7 +186,9 @@ namespace dana::ai {
               kToolChannels{"TOOL", "SEARCH", "BROWSE", "CODE", "WIDGET"};
             for (auto const token : kToolChannels) {
                 if (channel.contains(token)) {
-                    return tool_call(lower(replace_all(channel, "CHANNEL_", "")), "delta", body);
+                    return tool_call(lower(replace_all(std::string(channel), "CHANNEL_", "")),
+                                     "delta",
+                                     std::string(body));
                 }
             }
             // CHANNEL_ASSISTANT_NOTETAKER_HEADER and any thinking/reasoning channel.
@@ -223,7 +225,7 @@ namespace dana::ai {
             }
 
             std::unique_ptr<conversation>
-            open(session::match const& match, std::string const& model, open_options const& options) override;
+            open(session::match const& match, std::string_view model, open_options const& options) override;
 
             [[nodiscard]] std::string upload(session::match const& match, attachment const& file) const;
 
@@ -251,7 +253,7 @@ namespace dana::ai {
                 return headers;
             }
 
-            [[nodiscard]] std::string const& origin() const {
+            [[nodiscard]] std::string_view origin() const {
                 return info_.origin;
             }
 
@@ -290,7 +292,7 @@ namespace dana::ai {
           public:
             grok_conversation(grok_provider&      owner,
                               session::match      match,
-                              std::string         model,
+                              std::string_view         model,
                               open_options const& options)
               : conversation(std::move(match), std::move(model), options),
                 owner_(owner),
@@ -300,9 +302,7 @@ namespace dana::ai {
                 }
             }
 
-            void send(std::string const&              prompt,
-                      std::vector<std::string> const& files,
-                      event_sink const&               sink) override {
+            void send(std::string_view prompt, text::string_views files, event_sink const& sink) override {
                 if (match_.cookie_header.empty()) {
                     sink(error("no cookies in the Grok session; log in to grok.com"));
                     return;
@@ -373,7 +373,7 @@ namespace dana::ai {
             }
 
           private:
-            [[nodiscard]] std::string content_for(std::string const& prompt) const {
+            [[nodiscard]] std::string content_for(std::string_view prompt) const {
                 std::string query;
                 if (turns_ == 0 && !system_.empty()) {
                     query = system_;
@@ -390,7 +390,8 @@ namespace dana::ai {
                         std::string const who  = turn.value("role", "") == "user" ? "User" : "Assistant";
                         lines                 += who + ": " + turn.value("text", "") + "\n";
                     }
-                    lines += "\nUser: " + prompt;
+                    lines += "\nUser: ";
+                    lines += prompt;
                     if (!query.empty()) {
                         query += "\n\n";
                     }
@@ -451,7 +452,7 @@ namespace dana::ai {
                 throw std::runtime_error("the site never created a websocket session");
             }
 
-            void create_response(std::string const& prompt, std::vector<std::string> const& file_ids) {
+            void create_response(std::string_view prompt, text::string_views file_ids) {
                 auto const millis = std::chrono::duration_cast<std::chrono::milliseconds>(
                                       std::chrono::system_clock::now().time_since_epoch())
                                       .count();
@@ -469,7 +470,7 @@ namespace dana::ai {
                   {    "item",                                 item},
                 };
                 if (!file_ids.empty()) {
-                    event["file_attachment_ids"] = file_ids;
+                    event["file_attachment_ids"] = file_ids | std::ranges::to<std::vector<std::string>>();
                 }
                 send(json{
                   {"session_id", session_id_},
@@ -563,7 +564,7 @@ namespace dana::ai {
         };
 
         std::unique_ptr<conversation>
-        grok_provider::open(session::match const& match, std::string const& model, open_options const& options) {
+        grok_provider::open(session::match const& match, std::string_view model, open_options const& options) {
             return std::make_unique<grok_conversation>(*this, match, model, options);
         }
 

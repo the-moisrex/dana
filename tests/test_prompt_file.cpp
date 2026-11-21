@@ -29,23 +29,23 @@ namespace {
         return dir;
     }
 
-    void write_file(std::filesystem::path const& path, std::string const& text) {
+    void write_file(std::filesystem::path const& path, std::string_view text) {
         std::filesystem::create_directories(path.parent_path());
         std::ofstream out(path, std::ios::binary);
         out << text;
     }
 
     expanded_argv
-    expand(std::vector<std::string> const& argv, std::filesystem::path const& git_root = {}, bool expand_files = true) {
-        std::vector<char const*> raw;
+    expand(text::string_views argv, std::filesystem::path const& git_root = {}, bool expand_files = true) {
+        std::vector<std::string_view> raw;
         raw.reserve(argv.size());
-        for (auto const& arg : argv) {
-            raw.push_back(arg.c_str());
+        for (auto const arg : argv) {
+            raw.emplace_back(arg);
         }
-        return expand_prompt_files(std::span<char const* const>(raw.data(), raw.size()), git_root, expand_files);
+        return expand_prompt_files(raw, git_root, expand_files);
     }
 
-    bool same(std::vector<std::string> const& a, std::vector<std::string> const& b) {
+    bool same(text::string_views a, text::string_views b) {
         return a == b;
     }
 
@@ -69,7 +69,9 @@ namespace {
           "\"a\\\"b\" 'c'\n"
           "back\\ slash\n"
           "\n");
-        auto const result = expand({"prompt", file.string()});
+        // todo: we're using the name `prompt` directly; if we ever wanted to change it, the tests starts to fail
+        std::array<std::string, 2> const cmdline{"prompt", file.string()};
+        auto const                       result = expand(cmdline);
         check(result.error.empty(), "tokens: no error");
         check(
           same(result.storage,
@@ -93,7 +95,8 @@ namespace {
     void test_unterminated_quote(std::filesystem::path const& dir) {
         auto const file = dir / "bad.prompt";
         write_file(file, ".note ok\n.note \"oops\n");
-        auto const result = expand({"prompt", file.string()});
+        std::array<std::string, 2> const cmdline{"prompt", file.string()};
+        auto const                       result = expand(cmdline);
         check(!result.error.empty(), "unterminated: reported");
         check(result.error.contains(":2: unterminated \""), "unterminated: line and quote named");
         check(result.error.starts_with("prompt: "), "unterminated: prompt: prefix");
@@ -102,7 +105,8 @@ namespace {
     void test_inline_and_order(std::filesystem::path const& dir) {
         auto const file = dir / "chain.prompt";
         write_file(file, ".note hi\n");
-        auto const result = expand({"prompt", "--head", "10", file.string(), ".length", "short"});
+        std::array<std::string, 6> const cmdline{"prompt", "--head", "10", file.string(), ".length", "short"};
+        auto const                       result = expand(cmdline);
         check(result.error.empty(), "inline: no error");
         check(same(result.storage, {"prompt", "--head", "10", ".note", "hi", ".length", "short"}),
               "inline: replaced in place, later tokens kept");
@@ -111,14 +115,16 @@ namespace {
     void test_leading_prompt_dropped(std::filesystem::path const& dir) {
         auto const file = dir / "leading.prompt";
         write_file(file, "prompt .note hi\n");
-        auto const result = expand({"prompt", file.string()});
+        std::array<std::string, 2> const cmdline{"prompt", file.string()};
+        auto const                       result = expand(cmdline);
         check(same(result.storage, {"prompt", ".note", "hi"}), "leading prompt: dropped");
     }
 
     void test_verbatim_tail(std::filesystem::path const& dir) {
         auto const file = dir / "tail.prompt";
         write_file(file, ".exec -- run x.prompt\n");
-        auto const result = expand({"prompt", file.string()});
+        std::array<std::string, 2> const cmdline{"prompt", file.string()};
+        auto const                       result = expand(cmdline);
         check(result.error.empty(), "verbatim: a missing file after -- is not an error");
         check(same(result.storage, {"prompt", ".exec", "--", "run", "x.prompt"}),
               "verbatim: everything after -- is untouched");
@@ -128,22 +134,24 @@ namespace {
     }
 
     void test_head_position_error(std::filesystem::path const& dir) {
-        auto const result = expand({"prompt", (dir / "missing.prompt").string()});
+        std::array<std::string, 2> const cmdline{"prompt", (dir / "missing.prompt").string()};
+        auto const                       result = expand(cmdline);
         check(!result.error.empty(), "head: a missing file is an error");
         check(result.error.contains("cannot find prompt file"), "head: names the missing file");
 
         // Elsewhere the prompt owning the argument decides, so `.files` keeps its
         // own warning instead of aborting the chain.
-        auto const argument = expand({"prompt", ".files", (dir / "missing.prompt").string()});
+        std::array<std::string, 3> const cmdline2{"prompt", ".files", (dir / "missing.prompt").string()};
+        auto const                       argument = expand(cmdline2);
         check(argument.error.empty(), "argument: a missing file is not an error");
-        check(same(argument.storage, {"prompt", ".files", (dir / "missing.prompt").string()}),
-              "argument: the token is passed through");
+        check(same(argument.storage, cmdline2), "argument: the token is passed through");
     }
 
     void test_nested(std::filesystem::path const& dir) {
         write_file(dir / "outer.prompt", "inner.prompt\n.length short\n");
         write_file(dir / "inner.prompt", ".note nested\n");
-        auto const result = expand({"prompt", (dir / "outer.prompt").string()});
+        std::array<std::string, 2> const cmdline{"prompt", (dir / "outer.prompt").string()};
+        auto const                       result = expand(cmdline);
         check(result.error.empty(), "nested: no error");
         check(same(result.storage, {"prompt", ".note", "nested", ".length", "short"}), "nested: spliced recursively");
     }
@@ -151,7 +159,8 @@ namespace {
     void test_cycle(std::filesystem::path const& dir) {
         write_file(dir / "a.prompt", "b.prompt\n");
         write_file(dir / "b.prompt", "a.prompt\n");
-        auto const result = expand({"prompt", (dir / "a.prompt").string()});
+        std::array<std::string, 2> const cmdline{"prompt", (dir / "a.prompt").string()};
+        auto const                       result = expand(cmdline);
         check(!result.error.empty(), "cycle: reported");
         check(result.error.contains("prompt file cycle"), "cycle: named");
     }
@@ -164,13 +173,14 @@ namespace {
         }
         write_file(dir / ("deep" + std::to_string(last) + ".prompt"), ".note bottom\n");
 
-        auto const ok = expand({"prompt", (dir / "deep0.prompt").string()});
+        std::array<std::string, 2> const cmdline{"prompt", (dir / "deep0.prompt").string()};
+        auto const                       ok = expand(cmdline);
         check(ok.error.empty(), "depth: the limit itself is allowed");
         check(ok.storage.size() > 2 && ok.storage.back() == "bottom", "depth: the bottom file is spliced");
 
         write_file(dir / ("deep" + std::to_string(last) + ".prompt"), "deeper.prompt\n");
         write_file(dir / "deeper.prompt", ".note too deep\n");
-        auto const too_deep = expand({"prompt", (dir / "deep0.prompt").string()});
+        auto const too_deep = expand(cmdline);
         check(!too_deep.error.empty(), "depth: one level too many is an error");
         check(too_deep.error.contains("nested too deep"), "depth: named");
     }
@@ -196,12 +206,14 @@ namespace {
     void test_disabled_and_empty(std::filesystem::path const& dir) {
         auto const file = dir / "off.prompt";
         write_file(file, ".note hi\n");
-        auto const off = expand({"prompt", file.string()}, {}, false);
+        std::array<std::string, 2> const cmdline{"prompt", file.string()};
+        auto const                       off = expand(cmdline, {}, false);
         check(off.error.empty(), "disabled: no error");
-        check(same(off.storage, {"prompt", file.string()}), "disabled: argv is copied unchanged");
+        check(same(off.storage, cmdline), "disabled: argv is copied unchanged");
 
         write_file(dir / "empty.prompt", "# nothing but a comment\n\n");
-        auto const empty = expand({"prompt", (dir / "empty.prompt").string()});
+        std::array<std::string, 2> const cmdline2{"prompt", (dir / "empty.prompt").string()};
+        auto const                       empty = expand(cmdline2);
         check(empty.error.empty(), "empty: no error");
         check(same(empty.storage, {"prompt"}), "empty: expands to nothing");
     }

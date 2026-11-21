@@ -156,7 +156,7 @@ namespace dana::signals {
         return items;
     }
 
-    std::string join_focus(std::span<std::string const> items) {
+    std::string join_focus(text::string_views items) {
         std::string out;
         for (auto const& item : items) {
             if (item.empty()) {

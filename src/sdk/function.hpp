@@ -95,6 +95,6 @@ namespace dana {
     // Expand `.func` definitions and `.name` calls in an argv (argv[0] is copied
     // verbatim). `allow_chain` is false for a `funcs` file, where only `.func`
     // blocks are legal. A non-empty `error` means print it and exit 2.
-    expanded_argv expand_functions(std::span<std::string const> argv, function_table& table, bool allow_chain);
+    expanded_argv expand_functions(text::string_views argv, function_table& table, bool allow_chain);
 
 } // namespace dana

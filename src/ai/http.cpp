@@ -291,7 +291,7 @@ namespace dana::ai {
             return header_list(list);
         }
 
-        std::string impersonate_target(std::string const& requested) {
+        std::string_view impersonate_target(std::string_view requested) {
             // libcurl-impersonate only accepts versioned profile names; the Python
             // engine's generic "firefox" means "the newest bundled Firefox profile".
             if (requested == "firefox") {
@@ -348,7 +348,7 @@ namespace dana::ai {
             bool const impersonating = !request.impersonate.empty();
             if (impersonating) {
                 CURLcode const impersonate_code =
-                  curl_easy_impersonate(easy, impersonate_target(request.impersonate).c_str(), 1);
+                  curl_easy_impersonate(easy, impersonate_target(request.impersonate).data(), 1);
                 if (impersonate_code != CURLE_OK) {
                     warn(std::string("could not impersonate ") + request.impersonate + ": " +
                            curl_easy_strerror(impersonate_code),
@@ -576,7 +576,7 @@ namespace dana::ai {
 
 #ifdef PROMPT_HAVE_CURL_IMPERSONATE
             if (!request.impersonate.empty()) {
-                curl_easy_impersonate(easy, impersonate_target(request.impersonate).c_str(), 1);
+                curl_easy_impersonate(easy, impersonate_target(request.impersonate).data(), 1);
             }
 #endif
             curl_easy_setopt(easy, CURLOPT_URL, request.url.c_str());
@@ -703,16 +703,16 @@ namespace dana::ai {
         });
     }
 
-    std::vector<std::string> sse_payloads(std::vector<std::string> const& lines) {
+    std::vector<std::string> sse_payloads(text::string_views lines) {
         std::vector<std::string> out;
         for (auto const& line : lines) {
             if (line.empty() || line.front() == ':') {
                 continue;
             }
             if (line.starts_with("data:")) {
-                std::string payload = line.substr(5);
-                std::size_t first   = payload.find_first_not_of(" \t");
-                out.push_back(first == std::string::npos ? std::string{} : payload.substr(first));
+                auto const payload = line.substr(5);
+                auto const first   = payload.find_first_not_of(" \t");
+                out.emplace_back(first == std::string_view::npos ? std::string_view{} : payload.substr(first));
             }
         }
         return out;

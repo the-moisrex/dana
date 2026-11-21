@@ -20,7 +20,7 @@ namespace dana {
 
         // bash captures with `2>/dev/null` — the tool's diagnostics never reach the
         // user (git_raw is for `$(...)` of a command that may legitimately fail).
-        std::string git_raw(std::vector<std::string> const& args) {
+        std::string git_raw(text::string_views args) {
             return dana::process::command{args}.discard_stderr().run().stdout_data;
         }
 
@@ -38,11 +38,11 @@ namespace dana {
             std::vector<std::string> out;
             std::size_t              i = 0;
             while (i < s.size()) {
-                while (i < s.size() && (s[i] == ' ' || s[i] == '\t' || s[i] == '\n' || s[i] == '\r')) {
+                while (i < s.size() && (s.at(i) == ' ' || s.at(i) == '\t' || s.at(i) == '\n' || s.at(i) == '\r')) {
                     ++i;
                 }
                 std::size_t start = i;
-                while (i < s.size() && s[i] != ' ' && s[i] != '\t' && s[i] != '\n' && s[i] != '\r') {
+                while (i < s.size() && s.at(i) != ' ' && s.at(i) != '\t' && s.at(i) != '\n' && s.at(i) != '\r') {
                     ++i;
                 }
                 if (i > start) {
@@ -52,12 +52,11 @@ namespace dana {
             return out;
         }
 
-        std::string detect_base_branch(std::string const& given) {
+        std::string detect_base_branch(std::string_view const given) {
             if (!given.empty()) {
-                return given;
+                return std::string(given);
             }
-            std::string upstream =
-              strip_trailing_newlines(git_raw(std::vector<std::string>{"git", "rev-parse", "--abbrev-ref", "@{u}"}));
+            std::string upstream = strip_trailing_newlines(git_raw({"git", "rev-parse", "--abbrev-ref", "@{u}"}));
             if (upstream.empty()) {
                 return "origin/main";
             }
@@ -69,10 +68,7 @@ namespace dana {
     static void execute_git_worktree_files(view const& v, result& r) {
         auto opts = file_options_or_throw(v);
 
-        if (
-          dana::process::run_command(std::vector<std::string>{"git", "rev-parse", "--is-inside-work-tree"}).exit_code !=
-          0)
-        {
+        if (dana::process::run_command({"git", "rev-parse", "--is-inside-work-tree"}).exit_code != 0) {
             throw soft_error{"prompt git.worktree.files: Error: Not inside a git repository.\n"};
         }
 
@@ -82,20 +78,20 @@ namespace dana {
         std::string              not_commit;
         std::vector<std::string> files;
         for (std::size_t i = 0; i < rest.size();) {
-            if (rest[i] == "--not") {
+            if (rest.at(i) == "--not") {
                 if (i + 1 >= rest.size()) {
                     throw usage_error{"Missing value for --not\n"};
                 }
                 not_commit  = rest[i + 1];
                 i          += 2;
-            } else if (rest[i] == "--base") {
+            } else if (rest.at(i) == "--base") {
                 if (i + 1 >= rest.size()) {
                     throw usage_error{"Missing value for --base\n"};
                 }
                 base_branch  = rest[i + 1];
                 i           += 2;
             } else {
-                files.push_back(rest[i]);
+                files.push_back(rest.at(i));
                 ++i;
             }
         }
@@ -133,7 +129,7 @@ namespace dana {
         }
 
         if (!filter.exclude().empty()) {
-            std::erase_if(changed_files, [&](std::string const& file) {
+            std::erase_if(changed_files, [&](std::string_view file) {
                 return filter.excluded(v.env.git_root / file);
             });
         }

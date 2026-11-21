@@ -38,7 +38,7 @@ namespace dana::ai::keys {
             return home.empty() ? fs::path("/") : fs::path(home);
         }
 
-        fs::path xdg(std::string_view name, std::vector<std::string> const& fallback) {
+        fs::path xdg(std::string_view name, text::string_views fallback) {
             std::string value = env_value(name);
             if (!value.empty()) {
                 fs::path resolved(std::move(value));
@@ -170,15 +170,15 @@ namespace dana::ai::keys {
             return paths;
         }
 
-        std::optional<std::pair<std::string, std::string>> from_dotenv(std::span<std::string const> names) {
+        std::optional<std::pair<std::string, std::string>> from_dotenv(text::string_views names) {
             for (auto const& path : dotenv_paths()) {
                 std::error_code ec;
                 if (!fs::is_regular_file(path, ec)) {
                     continue;
                 }
                 auto const values = parse_env_file(path);
-                for (auto const& name : names) {
-                    auto const it = values.find(name);
+                for (auto const name : names) {
+                    auto const it = values.find(std::string(name));
                     if (it != values.end() && !it->second.empty()) {
                         return std::pair{it->second, "dotenv:" + path.string()};
                     }
@@ -289,11 +289,8 @@ namespace dana::ai::keys {
                 if (exe.empty()) {
                     continue;
                 }
-                auto const result = process::run_command(
-                  std::vector<std::string>{exe.string(), "auth", "export"},
-                  {},
-                  {},
-                  std::chrono::milliseconds(5000));
+                std::array<std::string, 3> const cmdline{exe.string(), "auth", "export"};
+                auto const result = process::run_command(cmdline, {}, {}, std::chrono::milliseconds(5000));
                 if (result.exit_code != 0 || result.stdout_data.empty()) {
                     continue;
                 }
@@ -388,8 +385,8 @@ namespace dana::ai::keys {
             if (!stream) {
                 return {};
             }
-            std::string text((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
-            json        payload = json::parse(strip_jsonc(text), nullptr, false);
+            std::string const text((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>());
+            json              payload = json::parse(strip_jsonc(text), nullptr, false);
             if (payload.is_discarded() || !payload.is_object()) {
                 return {};
             }
@@ -428,7 +425,7 @@ namespace dana::ai::keys {
             return std::string(provider);
         }
 
-        std::vector<std::string> env_names_for(std::string_view provider, std::span<std::string const> extra) {
+        std::vector<std::string> env_names_for(std::string_view provider, text::string_views extra) {
             std::vector<std::string> names(extra.begin(), extra.end());
             auto                     add = [&names](std::string_view name) {
                 if (std::ranges::find(names, name) == names.end()) {
@@ -462,15 +459,15 @@ namespace dana::ai::keys {
         return std::string(value.substr(0, 6)) + "…" + std::string(value.substr(value.size() - 4));
     }
 
-    resolved resolve(std::string_view             provider,
-                     std::span<std::string const> env_names,
-                     std::optional<std::string>   explicit_key) {
+    resolved resolve(std::string_view                provider,
+                     text::string_views              env_names,
+                     std::optional<std::string_view> explicit_key) {
         if (explicit_key && !explicit_key->empty()) {
-            std::string key = *explicit_key;
+            std::string key = std::string(*explicit_key);
             while (!key.empty() && (key.back() == '\n' || key.back() == '\r' || key.back() == ' ')) {
                 key.pop_back();
             }
-            std::size_t start = key.find_first_not_of(" \t");
+            auto const start = key.find_first_not_of(" \t");
             if (start != std::string::npos) {
                 key = key.substr(start);
             }
@@ -478,9 +475,9 @@ namespace dana::ai::keys {
         }
         auto const names = env_names_for(provider, env_names);
         for (auto const& name : names) {
-            std::string value = env_value(name);
+            auto value = env_value(name);
             if (!value.empty()) {
-                std::size_t start = value.find_first_not_of(" \t");
+                auto const start = value.find_first_not_of(" \t");
                 if (start != std::string::npos) {
                     value = value.substr(start);
                 }
@@ -511,7 +508,7 @@ namespace dana::ai::keys {
         return {};
     }
 
-    std::pair<std::string, std::string> describe(std::string_view provider, std::span<std::string const> env_names) {
+    std::pair<std::string, std::string> describe(std::string_view provider, text::string_views env_names) {
         auto const value = resolve(provider, env_names);
         return {value.source.empty() ? "(none)" : value.source, mask(value.key)};
     }

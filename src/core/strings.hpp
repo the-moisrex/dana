@@ -186,19 +186,23 @@ namespace dana::text {
         using advance_fn = void const* (*)(void const* base, size_type index) noexcept;
 
         struct [[nodiscard]] operations {
-            deref_fn   read;
-            advance_fn advance;
+            deref_fn read;
+            // advance_fn advance;
         };
 
         // One function per ELEMENT type, not per container type.
         template <typename T>
         static constexpr operations ops_for{
           .read = +[](void const* base, index_type index) noexcept -> string_view_type {
-              return string_view_type{static_cast<T const*>(base)[index]};
+              if constexpr (std::same_as<T, string_view_type>) {
+                  return static_cast<T const*>(base)[index];
+              } else {
+                  return string_view_type{static_cast<T const*>(base)[index]};
+              }
           },
-          .advance = +[](void const* p, size_type n) noexcept -> void const* {
-              return static_cast<T const*>(p) + n;
-          },
+          // .advance = +[](void const* p, size_type n) noexcept -> void const* {
+          //     return static_cast<T const*>(p) + n;
+          // },
         };
 
 
@@ -208,6 +212,13 @@ namespace dana::text {
 
       public:
         constexpr basic_string_views() noexcept = default;
+
+        // ctor for rvalue spans because we're disallowing rvalue ranges down there
+        template <typename T, std::size_t Extent>
+            requires std::convertible_to<T*, std::remove_cv_t<T> const*> &&
+                     std::convertible_to<T const&, string_view_type> &&
+                     std::is_nothrow_constructible_v<string_view_type, T const&>
+        constexpr basic_string_views(std::span<T, Extent> rng) noexcept : basic_string_views(rng.data(), rng.size()) {}
 
         // Lvalues only: don't silently retain a pointer into a temporary
         // vector. Precondition: size fits in ptrdiff_t and data addresses size
@@ -230,6 +241,10 @@ namespace dana::text {
           : base(begin),
             m_size(len),
             ops(ops_for<T>) {}
+
+        template <typename T>
+        constexpr basic_string_views(std::initializer_list<T> rng) noexcept
+          : basic_string_views(rng.begin(), rng.size()) {}
 
         constexpr basic_string_views(basic_string_views const&)                = default;
         constexpr basic_string_views(basic_string_views&&) noexcept            = default;
@@ -285,33 +300,47 @@ namespace dana::text {
             return that;
         }
 
-        [[nodiscard]] constexpr basic_string_views last(size_type count) const noexcept {
-            assert(count <= m_size);
-            auto that = *this;
-            if (count != m_size) [[likely]] {
-                that.base = ops->advance(base, m_size - count);
-            }
-            that.m_size = count;
-            return that;
-        }
+        // [[nodiscard]] constexpr basic_string_views last(size_type count) const noexcept {
+        //     assert(count <= m_size);
+        //     auto that = *this;
+        //     if (count != m_size) [[likely]] {
+        //         that.base = ops->advance(base, m_size - count);
+        //     }
+        //     that.m_size = count;
+        //     return that;
+        // }
 
-        template <class F>
-        void for_each(F&& func) const {
-            if (ops.read == &ops_for<string_view_type>.read) {
-                auto const* ptr = static_cast<string_view_type const*>(base);
-                for (index_type i = 0; i < m_size; ++i) {
-                    func(string_view_type{ptr[i]});
-                }
-            } else if (ops.read == &ops_for<string_type>.read) {
-                auto const* ptr = static_cast<string_type const*>(base);
-                for (index_type i = 0; i < m_size; ++i) {
-                    func(string_view_type{ptr[i]});
-                }
-            } else {
-                for (index_type i = 0; i < m_size; ++i) {
-                    func(ops.read(base, i));
+        // template <class F>
+        // void for_each(F&& func) const {
+        //     if (ops.read == &ops_for<string_view_type>.read) {
+        //         auto const* ptr = static_cast<string_view_type const*>(base);
+        //         for (index_type i = 0; i < m_size; ++i) {
+        //             func(string_view_type{ptr[i]});
+        //         }
+        //     } else if (ops.read == &ops_for<string_type>.read) {
+        //         auto const* ptr = static_cast<string_type const*>(base);
+        //         for (index_type i = 0; i < m_size; ++i) {
+        //             func(string_view_type{ptr[i]});
+        //         }
+        //     } else {
+        //         for (index_type i = 0; i < m_size; ++i) {
+        //             func(ops.read(base, i));
+        //         }
+        //     }
+        // }
+
+        [[nodiscard]] friend bool operator==(basic_string_views const& lhs, basic_string_views const& rhs) noexcept {
+            if (lhs.size() != rhs.size()) {
+                return false;
+            }
+
+            for (size_type i = 0; i < lhs.size(); ++i) {
+                auto const index = static_cast<index_type>(i);
+                if (lhs[index] != rhs[index]) {
+                    return false;
                 }
             }
+            return true;
         }
     };
 

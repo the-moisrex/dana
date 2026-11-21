@@ -1,7 +1,10 @@
 #pragma once
 
+#include "strings.hpp"
+
 #include <chrono>
 #include <cstdint>
+#include <filesystem>
 #include <functional>
 #include <initializer_list>
 #include <optional>
@@ -40,21 +43,20 @@ namespace dana::process {
     struct [[nodiscard]] command {
         command() = default;
 
-        command(std::initializer_list<std::string> argv) : argv_(argv) {}
+        command(text::string_views const argv) : m_argv(argv.begin(), argv.end()) {}
 
-        explicit command(std::vector<std::string> argv) : argv_(std::move(argv)) {}
+        explicit command(std::vector<std::string> argv) : m_argv(std::move(argv)) {}
 
-        command& arg(std::string_view a);
-        command& arg(std::string const& a);
-        command& args(std::vector<std::string> const& as);
+        command& arg(std::string_view str);
+        command& args(text::string_views as);
         command& stdin_data(std::string data);
-        command& env(std::vector<std::string> const& extra); // "KEY=VALUE" entries
-        command& timeout(std::chrono::milliseconds t);
+        command& env(text::string_views extra); // "KEY=VALUE" entries
+        command& timeout(std::chrono::milliseconds timeout);
         command& stderr(stderr_mode mode);
-        command& capture_stderr();                           // stderr_mode::capture
-        command& stderr_to_stdout();                         // stderr_mode::to_stdout
-        command& inherit_stderr();                           // stderr_mode::inherit (default)
-        command& discard_stderr();                           // stderr_mode::discard (`2>/dev/null`)
+        command& capture_stderr();              // stderr_mode::capture
+        command& stderr_to_stdout();            // stderr_mode::to_stdout
+        command& inherit_stderr();              // stderr_mode::inherit (default)
+        command& discard_stderr();              // stderr_mode::discard (`2>/dev/null`)
 
         // Tee callbacks: the matching stream is piped, each chunk is passed to the
         // callback as it arrives, and the complete text is still accumulated in
@@ -67,35 +69,35 @@ namespace dana::process {
         command_result run();
 
       private:
-        std::vector<std::string>  argv_;
-        std::string               stdin_data_;
-        std::vector<std::string>  env_;
-        std::chrono::milliseconds timeout_{0};
-        stderr_mode               stderr_mode_{stderr_mode::inherit};
-        chunk_callback            stdout_callback_;
-        chunk_callback            stderr_callback_;
+        std::vector<std::string>  m_argv;
+        std::string               m_stdin_data;
+        std::vector<std::string>  m_env;
+        std::chrono::milliseconds m_timeout{0};
+        stderr_mode               m_stderr_mode{stderr_mode::inherit};
+        chunk_callback            m_stdout_callback;
+        chunk_callback            m_stderr_callback;
     };
 
     // Runs a bash script snippet (`/bin/bash -c <script>`), with "extras..." passed
     // as $0 $1 .... This is the escape hatch: prefer argv construction above unless
     // the command needs a real shell.
     command_result run_script(
-      std::string const&              script,
-      std::vector<std::string> const& extras     = {},
-      std::string_view                stdin_data = {},
-      std::chrono::milliseconds       timeout    = std::chrono::seconds(30));
+      std::string_view        script,
+      text::string_views        extras     = {},
+      std::string_view          stdin_data = {},
+      std::chrono::milliseconds timeout    = std::chrono::seconds(30));
+
+    // command_result run_command(
+    //   std::span<char const* const> argv,
+    //   std::string_view             stdin_data = {},
+    //   std::span<char const* const> env        = {},
+    //   std::chrono::milliseconds    timeout    = std::chrono::seconds(30));
 
     command_result run_command(
-      std::span<char const* const> argv,
-      std::string_view             stdin_data = {},
-      std::span<char const* const> env        = {},
-      std::chrono::milliseconds    timeout    = std::chrono::seconds(30));
-
-    command_result run_command(
-      std::vector<std::string> const& argv,
-      std::string_view                stdin_data = {},
-      std::vector<std::string> const& env        = {},
-      std::chrono::milliseconds       timeout    = std::chrono::seconds(30));
+      text::string_views        argv,
+      std::string_view          stdin_data = {},
+      text::string_views        env        = {},
+      std::chrono::milliseconds timeout    = std::chrono::seconds(30));
 
     struct [[nodiscard]] snippet_result {
         // stdout and stderr merged, exactly like `$(... 2>&1)`.
@@ -110,4 +112,10 @@ namespace dana::process {
     snippet_result run_snippet(std::string_view script, std::string_view stdin_data);
 
 
+    // See if this tool exists or not
+    bool tool_exists(std::string_view name) noexcept;
+
+    // xargs: every whitespace-separated token becomes one subtitle argument (an
+    // empty token list still runs the command once, like GNU xargs without -r).
+    std::vector<std::string_view> xargs_tokens(std::string_view text);
 } // namespace dana::process

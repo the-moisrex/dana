@@ -185,7 +185,7 @@ namespace dana::ai {
 
         std::pair<std::int64_t, std::string> local_timezone() {
             std::int64_t const offset = floor_div(static_cast<std::int64_t>(::timezone), 60);
-            std::string     zone   = tzname[0] != nullptr ? tzname[0] : "UTC";
+            std::string        zone   = tzname[0] != nullptr ? tzname[0] : "UTC";
             return {offset, zone};
         }
 
@@ -193,8 +193,8 @@ namespace dana::ai {
             return std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count();
         }
 
-        std::string asset_pointer(std::string const& file_id) {
-            return (file_id.starts_with("file-") ? "file-service://" : "sediment://") + file_id;
+        std::string asset_pointer(std::string_view file_id) {
+            return (file_id.starts_with("file-") ? "file-service://" : "sediment://") + std::string(file_id);
         }
 
         std::vector<std::pair<std::string, std::string>> with_target(
@@ -398,7 +398,7 @@ namespace dana::ai {
                 return emitted_;
             }
 
-            [[nodiscard]] std::string const& last_assistant_id() const {
+            [[nodiscard]] std::string_view last_assistant_id() const {
                 return last_assistant_id_;
             }
 
@@ -493,9 +493,9 @@ namespace dana::ai {
             }
 
             std::unique_ptr<conversation>
-            open(session::match const& match, std::string const& model, open_options const& options) override;
+            open(session::match const& match, std::string_view model, open_options const& options) override;
 
-            [[nodiscard]] std::string const& origin() const {
+            [[nodiscard]] std::string_view origin() const {
                 return info_.origin;
             }
 
@@ -663,14 +663,14 @@ namespace dana::ai {
                   with_target(headers, path),
                   info_.origin + path,
                   json{
-                    {                "file_name",                           file.name},
+                    {                "file_name",                              file.name},
                     {                "file_size", static_cast<std::int64_t>(file.size())},
-                    {                "mime_type",                           file.mime},
-                    {"client_resolved_mime_type",                           file.mime},
-                    {   "mime_resolution_source",                            "client"},
-                    {                 "use_case",                        "multimodal"},
-                    {      "timezone_offset_min",                              offset},
-                    {        "reset_rate_limits",                               false},
+                    {                "mime_type",                              file.mime},
+                    {"client_resolved_mime_type",                              file.mime},
+                    {   "mime_resolution_source",                               "client"},
+                    {                 "use_case",                           "multimodal"},
+                    {      "timezone_offset_min",                                 offset},
+                    {        "reset_rate_limits",                                  false},
                 },
                   120);
                 std::string const file_id    = string_or(prepared, "file_id");
@@ -701,18 +701,18 @@ namespace dana::ai {
                 std::string const uploaded_path = path + "/" + file_id + "/uploaded";
                 post_json(with_target(headers, uploaded_path), info_.origin + uploaded_path, json::object(), 120);
                 return json{
-                  {   "id",                             file_id},
-                  { "name",                           file.name},
-                  { "mime",                           file.mime},
+                  {   "id",                                file_id},
+                  { "name",                              file.name},
+                  { "mime",                              file.mime},
                   { "size", static_cast<std::int64_t>(file.size())},
-                  {"image",     file.mime.starts_with("image/")}
+                  {"image",        file.mime.starts_with("image/")}
                 };
             }
 
             // The conduit token the `f/conversation` request must carry.
             std::string conduit_token(std::vector<std::pair<std::string, std::string>> const& headers,
-                                      std::string const&                                      prompt,
-                                      std::string const&                                      model) const {
+                                      std::string_view                                        prompt,
+                                      std::string_view                                        model) const {
                 auto const [offset, zone] = local_timezone();
                 json const body{
                   {                "action","next"                                            },
@@ -743,10 +743,10 @@ namespace dana::ai {
                 return conduit;
             }
 
-            json stream_body(json const&        messages,
-                             std::string const& model,
-                             std::string const& conversation_id,
-                             std::string const& parent) const {
+            json stream_body(json const&      messages,
+                             std::string_view model,
+                             std::string_view conversation_id,
+                             std::string_view parent) const {
                 auto const [offset, zone] = local_timezone();
                 json body{
                   {                              "action","next"                                                          },
@@ -779,8 +779,8 @@ namespace dana::ai {
                 return body;
             }
 
-            json message_body(std::string const&       text,
-                              std::string const&       role,
+            json message_body(std::string_view         text,
+                              std::string_view         role,
                               std::vector<json> const& attachments) const {
                 json message{
                   {         "id",                   uuid4()                                 },
@@ -835,7 +835,7 @@ namespace dana::ai {
 
           private:
             json post_json(std::vector<std::pair<std::string, std::string>> const& headers,
-                           std::string const&                                      url,
+                           std::string_view                                        url,
                            json const&                                             body,
                            long                                                    timeout) const {
                 http_request request;
@@ -850,13 +850,12 @@ namespace dana::ai {
             provider_info info_;
         };
 
-        class chatgpt_conversation : public conversation {
-          public:
-            chatgpt_conversation(chatgpt_provider&   owner,
-                                 session::match      match,
-                                 std::string         model,
-                                 open_options const& options)
-              : conversation(std::move(match), std::move(model), options),
+        struct [[nodiscard]] chatgpt_conversation : conversation {
+            chatgpt_conversation(chatgpt_provider&      owner,
+                                 session::match         match,
+                                 std::string_view const model,
+                                 open_options const&    options)
+              : conversation(std::move(match), model, options),
                 owner_(owner),
                 headers_(owner.build_headers(match_)) {
                 parent_message_id_ = std::string(kRootMessage);
@@ -867,9 +866,7 @@ namespace dana::ai {
                 }
             }
 
-            void send(std::string const&              prompt,
-                      std::vector<std::string> const& files,
-                      event_sink const&               sink) override {
+            void send(std::string_view prompt, text::string_views files, event_sink const& sink) override {
                 if (!ready_) {
                     try {
                         prepare();
@@ -897,7 +894,8 @@ namespace dana::ai {
                     sink(tool_call("upload", "done", file.name));
                 }
 
-                std::string const message = (!system_.empty() && turns_ == 0) ? system_ + "\n\n" + prompt : prompt;
+                std::string const message =
+                  (!system_.empty() && turns_ == 0) ? system_ + "\n\n" + std::string(prompt) : std::string(prompt);
 
                 json gate;
                 try {
@@ -1014,7 +1012,7 @@ namespace dana::ai {
                     json data;
                     try {
                         http_request request;
-                        request.url             = owner_.origin() + "/backend-api/conversation/" + conversation_id_;
+                        request.url = std::string(owner_.origin()) + "/backend-api/conversation/" + conversation_id_;
                         request.timeout_seconds = 60;
                         apply_headers(request, headers_);
                         data = request_json(request);
@@ -1049,7 +1047,7 @@ namespace dana::ai {
         };
 
         std::unique_ptr<conversation>
-        chatgpt_provider::open(session::match const& match, std::string const& model, open_options const& options) {
+        chatgpt_provider::open(session::match const& match, std::string_view model, open_options const& options) {
             return std::make_unique<chatgpt_conversation>(*this, match, model, options);
         }
 

@@ -212,7 +212,7 @@ namespace {
 
         auto const             models        = ai::models::list(provider);
         std::string_view const default_model = ai::models::default_model(provider);
-        auto const             description   = [&](std::string const& model) -> std::string_view {
+        auto const             description   = [&](std::string_view model) -> std::string_view {
             return std::string_view{model} == default_model ? "default model" : std::string_view{};
         };
 
@@ -689,7 +689,7 @@ namespace {
 
         int               turn_number = 0;
         ai::agent_loop_io io;
-        io.turn = [&](std::string const& prompt) {
+        io.turn = [&](std::string_view prompt) {
             ++turn_number;
             write_stderr(
               v,

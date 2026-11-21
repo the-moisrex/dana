@@ -5,7 +5,8 @@
 // fingerprint matches the browser session the sites expect; falls back to the
 // system libcurl otherwise.
 
-#include <cstdint>
+#include "../core/strings.hpp"
+
 #include <functional>
 #include <nlohmann/json.hpp>
 #include <optional>
@@ -18,8 +19,8 @@
 namespace dana::ai {
 
     struct [[nodiscard]] http_error : std::runtime_error {
-        http_error(long status, std::string body, std::string const& message)
-          : std::runtime_error(message),
+        http_error(long status, std::string body, std::string_view message)
+          : std::runtime_error(std::string(message)),
             status_(status),
             body_(std::move(body)) {}
 
@@ -27,7 +28,7 @@ namespace dana::ai {
             return status_;
         }
 
-        [[nodiscard]] std::string const& body() const {
+        [[nodiscard]] std::string_view body() const {
             return body_;
         }
 
@@ -87,7 +88,7 @@ namespace dana::ai {
     bool is_network_failure(std::string_view message);
 
     // The payload of each SSE `data:` line (ignoring comments/blanks).
-    std::vector<std::string> sse_payloads(std::vector<std::string> const& lines);
+    std::vector<std::string> sse_payloads(text::string_views lines);
 
     // Build a multipart/form-data body.  A field whose value has `filename` set is
     // a file part.

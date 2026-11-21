@@ -15,11 +15,11 @@ namespace dana {
     // The chain keeps running after a failure — the first non-zero status wins.
     struct [[nodiscard]] prompt_error : std::runtime_error {
         // NOLINTNEXTLINE(performance-unnecessary-value-param) — by value on purpose: callers std::move the message in.
-        prompt_error(int         exit_code,
+        prompt_error(int const   exit_code,
                      std::string message,
                      std::string partial_output = {},
-                     bool        no_clipboard   = false,
-                     bool        stdin_consumed = false)
+                     bool const  no_clipboard   = false,
+                     bool const  stdin_consumed = false)
           // runtime_error's ctor takes a const& and copies; the message is
           // consumed there, partial_ still moves. NOLINT: no way to move into it.
           : std::runtime_error(std::move(message)), // NOLINT(performance-move-const-arg)
@@ -32,7 +32,7 @@ namespace dana {
             return m_exit_code;
         }
 
-        [[nodiscard]] std::string const& partial_output() const {
+        [[nodiscard]] std::string_view partial_output() const {
             return m_partial;
         }
 

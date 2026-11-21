@@ -98,8 +98,8 @@ namespace dana::text {
         std::size_t start = 0;
         std::size_t seen  = 0;
         while (start < s.size() && seen < n) {
-            std::size_t end  = s.find('\n', start);
-            std::size_t stop = end == std::string_view::npos ? s.size() : end + 1;
+            auto const end  = s.find('\n', start);
+            auto const stop = end == std::string_view::npos ? s.size() : end + 1;
             out.append(s.substr(start, stop - start));
             ++seen;
             start = stop;

@@ -54,9 +54,9 @@ namespace dana {
 
         [[nodiscard]] std::size_t positive_number(std::string_view value, std::string_view option) {
             std::uint64_t number = 0;
-            auto const*        begin  = value.data();
-            auto const*        end    = value.data() + value.size();
-            auto [ptr, ec]            = std::from_chars(begin, end, number);
+            auto const*   begin  = value.data();
+            auto const*   end    = value.data() + value.size();
+            auto [ptr, ec]       = std::from_chars(begin, end, number);
             if (ec != std::errc{} || ptr != end || number == 0) {
                 throw usage_error{std::format("prompt each: {} needs a positive number\n", option)};
             }
@@ -153,7 +153,7 @@ namespace dana {
           nlohmann::ordered_json const& item,
           std::size_t                   index,
           std::size_t                   total,
-          std::string const&            file) {
+          std::string_view              file) {
             std::string out;
             out.reserve(token.size());
             for (std::size_t i = 0; i < token.size();) {
@@ -246,7 +246,7 @@ namespace dana {
             return text.empty() ? std::format("item {}", index) : text;
         }
 
-        [[nodiscard]] std::string join_strings(std::vector<std::string> const& values, std::string_view separator) {
+        [[nodiscard]] std::string join_strings(text::string_views values, std::string_view separator) {
             std::string out;
             for (auto const& value : values) {
                 if (!out.empty()) {
@@ -401,13 +401,13 @@ namespace dana {
         }
 
         [[nodiscard]] pid_t launch_job(
-          std::vector<std::string> const& argv,
-          std::string const&              executable,
-          std::vector<std::string> const& extra_env,
-          std::string_view                stdin_text,
-          bool                            feed_stdin,
-          int&                            out_fd,
-          int&                            err_fd) {
+          text::string_views argv,
+          std::string_view   executable,
+          text::string_views extra_env,
+          std::string_view   stdin_text,
+          bool               feed_stdin,
+          int&               out_fd,
+          int&               err_fd) {
             std::array<int, 2> out_pipe{-1, -1};
             std::array<int, 2> err_pipe{-1, -1};
             if (::pipe(out_pipe.data()) != 0) {
@@ -468,18 +468,18 @@ namespace dana {
                     if (equals == std::string::npos) {
                         continue;
                     }
-                    std::string const key   = entry.substr(0, equals);
-                    std::string const value = entry.substr(equals + 1);
-                    ::setenv(key.c_str(), value.c_str(), 1);
+                    auto const key   = entry.substr(0, equals);
+                    auto const value = entry.substr(equals + 1);
+                    ::setenv(key.data(), value.data(), 1);
                 }
 
                 std::vector<char*> raw;
                 raw.reserve(argv.size() + 1);
                 for (auto const& arg : argv) {
-                    raw.push_back(const_cast<char*>(arg.c_str()));
+                    raw.push_back(const_cast<char*>(arg.data()));
                 }
                 raw.push_back(nullptr);
-                ::execv(executable.c_str(), raw.data());
+                ::execv(executable.data(), raw.data());
                 ::_exit(127);
             }
 
@@ -497,10 +497,10 @@ namespace dana {
 
         [[nodiscard]] std::vector<job_result> run_jobs(
           std::vector<std::vector<std::string>> const& argvs,
-          std::string const&                           executable,
+          std::string_view                             executable,
           std::size_t                                  jobs,
           std::chrono::seconds                         timeout,
-          std::vector<std::string> const&              extra_env,
+          text::string_views                           extra_env,
           std::vector<std::string> const*              stdin_texts) {
             std::vector<job_result> results(argvs.size());
             if (argvs.empty()) {
@@ -708,7 +708,7 @@ namespace dana {
         // allowed but stays dynamic: the child's policy checks the resolved value.
         agent::validate_exec_template(body_tokens);
 
-        bool const needs_file = std::ranges::any_of(body_tokens, [](std::string const& token) {
+        bool const needs_file = std::ranges::any_of(body_tokens, [](std::string_view token) {
             return token.contains("{file}");
         });
 

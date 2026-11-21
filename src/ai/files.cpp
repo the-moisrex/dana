@@ -1,5 +1,7 @@
 #include "files.hpp"
 
+#include "../core/strings.hpp"
+
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
@@ -130,7 +132,7 @@ namespace dana::ai {
         return attachment{.path = full.string(), .name = name, .data = std::move(data), .mime = guess_mime(name)};
     }
 
-    std::vector<attachment> read_attachments(std::span<std::string const> paths) {
+    std::vector<attachment> read_attachments(text::string_views paths) {
         std::vector<attachment> out;
         out.reserve(paths.size());
         for (auto const& path : paths) {

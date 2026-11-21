@@ -32,7 +32,7 @@ namespace dana {
             return false;
         }
 
-        std::string join_names(std::vector<std::string> const& names) {
+        std::string join_names(text::string_views names) {
             std::string out;
             for (std::size_t i = 0; i < names.size(); ++i) {
                 if (i != 0) {

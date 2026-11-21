@@ -26,7 +26,7 @@ namespace dana {
         };
 
         void execute_matching_files(view const& v, result& r, std::string_view target) {
-            auto fail = [&](std::string const& message) {
+            auto fail = [&](std::string_view message) {
                 throw usage_error{std::string(v.name) + ": " + message + "\n"};
             };
             auto                     backend     = search_backend::automatic;

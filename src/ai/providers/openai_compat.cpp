@@ -136,21 +136,19 @@ namespace dana::ai {
                 api_key_(owner.api_key(options.api_key)),
                 params_(parse_params(options.params)) {}
 
-            void send(std::string const&              prompt,
-                      std::vector<std::string> const& files,
-                      event_sink const&               sink) override {
+            void send(std::string_view prompt, text::string_views files, event_sink const& sink) override {
                 std::vector<attachment> attachments;
                 try {
                     for (auto const& path : files) {
                         attachments.push_back(read_attachment(path));
                     }
                 } catch (file_error const& failure) {
-                    sink(dana::ai::error(failure.what()));
+                    sink(error(failure.what()));
                     return;
                 }
 
                 json                     content = json::array();
-                std::string              message = prompt;
+                std::string              message = std::string(prompt);
                 std::vector<std::string> announced;
                 bool                     has_parts = false;
                 for (auto const& attachment : attachments) {
@@ -344,12 +342,12 @@ namespace dana::ai {
         return normalise_base_impl(url);
     }
 
-    json parse_params(std::vector<std::string> const& pairs) {
+    json parse_params(text::string_views pairs) {
         json params = json::object();
         for (auto const& pair : pairs) {
             auto const equals = pair.find('=');
-            if (equals == std::string::npos || equals == 0) {
-                throw std::runtime_error("--param wants KEY=VALUE, got " + pair);
+            if (equals == std::string::npos || equals == 0) [[unlikely]] {
+                throw std::runtime_error("--param wants KEY=VALUE, got " + std::string(pair));
             }
             std::string const name    = trim(pair.substr(0, equals));
             std::string const value   = trim(pair.substr(equals + 1));
@@ -360,7 +358,7 @@ namespace dana::ai {
     }
 
     std::unique_ptr<conversation>
-    openai_compat::open(session::match const& match, std::string const& model, open_options const& options) {
+    openai_compat::open(session::match const& match, std::string_view model, open_options const& options) {
         std::string const base = base_url(options.base_url);
         std::string       resolved;
         try {
@@ -371,48 +369,48 @@ namespace dana::ai {
         return std::make_unique<openai_conversation>(*this, match, resolved, options);
     }
 
-    std::string openai_compat::base_url(std::string const& requested) {
+    std::string openai_compat::base_url(std::string_view requested) {
         std::string explicit_url = trim(requested);
         if (explicit_url.empty() && !m_info.base_url_env.empty()) {
             explicit_url = trim(env_value(m_info.base_url_env));
         }
         std::string const url = explicit_url.empty() ? m_info.default_base_url : explicit_url;
-        if (url.empty()) {
+        if (url.empty()) [[unlikely]] {
             throw std::runtime_error("no API endpoint configured; pass --base-url or set " + m_info.base_url_env);
         }
         return normalise_base(url);
     }
 
-    std::string openai_compat::api_key(std::string const& requested) {
-        return keys::resolve(m_info.name, std::array<std::string, 1>{m_info.key_env}, requested).key;
+    std::string openai_compat::api_key(std::string_view requested) {
+        return keys::resolve(m_info.name, {m_info.key_env}, requested).key;
     }
 
     std::vector<std::pair<std::string, std::string>> openai_compat::headers(
-      std::string const& key,
-      std::string const& /*base*/) {
+      std::string_view key,
+      std::string_view /*base*/) {
         std::vector<std::pair<std::string, std::string>> out{
           {"Content-Type",                    "application/json"},
           {      "Accept", "application/json, text/event-stream"},
         };
-        std::string const token = key.empty() ? api_key({}) : key;
+        std::string const token = key.empty() ? api_key({}) : std::string(key);
         if (!token.empty()) {
             out.emplace_back("Authorization", "Bearer " + token);
         }
         return out;
     }
 
-    std::string openai_compat::chat_url(std::string const& base) {
-        return base + "/chat/completions";
+    std::string openai_compat::chat_url(std::string_view base) {
+        return std::string(base) + "/chat/completions";
     }
 
-    std::vector<model_record> openai_compat::chat_models(std::string const& base, long timeout) {
+    std::vector<model_record> openai_compat::chat_models(std::string_view base, long timeout) {
         return chat_models_with_key(base, timeout, {});
     }
 
     std::vector<model_record>
-    openai_compat::chat_models_with_key(std::string const& base, long timeout, std::string const& key) {
+    openai_compat::chat_models_with_key(std::string_view base, long timeout, std::string_view key) {
         std::vector<model_record> out;
-        std::string const         resolved = base.empty() ? base_url({}) : base;
+        std::string const         resolved = base.empty() ? base_url({}) : std::string(base);
         http_request              request;
         request.url             = resolved + "/models";
         request.timeout_seconds = timeout;
@@ -472,7 +470,7 @@ namespace dana::ai {
         }
     }
 
-    std::string openai_compat::resolve_model(std::string const& requested, std::string const& /*base*/) {
+    std::string openai_compat::resolve_model(std::string_view requested, std::string_view /*base*/) {
         std::string wanted = trim(requested);
         if (wanted.empty() && !m_info.model_env.empty()) {
             wanted = trim(env_value(m_info.model_env));
@@ -510,8 +508,8 @@ namespace dana::ai {
         return report;
     }
 
-    std::string openai_compat::error_hint(std::string const& message, std::string const& base) {
-        std::string       text    = message;
+    std::string openai_compat::error_hint(std::string_view message, std::string_view base) {
+        std::string       text    = std::string(message);
         std::string const lowered = lower(text);
         bool const        model_problem =
           lowered.contains("not found") || lowered.contains("not loaded") || lowered.contains("does not exist") ||

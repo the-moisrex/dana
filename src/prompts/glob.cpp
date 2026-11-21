@@ -79,10 +79,10 @@ namespace dana {
             }
             if (!ran) {
                 // Fallback: find only understands a basename glob, which is the common case.
-                std::string const name = opts.pattern.empty() ? "*" : opts.pattern;
+                std::string const name   = opts.pattern.empty() ? "*" : opts.pattern;
+                auto const        extras = std::array<std::string, 3>{"glob", opts.path, name};
                 auto const        res =
-                  process::run_script(R"(find "$1" -type f -name "$2" 2>/dev/null | sort | sed 's|^\./||')",
-                                      {"glob", opts.path, name});
+                  process::run_script(R"(find "$1" -type f -name "$2" 2>/dev/null | sort | sed 's|^\./||')", extras);
                 out = res.stdout_data;
             }
 

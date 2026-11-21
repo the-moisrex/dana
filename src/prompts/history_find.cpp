@@ -121,7 +121,7 @@ namespace dana {
             return it != haystack.end();
         }
 
-        std::vector<std::string_view> lines_of(std::string const& text) {
+        std::vector<std::string_view> lines_of(std::string_view text) {
             std::vector<std::string_view> lines;
             std::size_t                   pos = 0;
             while (pos <= text.size()) {

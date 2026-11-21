@@ -23,15 +23,15 @@ namespace dana {
         };
 
         struct parsed_verify_args {
-            verify_options           opts;
-            std::vector<std::string> forward; // args still destined for git-dirty
+            verify_options                opts;
+            std::vector<std::string_view> forward; // args still destined for git-dirty
         };
 
-        parsed_verify_args parse_verify_args(std::vector<std::string> const& args) {
+        parsed_verify_args parse_verify_args(text::string_views args) {
             parsed_verify_args result;
             for (std::size_t i = 0; i < args.size(); ++i) {
                 std::string_view a          = args[i];
-                auto             take_value = [&](std::string_view flag) -> std::optional<std::string_view> {
+                auto const       take_value = [&](std::string_view flag) -> std::optional<std::string_view> {
                     if (a == flag) {
                         if (i + 1 >= args.size()) {
                             throw soft_error{std::format("prompt verify: option '{}' requires a value.\n", flag)};
@@ -98,12 +98,12 @@ than inventing missing source or hunk coordinates.
     } // namespace
 
     static void execute_verify(view const& v, result& r) {
-        auto head_lines = head_lines_or_throw(v);
-        auto pos_args   = positional_args(v);
+        auto const head_lines = head_lines_or_throw(v);
+        auto       pos_args   = positional_args(v);
         // positional_args drops --no-dedup; verify forwards it to git-dirty so the
         // escape hatch reaches the prompt that actually emits the files.
         if (std::ranges::any_of(v.args,
-                                [](std::string_view arg) {
+                                [](std::string_view const arg) {
                                     return arg == kNoDedupFlag;
                                 }))
         {
@@ -115,11 +115,11 @@ than inventing missing source or hunk coordinates.
         // The chain-wide filter: exclusions join --exclude, and a scope becomes an
         // implicit --only prefix.
         file_filter const filter = file_filter::from(v.prior, v.env);
-        for (auto const& pattern : filter.exclude()) {
-            parsed.opts.exclude.push_back(pattern);
+        for (auto const pattern : filter.exclude()) {
+            parsed.opts.exclude.emplace_back(pattern);
         }
         if (filter.has_root() && !v.env.git_root.empty()) {
-            auto spec = filter.root().lexically_relative(v.env.git_root).generic_string();
+            auto const spec = filter.root().lexically_relative(v.env.git_root).generic_string();
             if (!spec.empty() && spec != ".") {
                 parsed.opts.only.push_back(spec + "/*");
             }

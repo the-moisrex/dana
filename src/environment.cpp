@@ -22,7 +22,7 @@ namespace dana {
         // `fzf -m` over whatever the caller pipes in: the file prompts' interactive
         // picker, used when a prompt is invoked with no FILE arguments.
         std::vector<std::filesystem::path> select_files_with_fzf() {
-            auto                               result = process::run_command(std::vector<std::string>{"fzf", "-m"});
+            auto                               result = process::run_command({"fzf", "-m"});
             std::vector<std::filesystem::path> files;
             std::string                        line;
             for (char c : result.stdout_data) {
@@ -43,12 +43,12 @@ namespace dana {
 
         namespace stdfs = std::filesystem;
 
-        inline bool is_file(stdfs::path const& p) {
+        bool is_file(stdfs::path const& p) {
             std::error_code ec;
             return stdfs::is_regular_file(p, ec);
         }
 
-        inline bool is_file_or_directory(stdfs::path const& p) {
+        bool is_file_or_directory(stdfs::path const& p) {
             std::error_code ec;
             auto const      status = stdfs::status(p, ec);
             return !ec && (stdfs::is_regular_file(status) || stdfs::is_directory(status));
@@ -56,7 +56,7 @@ namespace dana {
 
         // Recognizes both ordinary repositories (.git directory) and worktrees /
         // submodules (.git file). No subprocess is needed for root discovery.
-        inline std::optional<stdfs::path> find_git_root(stdfs::path dir) {
+        std::optional<stdfs::path> find_git_root(stdfs::path dir) {
             for (;;) {
                 if (is_file_or_directory(dir / ".git")) {
                     return dir;
@@ -191,19 +191,16 @@ namespace dana {
 
         // Git is an optional accelerator; no listing selects native traversal.
         [[nodiscard]] std::optional<std::string> try_git_listing(stdfs::path const& root) try {
-            auto result = process::run_command(
-              std::vector<std::string>{
-                "git",
-                "-C",
-                root.string(),
-                "ls-files",
-                "--cached",
-                "--others",
-                "--exclude-standard",
-                "--full-name",
-                "-z",
-              },
-              "");
+            std::vector<std::string> const cmdline{
+              {
+               "git", "-C",
+               root.string(),
+               "ls-files", "--cached",
+               "--others", "--exclude-standard",
+               "--full-name", "-z",
+               }
+            };
+            auto result = process::run_command(cmdline, "");
 
             if (result.exit_code != 0) [[unlikely]] {
                 return std::nullopt;

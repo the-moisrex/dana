@@ -12,18 +12,18 @@ namespace dana {
 
     namespace {
 
-        std::vector<std::string> split_lines(std::string const& text) {
+        std::vector<std::string> split_lines(std::string_view text) {
             std::vector<std::string> lines;
             std::size_t              start = 0;
             while (start <= text.size()) {
                 std::size_t end = text.find('\n', start);
                 if (end == std::string::npos) {
                     if (start < text.size()) {
-                        lines.push_back(text.substr(start));
+                        lines.emplace_back(text.substr(start));
                     }
                     break;
                 }
-                lines.push_back(text.substr(start, end - start)); // keep blank lines, like awk
+                lines.emplace_back(text.substr(start, end - start)); // keep blank lines, like awk
                 start = end + 1;
             }
             return lines;
@@ -31,9 +31,9 @@ namespace dana {
 
         // Port of the --strip-lists awk: contiguous lines that are only a source/header
         // file name collapse to a single comment, reset on any other line.
-        std::string strip_source_lists(std::string const& content) {
+        std::string strip_source_lists(std::string_view const content) {
             static std::regex const src_re(R"(^[ \t]*[A-Za-z0-9_./-]+\.(cpp|cc|cxx|hpp|hh|h|c|ixx)[ \t]*$)");
-            std::string             stripped = content;
+            std::string             stripped = std::string(content);
             while (!stripped.empty() && stripped.back() == '\n') {
                 stripped.pop_back();
             }
@@ -60,13 +60,13 @@ namespace dana {
     static void execute_cmake(view const& v, result& r) {
         // init_prompt -> parse_arguments runs first (validates --head); the script
         // then walks the remaining args for its own flags.
-        auto opts      = file_options_or_throw(v);
-        auto remaining = positional_args(v);
+        auto const opts      = file_options_or_throw(v);
+        auto       remaining = positional_args(v);
 
         std::vector<std::string> exclude_patterns;
         bool                     strip_lists = false;
         for (std::size_t i = 0; i < remaining.size(); ++i) {
-            std::string_view a = remaining[i];
+            auto const a = remaining[i];
             if (a == "--exclude") {
                 if (i + 1 >= remaining.size()) {
                     throw usage_error{"Missing value for --exclude\n"};

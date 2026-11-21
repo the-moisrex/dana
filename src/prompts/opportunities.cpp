@@ -56,7 +56,7 @@ namespace dana {
             }
         }
 
-        bool in(std::string const& cat, std::initializer_list<char const*> names) {
+        bool in(std::string_view cat, std::initializer_list<char const*> names) {
             return std::ranges::any_of(names, [&](char const* n) {
                 return cat == n;
             });

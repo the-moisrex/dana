@@ -29,12 +29,12 @@ namespace dana {
     }
 
     result run_sub_prompt(
-      view const&                       parent,
-      std::string_view                  name,
-      text::string_views args,
-      std::optional<std::string_view>   stdin_text,
-      facts const*                      extra_facts,
-      bool                              inherit_file_scope) {
+      view const&                     parent,
+      std::string_view                name,
+      text::string_views              args,
+      std::optional<std::string_view> stdin_text,
+      facts const*                    extra_facts,
+      bool                            inherit_file_scope) {
         auto const* desc = find_prompt(name);
         if (desc == nullptr) {
             throw prompt_error{3, "prompt: prompt '" + std::string(name) + "' not found\n"};
@@ -69,7 +69,11 @@ namespace dana {
         } catch (prompt_error const& err) {
             // The child's own stdin source is gone with the frame; report whether
             // it was spent so `auto` can mark the chain's pipe consumed.
-            throw prompt_error{err.exit_code(), err.what(), err.partial_output(), err.no_clipboard(), in.spent()};
+            throw prompt_error{err.exit_code(),
+                               err.what(),
+                               std::string{err.partial_output()},
+                               err.no_clipboard(),
+                               in.spent()};
         }
         return out;
     }

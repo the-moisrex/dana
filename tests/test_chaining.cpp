@@ -26,15 +26,15 @@ namespace {
     void test_bare_prompt_name() {
         // Regression: a bare "prompt fix" (no args) must select "fix", not fall
         // back to "auto".
-        std::array<char const*, 2> argv = {"prompt", "fix"};
-        auto chain = parse_chain(std::span<char const* const>(argv.data(), argv.size()), get_all_prompts());
+        std::array<char const*, 2> argv  = {"prompt", "fix"};
+        auto                       chain = parse_chain(argv, get_all_prompts());
         check(chain.invocations.size() == 1, "bare name: one invocation");
         check(chain.invocations.size() == 1 && chain.invocations[0].name == "fix", "bare name resolves to fix");
     }
 
     void test_prompt_with_args() {
-        std::array<char const*, 4> argv = {"prompt", "fix", "--head", "10"};
-        auto chain = parse_chain(std::span<char const* const>(argv.data(), argv.size()), get_all_prompts());
+        std::array<char const*, 4> argv  = {"prompt", "fix", "--head", "10"};
+        auto                       chain = parse_chain(argv, get_all_prompts());
         check(chain.invocations.size() == 1, "args: one invocation");
         check(chain.invocations.size() == 1 && chain.invocations[0].name == "fix", "args: name is fix");
         check(chain.invocations.size() == 1 && chain.invocations[0].args.size() == 2, "args: --head 10 kept");
@@ -42,8 +42,8 @@ namespace {
     }
 
     void test_chain_two_prompts() {
-        std::array<char const*, 5> argv = {"prompt", "tse", "فولاد", ".note", "compare"};
-        auto chain = parse_chain(std::span<char const* const>(argv.data(), argv.size()), get_all_prompts());
+        std::array<char const*, 5> argv  = {"prompt", "tse", "فولاد", ".note", "compare"};
+        auto                       chain = parse_chain(argv, get_all_prompts());
         check(chain.invocations.size() == 2, "chain: two invocations");
         check(chain.invocations.size() == 2 && chain.invocations[0].name == "tse", "chain: first is tse");
         check(chain.invocations.size() == 2 && chain.invocations[1].name == "note", "chain: second is note");
@@ -51,8 +51,8 @@ namespace {
     }
 
     void test_unknown_defaults_to_auto() {
-        std::array<char const*, 1> argv = {"prompt"};
-        auto chain = parse_chain(std::span<char const* const>(argv.data(), argv.size()), get_all_prompts());
+        std::array<char const*, 1> argv  = {"prompt"};
+        auto                       chain = parse_chain(argv, get_all_prompts());
         check(chain.invocations.size() == 1, "empty argv: one invocation");
         check(chain.invocations.size() == 1 && chain.invocations[0].name == "auto", "empty argv: defaults to auto");
     }
@@ -60,8 +60,8 @@ namespace {
     void test_unknown_shorthand_at_head_errors() {
         // `.dfsgfdsgfdgfds` has no owning prompt: the head must be a hard error so
         // the typo never falls through to auto's argument list.
-        std::array<char const*, 2> argv = {"prompt", ".dfsgfdsgfdgfds"};
-        auto chain = parse_chain(std::span<char const* const>(argv.data(), argv.size()), get_all_prompts());
+        std::array<char const*, 2> argv  = {"prompt", ".dfsgfdsgfdgfds"};
+        auto                       chain = parse_chain(argv, get_all_prompts());
         check(!chain.error.empty(), "unknown shorthand: error is set");
         check(chain.invocations.empty(), "unknown shorthand: no invocation was built");
     }
@@ -69,8 +69,8 @@ namespace {
     void test_unknown_dash_shorthand_at_head_errors() {
         // The single-dash form is the same documented shorthand, so it gets the
         // same head-of-chain diagnostic.
-        std::array<char const*, 2> argv = {"prompt", "-dfsgfdsgfdgfds"};
-        auto chain = parse_chain(std::span<char const* const>(argv.data(), argv.size()), get_all_prompts());
+        std::array<char const*, 2> argv  = {"prompt", "-dfsgfdsgfdgfds"};
+        auto                       chain = parse_chain(argv, get_all_prompts());
         check(!chain.error.empty(), "unknown dash shorthand: error is set");
         check(chain.invocations.empty(), "unknown dash shorthand: no invocation was built");
     }
@@ -78,8 +78,8 @@ namespace {
     void test_unknown_bare_word_defaults_to_auto() {
         // A bare word that is not a prompt name still reaches `auto`: that is how a
         // leading file/identifier argument gets there.
-        std::array<char const*, 2> argv = {"prompt", "somefile.txt"};
-        auto chain = parse_chain(std::span<char const* const>(argv.data(), argv.size()), get_all_prompts());
+        std::array<char const*, 2> argv  = {"prompt", "somefile.txt"};
+        auto                       chain = parse_chain(argv, get_all_prompts());
         check(chain.error.empty(), "unknown bare word: no error");
         check(chain.invocations.size() == 1, "unknown bare word: one invocation");
         check(chain.invocations.size() == 1 && chain.invocations[0].name == "auto",
@@ -92,8 +92,8 @@ namespace {
     void test_post_match_dot_is_argument() {
         // After a prompt has matched, `.env` is a legitimate argument; the head
         // guard must not fire.
-        std::array<char const*, 3> argv = {"prompt", ".files", ".env"};
-        auto chain = parse_chain(std::span<char const* const>(argv.data(), argv.size()), get_all_prompts());
+        std::array<char const*, 3> argv  = {"prompt", ".files", ".env"};
+        auto                       chain = parse_chain(argv, get_all_prompts());
         check(chain.error.empty(), "post-match dot: no error");
         check(chain.invocations.size() == 1, "post-match dot: one invocation");
         check(chain.invocations.size() == 1 && chain.invocations[0].name == "files", "post-match dot: files matched");
@@ -105,8 +105,8 @@ namespace {
     void test_leading_relative_path_is_argument() {
         // `./build.log` is path-like (`/`): the head guard must let it through to
         // auto, otherwise a common invocation would suddenly error.
-        std::array<char const*, 2> argv = {"prompt", "./build.log"};
-        auto chain = parse_chain(std::span<char const* const>(argv.data(), argv.size()), get_all_prompts());
+        std::array<char const*, 2> argv  = {"prompt", "./build.log"};
+        auto                       chain = parse_chain(argv, get_all_prompts());
         check(chain.error.empty(), "leading path: no error");
         check(chain.invocations.size() == 1 && chain.invocations[0].name == "auto", "leading path: auto owns the path");
         check(chain.invocations.size() == 1 && chain.invocations[0].args.size() == 1 &&
@@ -142,8 +142,8 @@ namespace {
         }
 
         // Dotted names resolve through the chain parser directly.
-        std::array<char const*, 2> argv = {"prompt", "explain"};
-        auto chain = parse_chain(std::span<char const* const>(argv.data(), argv.size()), get_all_prompts());
+        std::array<char const*, 2> argv  = {"prompt", "explain"};
+        auto                       chain = parse_chain(argv, get_all_prompts());
         check(chain.invocations.size() == 1, "dotted name: one invocation");
         check(chain.invocations.size() == 1 && chain.invocations[0].name == "explain",
               "dotted name resolves to explain, not auto");
@@ -307,7 +307,7 @@ namespace {
         // the dispatcher's flag parser never sees it.
         std::array<char const*, 7> argv =
           {"prompt", ".each", "table:symbol", ".tse", "{symbol}", ".tse.analyze", ".end"};
-        auto chain = parse_chain(std::span<char const* const>(argv.data(), argv.size()), get_all_prompts());
+        auto chain = parse_chain(argv, get_all_prompts());
         check(chain.error.empty(), "body: a closed body parses");
         check(chain.invocations.size() == 1, "body: one invocation");
         check(chain.invocations.size() == 1 && chain.invocations[0].name == "each", "body: the opener is each");
@@ -320,7 +320,7 @@ namespace {
 
         // A prompt after the closing `.end` resumes normal parsing.
         std::array<char const*, 8> after = {"prompt", ".each", ".length", "5", ".end", ".note", "after", "body"};
-        chain = parse_chain(std::span<char const* const>(after.data(), after.size()), get_all_prompts());
+        chain                            = parse_chain(after, get_all_prompts());
         check(chain.error.empty(), "body: a following prompt parses");
         check(chain.invocations.size() == 2, "body: the following prompt is its own invocation");
         check(chain.invocations.size() == 2 && chain.invocations[1].name == "note", "body: note follows each");
@@ -340,7 +340,7 @@ namespace {
           "tail",
           ".end",
         };
-        chain = parse_chain(std::span<char const* const>(nested.data(), nested.size()), get_all_prompts());
+        chain = parse_chain(nested, get_all_prompts());
         check(chain.error.empty(), "body: nested body parses");
         check(chain.invocations.size() == 1, "body: nested body is still one outer invocation");
         check(chain.invocations.size() == 1 && chain.invocations[0].body.size() == 7,
@@ -349,22 +349,22 @@ namespace {
         // `.each --help` has no body, and must reach the help path instead of a
         // parse error.
         std::array<char const*, 3> help = {"prompt", ".each", "--help"};
-        chain = parse_chain(std::span<char const* const>(help.data(), help.size()), get_all_prompts());
+        chain                           = parse_chain(help, get_all_prompts());
         check(chain.error.empty(), "body: --help without a body parses");
         check(chain.invocations.size() == 1 && chain.invocations[0].body.empty(), "body: --help has no body");
 
         std::array<char const*, 3> missing = {"prompt", ".each", ".length"};
-        chain = parse_chain(std::span<char const* const>(missing.data(), missing.size()), get_all_prompts());
+        chain                              = parse_chain(missing, get_all_prompts());
         check(!chain.error.empty(), "body: a missing .end is an error");
 
         std::array<char const*, 2> stray = {"prompt", ".end"};
-        chain = parse_chain(std::span<char const* const>(stray.data(), stray.size()), get_all_prompts());
+        chain                            = parse_chain(stray, get_all_prompts());
         check(!chain.error.empty(), "body: a stray .end is an error");
 
         // `.exec -- ...` owns the rest of argv: a child prompt chain is not parsed
         // as another segment of this chain.
         std::array<char const*, 7> exec_chain = {"prompt", ".exec", "--", "prompt", ".tse", "foolad", ".tse.analyze"};
-        chain = parse_chain(std::span<char const* const>(exec_chain.data(), exec_chain.size()), get_all_prompts());
+        chain                                 = parse_chain(exec_chain, get_all_prompts());
         check(chain.error.empty(), "exec: a -- child chain parses");
         check(chain.invocations.size() == 1, "exec: -- keeps one invocation");
         check(chain.invocations.size() == 1 && chain.invocations[0].args.size() == 5,
@@ -392,17 +392,17 @@ namespace {
         check(refused, "agent: a pipe is refused");
 
         constexpr std::array<std::string_view, 3> git_status{"--print", "git", "status"};
-        auto spec = agent::parse_exec_args(git_status);
+        auto                                      spec = agent::parse_exec_args(git_status);
         check(spec.print_only && spec.command.size() == 2 && spec.command[0] == "git",
               "agent: --print before the program");
         check(spec.command.size() == 2 && spec.command[1] == "status", "agent: program arguments are kept");
 
-        constexpr std::array<std::string_view, 1>table_symbol{"table:symbol"};
-        auto selector = agent::parse_exec_args(table_symbol);
+        constexpr std::array<std::string_view, 1> table_symbol{"table:symbol"};
+        auto                                      selector = agent::parse_exec_args(table_symbol);
         check(selector.selector == "table:symbol" && selector.command.empty(), "agent: a selector is not a command");
 
         constexpr std::array<std::string_view, 2> echo_ver{"echo", "--version"};
-        auto flag_after = agent::parse_exec_args(echo_ver);
+        auto                                      flag_after = agent::parse_exec_args(echo_ver);
         check(flag_after.command.size() == 2 && flag_after.command[1] == "--version",
               "agent: after the program, flags belong to the program");
 

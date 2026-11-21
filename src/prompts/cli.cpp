@@ -32,7 +32,7 @@ namespace dana {
         }
 
         std::vector<char const*> argv   = {"bash", "-c", "eval \"$0\" 2>&1", command.c_str(), nullptr};
-        auto                     result = dana::process::run_command(argv, v.in.text());
+        auto                     result = process::run_command(argv, v.in.text());
 
         std::string output;
         output += std::format("Output of command `{}`:\n\n", command);

@@ -41,7 +41,7 @@ namespace detail {
 } // namespace detail
 
 // Run a git command and return stdout with trailing newlines stripped.
-std::string dana::git::run(std::vector<std::string> const& args) {
+std::string dana::git::run(text::string_views args) {
     auto        result = dana::process::run_command(args);
     std::string out    = std::move(result.stdout_data);
     while (!out.empty() && out.back() == '\n') {
@@ -127,13 +127,13 @@ std::string dana::git::add_line_numbers_to_diff(std::string_view diff) {
 // Paths are matched both verbatim and by basename, using `detail::glob_match`.
 std::string dana::git::filter_diff_by_path(
   std::string_view                diff,
-  std::vector<std::string> const& includes,
-  std::vector<std::string> const& excludes) {
+  text::string_views includes,
+  text::string_views excludes) {
     if (includes.empty() && excludes.empty()) {
         return std::string(diff);
     }
 
-    auto matches = [](std::string_view path, std::vector<std::string> const& patterns) {
+    auto matches = [](std::string_view path, text::string_views patterns) {
         if (path.empty()) {
             return false;
         }

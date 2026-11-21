@@ -19,7 +19,7 @@ namespace {
         }
     }
 
-    std::string failure_of(std::vector<std::string> const& argv, std::chrono::milliseconds timeout) {
+    std::string failure_of(text::string_views argv, std::chrono::milliseconds timeout) {
         try {
             std::ignore = tse_data::run_tool("tse", "bin/tse", argv, timeout);
         } catch (soft_error const& e) {

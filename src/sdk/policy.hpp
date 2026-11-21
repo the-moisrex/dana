@@ -35,8 +35,8 @@ namespace dana::policy {
         // Throws soft_error when the command is denied or the user cancels. `label`
         // overrides the display line (a generated prompt chain shows all its
         // segments).
-        void require(std::span<std::string const> argv, std::string_view label = {});
-        void require_chain(std::span<std::string const> chain_tokens);
+        void require(text::string_views argv, std::string_view label = {});
+        void require_chain(text::string_views chain_tokens);
 
         void set_yes(bool yes) {
             yes_ = yes;
@@ -61,7 +61,7 @@ namespace dana::policy {
             std::size_t              specificity = 0;
         };
 
-        [[nodiscard]] action decide(std::span<std::string const> argv) const;
+        [[nodiscard]] action decide(text::string_views argv) const;
         void                 add(action verdict, std::string program, std::vector<std::string> args, int source);
         void                 load_file(std::filesystem::path const& path, int source);
         void                 parse_env(std::string_view name, action verdict, int source);

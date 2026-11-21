@@ -120,9 +120,9 @@ namespace dana::ai {
     }
 
     void websocket::connect(
-      std::string const&                                      url,
+      std::string_view                                      url,
       std::vector<std::pair<std::string, std::string>> const& headers,
-      std::string const&                                      origin,
+      std::string_view                                      origin,
       long                                                    timeout_seconds) {
         close();
         if (!have_websocket()) {
@@ -152,7 +152,8 @@ namespace dana::ai {
             curl_easy_cleanup(easy);
         };
 
-        curl_easy_setopt(easy, CURLOPT_URL, url.c_str());
+        // todo: is this safe?
+        curl_easy_setopt(easy, CURLOPT_URL, url.data());
         // 2 = run the handshake and hand the raw connection back to us.
         curl_easy_setopt(easy, CURLOPT_CONNECT_ONLY, 2L);
         curl_easy_setopt(easy, CURLOPT_HTTP_VERSION, static_cast<long>(CURL_HTTP_VERSION_1_1));

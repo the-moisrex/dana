@@ -159,7 +159,7 @@ namespace dana::ai {
         //: The part of `next` that is not already in `previous`.  The common prefix
         //: and suffix are kept, so an insertion in the middle emits just the inserted
         //: text while an ordinary streaming extension emits the new tail.
-        std::string delta_of(std::string const& next, std::string const& previous) {
+        std::string_view delta_of(std::string_view const next, std::string_view const previous) {
             if (next == previous) {
                 return {};
             }
@@ -180,16 +180,16 @@ namespace dana::ai {
         }
 
         struct utf8_unit {
-            std::size_t bytes = 0; // 0 means the sequence is incomplete
-            std::int64_t   units = 0;
+            std::size_t  bytes = 0; // 0 means the sequence is incomplete
+            std::int64_t units = 0;
         };
 
         // One UTF-8 code point's byte length and UTF-16 code-unit length (Google's
         // frame lengths count UTF-16 units, so astral characters count as two).
         utf8_unit decode_unit(std::string_view buffer, std::size_t index) {
-            auto const  byte  = static_cast<unsigned char>(buffer[index]);
-            std::size_t need  = 0;
-            std::int64_t   units = 1;
+            auto const   byte  = static_cast<unsigned char>(buffer[index]);
+            std::size_t  need  = 0;
+            std::int64_t units = 1;
             if (byte < 0x80) {
                 return {.bytes = 1, .units = 1};
             }
@@ -297,12 +297,12 @@ namespace dana::ai {
             }
 
           private:
-            std::string              buffer_;
+            std::string                 buffer_;
             std::optional<std::int64_t> expected_;
-            std::size_t              start_          = 0;
-            std::size_t              scanned_chars_  = 0;
+            std::size_t                 start_          = 0;
+            std::size_t                 scanned_chars_  = 0;
             std::int64_t                scanned_units_  = 0;
-            bool                     prefix_checked_ = false;
+            bool                        prefix_checked_ = false;
         };
 
         std::string error_message(std::int64_t code) {
@@ -429,11 +429,12 @@ namespace dana::ai {
                     bool const  is_final =
                       indicator != nullptr && indicator->is_number_integer() && indicator->get<std::int64_t>() == 2;
 
-                    std::string const key           = rcid.empty() ? "idx_" + std::to_string(index) : rcid;
-                    std::string const delta         = delta_of(text, last_text_[key]);
-                    std::string const thought_delta = delta_of(thoughts, last_thoughts_[key]);
-                    last_text_[key]                 = text;
-                    last_thoughts_[key]             = thoughts;
+                    std::string const key   = rcid.empty() ? "idx_" + std::to_string(index) : rcid;
+                    auto const        delta = delta_of(std::string_view{text}, std::string_view{last_text_[key]});
+                    auto const        thought_delta =
+                      delta_of(std::string_view{thoughts}, std::string_view{last_thoughts_[key]});
+                    last_text_[key]     = text;
+                    last_thoughts_[key] = thoughts;
                     if (index == 0) {
                         full_text     = text;
                         full_thoughts = thoughts;
@@ -451,8 +452,8 @@ namespace dana::ai {
             }
 
             // Disambiguate the event factory from the local `text` variable.
-            static stream_event text_event(std::string value) {
-                return text(std::move(value));
+            static stream_event text_event(std::string_view value) {
+                return text(value);
             }
 
             frame_parser                       frames_;
@@ -465,14 +466,14 @@ namespace dana::ai {
             int  number = 1;
         };
 
-        std::optional<std::string> model_alias(std::string const& requested) {
+        std::optional<std::string> model_alias(std::string_view requested) {
             if (auto const alias = models::resolve_alias("gemini", requested)) {
                 return std::string(*alias);
             }
             return std::nullopt;
         }
 
-        model_spec resolve_model(std::string const& requested) {
+        model_spec resolve_model(std::string_view requested) {
             std::string const cleaned = lower(trim(requested.empty() ? std::string("auto") : requested));
             std::string       key     = cleaned;
             if (auto const alias = model_alias(cleaned)) {
@@ -549,7 +550,7 @@ namespace dana::ai {
         };
 
         // The value of `"key": "value"` in the page's inline JSON.
-        std::string page_value(std::string const& page, std::string_view key) {
+        std::string_view page_value(std::string_view page, std::string_view key) {
             std::string const marker = "\"" + std::string(key) + "\":";
             auto const        start  = page.find(marker);
             if (start == std::string::npos) {
@@ -596,9 +597,9 @@ namespace dana::ai {
             }
 
             std::unique_ptr<conversation>
-            open(session::match const& match, std::string const& model, open_options const& options) override;
+            open(session::match const& match, std::string_view model, open_options const& options) override;
 
-            [[nodiscard]] std::string const& origin() const {
+            [[nodiscard]] std::string_view origin() const {
                 return info_.origin;
             }
 
@@ -634,7 +635,7 @@ namespace dana::ai {
             [[nodiscard]] std::string upload(
               std::vector<std::pair<std::string, std::string>> const& headers,
               attachment const&                                       file,
-              std::string const&                                      push_id) const {
+              std::string_view                                        push_id) const {
                 std::vector<multipart_field> fields{
                   {.name = "file", .value = file.data, .filename = file.name, .content_type = file.mime},
                 };
@@ -656,7 +657,9 @@ namespace dana::ai {
                 }
                 set_header(request.headers, "Content-Type", content_type);
                 set_header(request.headers, "X-Tenant-Id", "bard-storage");
-                set_header(request.headers, "Push-ID", push_id.empty() ? std::string("feeds/mcudyrk2a4khkz") : push_id);
+                set_header(request.headers,
+                           "Push-ID",
+                           push_id.empty() ? std::string("feeds/mcudyrk2a4khkz") : std::string(push_id));
                 set_header(request.headers, "Origin", info_.origin);
                 set_header(request.headers, "Referer", info_.origin + "/");
 
@@ -691,9 +694,9 @@ namespace dana::ai {
           public:
             gemini_conversation(gemini_provider&    owner,
                                 session::match      match,
-                                std::string         model,
+                                std::string_view         model,
                                 open_options const& options)
-              : conversation(std::move(match), std::move(model), options),
+              : conversation(std::move(match), model, options),
                 owner_(owner) {
                 if (options.resume.is_object()) {
                     if (auto const it = options.resume.find("metadata");
@@ -721,9 +724,7 @@ namespace dana::ai {
                 reqid_      = random_reqid();
             }
 
-            void send(std::string const&              prompt,
-                      std::vector<std::string> const& files,
-                      event_sink const&               sink) override {
+            void send(std::string_view prompt, text::string_views files, event_sink const& sink) override {
                 init_tokens tokens;
                 try {
                     tokens = owner_.init(match_);
@@ -763,7 +764,8 @@ namespace dana::ai {
                     file_data = std::move(uploaded);
                 }
 
-                std::string const content      = (!system_.empty() && turns_ == 0) ? system_ + "\n\n" + prompt : prompt;
+                std::string const content =
+                  (!system_.empty() && turns_ == 0) ? system_ + "\n\n" + std::string(prompt) : std::string(prompt);
                 auto const        spec         = resolve_model(model_);
                 std::string const request_uuid = upper(uuid4());
                 std::string const language     = tokens.language.empty() ? std::string("en") : tokens.language;
@@ -794,7 +796,7 @@ namespace dana::ai {
                 auto headers = owner_.base_headers(match_);
                 set_header(headers, "Accept", "*/*");
                 set_header(headers, "Content-Type", "application/x-www-form-urlencoded;charset=utf-8");
-                set_header(headers, "Origin", owner_.origin());
+                set_header(headers, "Origin", std::string(owner_.origin()));
                 set_header(headers, "Referer", owner_.origin() + std::string(kInitPath));
                 set_header(headers, "X-Same-Domain", "1");
                 set_header(headers, "x-goog-ext-525005358-jspb", "[\"" + request_uuid + "\",1]");
@@ -904,11 +906,11 @@ namespace dana::ai {
             std::string      rid_;
             std::string      rcid_;
             std::string      session_id_;
-            std::int64_t        reqid_ = 0;
+            std::int64_t     reqid_ = 0;
         };
 
         std::unique_ptr<conversation>
-        gemini_provider::open(session::match const& match, std::string const& model, open_options const& options) {
+        gemini_provider::open(session::match const& match, std::string_view model, open_options const& options) {
             return std::make_unique<gemini_conversation>(*this, match, model, options);
         }
 

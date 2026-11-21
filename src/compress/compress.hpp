@@ -107,7 +107,7 @@ namespace dana::compress {
     [[nodiscard]] bool        is_cpp_lang(std::string_view lang);
     [[nodiscard]] std::size_t count_lines(std::string_view text);
     [[nodiscard]] std::string plural(std::size_t n, std::string_view singular, std::string_view many);
-    [[nodiscard]] std::string first_items(std::span<std::string const> items, std::size_t limit);
+    [[nodiscard]] std::string first_items(text::string_views items, std::size_t limit);
     [[nodiscard]] std::string normalize_whitespace(std::string_view text);
 
     // The "> … Expand: `prompt .files <path>`" tail a legend ends with. `extra` is

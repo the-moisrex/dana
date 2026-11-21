@@ -13,7 +13,7 @@ namespace dana {
 
         // de-export.sh is_cpp_file: extension check first, then the CMakeLists.txt
         // special case. `${base##*.}` keeps the whole name when there is no dot.
-        bool is_cpp_file(std::string const& file) {
+        bool is_cpp_file(std::string_view file) {
             std::string base = std::filesystem::path(file).filename().string();
             auto        pos  = base.rfind('.');
             std::string ext  = pos == std::string::npos ? base : base.substr(pos + 1);
@@ -29,9 +29,9 @@ namespace dana {
             return false;
         }
 
-        std::string strip_trailing_newlines(std::string const& content) {
+        std::string_view strip_trailing_newlines(std::string_view content) {
             std::size_t end = content.size();
-            while (end > 0 && content[end - 1] == '\n') {
+            while (end > 0 && content.at(end - 1) == '\n') {
                 --end;
             }
             return content.substr(0, end);
@@ -39,12 +39,13 @@ namespace dana {
 
         // The two greps run over the accumulated content; `^` anchors every grep line,
         // so matching is done line by line.
-        bool matches_any_line(std::string const& content, std::regex const& re) {
+        bool matches_any_line(std::string_view content, std::regex const& re) {
             std::size_t start = 0;
             while (start <= content.size()) {
-                std::size_t nl   = content.find('\n', start);
-                std::string line = content.substr(start, nl == std::string::npos ? std::string::npos : nl - start);
-                if (std::regex_search(line, re)) {
+                auto const nl = content.find('\n', start);
+                auto const line =
+                  content.substr(start, nl == std::string_view::npos ? std::string_view::npos : nl - start);
+                if (std::regex_search(std::string(line), re)) {
                     return true;
                 }
                 if (nl == std::string::npos) {
@@ -58,7 +59,7 @@ namespace dana {
     } // namespace
 
     static void execute_de_export(view const& v, result& r) {
-        auto opts = file_options_or_throw(v);
+        auto const opts = file_options_or_throw(v);
 
         // de-export.sh reads $stdin_content, which the dispatcher never exports and
         // the script never fills (it has no read_stdin), so piped stdin never
@@ -66,10 +67,11 @@ namespace dana {
         std::vector<std::filesystem::path> cpp_files;
         std::string                        all_content;
         for (auto const& arg : positional_args(v)) {
-            std::filesystem::path file(arg);
-            if (std::filesystem::is_regular_file(file) && is_cpp_file(std::string(arg))) {
+            std::filesystem::path const file(arg);
+            if (std::filesystem::is_regular_file(file) && is_cpp_file(arg)) {
                 cpp_files.push_back(file);
-                all_content += strip_trailing_newlines(read_file(file)) + "\n";
+                all_content += strip_trailing_newlines(read_file(file));
+                all_content += '\n';
             }
         }
 
@@ -80,8 +82,8 @@ namespace dana {
         static std::regex const modules_re(R"(^\s*module\s+\S|^\s*export\s+module\s+\S|^\s*import\s+\S|module\s*;)");
         static std::regex const exports_re(R"(^\s*export\s+\S|^\s*export\s*\{)");
 
-        bool has_modules = matches_any_line(all_content, modules_re);
-        bool has_exports = matches_any_line(all_content, exports_re);
+        bool       has_modules = matches_any_line(all_content, modules_re);
+        bool const has_exports = matches_any_line(all_content, exports_re);
         if (has_exports) {
             has_modules = true;
         }

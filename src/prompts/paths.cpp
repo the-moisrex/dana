@@ -24,19 +24,19 @@ namespace dana {
             return std::string(text);
         }
 
-        std::vector<std::string> split_lines(std::string const& text) {
+        std::vector<std::string> split_lines(std::string_view text) {
             std::vector<std::string> lines;
             std::size_t              start = 0;
             while (start <= text.size()) {
                 std::size_t end = text.find('\n', start);
                 if (end == std::string::npos) {
                     if (start < text.size()) {
-                        lines.push_back(text.substr(start));
+                        lines.emplace_back(text.substr(start));
                     }
                     break;
                 }
                 if (end > start) {
-                    lines.push_back(text.substr(start, end - start));
+                    lines.emplace_back(text.substr(start, end - start));
                 }
                 start = end + 1;
             }
@@ -45,13 +45,13 @@ namespace dana {
 
         // Port of paths.sh's inline hit parser: split a "path:line:col" token into the
         // path (up to the first colon, minus one trailing colon) and the line number.
-        std::pair<std::string, std::string> parse_hit(std::string const& raw) {
+        std::pair<std::string, std::string> parse_hit(std::string_view raw) {
             std::size_t colon = raw.find(':');
-            std::string clean = colon == std::string::npos ? raw : raw.substr(0, colon);
+            auto        clean = std::string(colon == std::string_view::npos ? raw : raw.substr(0, colon));
             if (!clean.empty() && clean.back() == ':') {
                 clean.pop_back();
             }
-            std::string rest = raw.substr(clean.size());
+            auto const  rest = raw.substr(clean.size());
             std::string line_num;
             if (rest.size() >= 2 && rest[0] == ':') {
                 std::size_t j = 1;
@@ -66,14 +66,20 @@ namespace dana {
         }
 
         // git ls-files --error-unmatch <path> &>/dev/null — silence both streams.
-        bool git_tracked(std::string const& path) {
-            return dana::process::run_command(
-                     {"bash", "-c", "git ls-files --error-unmatch \"$0\" >/dev/null 2>&1", path})
-                     .exit_code == 0;
+        bool git_tracked(std::string_view path) noexcept try {
+            std::array<std::string_view, 4> const cmdline{
+              "bash",
+              "-c",
+              "git ls-files --error-unmatch \"$0\" >/dev/null 2>&1",
+              path,
+            };
+            return process::run_command(cmdline).exit_code == 0;
+        } catch (...) {
+            return false;
         }
 
         // `wc -l < file`: number of newline bytes.
-        std::int64_t count_newlines(std::string const& content) {
+        std::int64_t count_newlines(std::string_view content) {
             std::int64_t n = 0;
             for (char c : content) {
                 if (c == '\n') {
@@ -84,18 +90,18 @@ namespace dana {
         }
 
         // sed's line model — trailing newline does not create a phantom last line.
-        std::vector<std::string> to_sed_lines(std::string const& content) {
+        std::vector<std::string> to_sed_lines(std::string_view content) {
             std::vector<std::string> lines;
             std::size_t              start = 0;
             while (true) {
-                std::size_t end = content.find('\n', start);
+                auto const end = content.find('\n', start);
                 if (end == std::string::npos) {
                     if (start < content.size()) {
-                        lines.push_back(content.substr(start));
+                        lines.emplace_back(content.substr(start));
                     }
                     break;
                 }
-                lines.push_back(content.substr(start, end - start));
+                lines.emplace_back(content.substr(start, end - start));
                 start = end + 1;
                 if (start == content.size()) {
                     break;
@@ -110,7 +116,7 @@ namespace dana {
         // paths.sh parses its own args (no init_prompt): --context/--head are NOT
         // integer-validated, and --head is only consumed so it is not a path.
         std::string                mode          = "context";
-        std::int64_t                  context_lines = 10;
+        std::int64_t               context_lines = 10;
         std::optional<std::size_t> head_lines;
         std::string                head_value;
         std::string                sed_error;
@@ -160,9 +166,10 @@ namespace dana {
         std::vector<std::pair<std::string, std::string>> hits; // (clean, line_num)
 
         if (!stdin_content.empty()) {
-            auto                     tool   = fs::bin_tool("paths", v.env.exe_path, git_root_opt);
-            std::vector<char const*> argv   = {tool.c_str(), nullptr};
-            auto                     result = dana::process::run_command({tool}, stdin_content);
+            auto const                       tool = fs::bin_tool("paths", v.env.exe_path, git_root_opt);
+            std::vector<char const*>         argv = {tool.c_str(), nullptr};
+            std::array<std::string, 1> const cmdline{tool};
+            auto const                       result = process::run_command(cmdline, stdin_content);
             for (auto const& line : split_lines(result.stdout_data)) {
                 auto [clean, line_num] = parse_hit(line);
                 bool seen              = false;
@@ -251,14 +258,14 @@ namespace dana {
             }
 
             if (!line_num.empty()) {
-                std::string content = read_file(std::filesystem::path(resolved));
-                std::int64_t   total   = count_newlines(content);
-                std::int64_t   ln      = dana::text::to_ll(line_num, 0);
-                std::int64_t   start   = ln - context_lines;
-                start               = std::max<std::int64_t>(start, 1);
-                std::int64_t end       = ln + context_lines;
-                end                 = std::min(end, total);
-                auto lines          = to_sed_lines(content);
+                std::string const  content = read_file(std::filesystem::path(resolved));
+                std::int64_t const total   = count_newlines(content);
+                std::int64_t const ln      = text::to_ll(line_num, 0);
+                std::int64_t       start   = ln - context_lines;
+                start                      = std::max<std::int64_t>(start, 1);
+                std::int64_t end           = ln + context_lines;
+                end                        = std::min(end, total);
+                auto lines                 = to_sed_lines(content);
 
                 output += "File " + rel.string() + " around line " + std::to_string(ln) + " (lines " +
                           std::to_string(start) + "\u2013" + std::to_string(end) + "):\n\n";

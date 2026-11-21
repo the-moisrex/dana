@@ -35,7 +35,7 @@ namespace dana {
             return out;
         }
 
-        std::string join_lines(std::vector<std::string> const& lines) {
+        std::string join_lines(text::string_views lines) {
             std::string out;
             for (auto const& line : lines) {
                 out += line;
@@ -87,17 +87,10 @@ namespace dana {
         // The file list git would show: tracked plus untracked-but-not-ignored files,
         // NUL-separated so spaces and newlines survive.
         std::optional<std::vector<fs_std::path>> git_listing(fs_std::path const& git_root) {
-            auto const result = process::run_command(
-              std::vector<std::string>{
-                "git",
-                "-C",
-                git_root.string(),
-                "ls-files",
-                "--cached",
-                "--others",
-                "--exclude-standard",
-                "-z"},
-              "");
+            std::vector<std::string> const cmdline{
+              {"git", "-C", git_root.string(), "ls-files", "--cached", "--others", "--exclude-standard", "-z"}
+            };
+            auto const result = process::run_command(cmdline, "");
             if (result.exit_code != 0) {
                 return std::nullopt;
             }
@@ -338,14 +331,14 @@ namespace dana {
         return flags;
     }
 
-    std::string file_filter::exclude_fact(std::vector<std::string> const& patterns) const {
+    std::string file_filter::exclude_fact(text::string_views patterns) const {
         std::vector<std::string> merged = exclude_;
         for (auto const& pattern : patterns) {
             if (pattern.empty()) {
                 continue;
             }
             if (std::ranges::find(merged, pattern) == merged.end()) {
-                merged.push_back(pattern);
+                merged.emplace_back(pattern);
             }
         }
         return join_lines(merged);
@@ -368,7 +361,7 @@ namespace dana {
             input += '\n';
         }
 
-        auto const result = process::run_command(std::vector<std::string>{"fzf", "-m"}, input);
+        auto const result = process::run_command({"fzf", "-m"}, input);
         return parse_picked(result.stdout_data, base);
     }
 
@@ -380,7 +373,7 @@ namespace dana {
             input += '\n';
         }
 
-        auto const result = process::run_command(std::vector<std::string>{"fzf", "-m"}, input);
+        auto const result = process::run_command({"fzf", "-m"}, input);
         return parse_picked(result.stdout_data, base);
     }
 

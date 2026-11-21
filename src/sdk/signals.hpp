@@ -1,7 +1,8 @@
 #pragma once
 
+#include "../core/strings.hpp"
+
 #include <cstdint>
-#include <span>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -38,6 +39,6 @@ namespace dana::signals {
 
     // `keys::focus` is newline-separated; these are the two ends of that encoding.
     [[nodiscard]] std::vector<std::string> parse_focus(std::string_view value);
-    [[nodiscard]] std::string              join_focus(std::span<std::string const> items);
+    [[nodiscard]] std::string              join_focus(text::string_views items);
 
 } // namespace dana::signals
