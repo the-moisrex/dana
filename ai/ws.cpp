@@ -35,7 +35,7 @@ namespace dana::ai {
             }
         }
 
-        //: Send waits are bounded so a stalled edge cannot hang the whole turn.
+        /// Send waits are bounded so a stalled edge cannot hang the whole turn.
         constexpr int kSendTimeoutMs = 60'000;
 
         struct curl_slist_deleter {

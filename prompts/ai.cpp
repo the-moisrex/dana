@@ -42,9 +42,9 @@ namespace {
     struct ai_provider {
         std::string_view name;
         std::string_view label;
-        //: Speaks the OpenAI-compatible HTTP API instead of replaying a web session.
+        /// Speaks the OpenAI-compatible HTTP API instead of replaying a web session.
         bool api   = false;
-        //: A local server the tool discovers on its own (LM Studio).
+        /// A local server the tool discovers on its own (LM Studio).
         bool local = false;
         // GCC's -Wmissing-field-initializers wants a member initializer so the
         // designators above stay warning-free; clang-tidy calls the empty ones

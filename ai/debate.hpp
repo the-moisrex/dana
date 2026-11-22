@@ -20,13 +20,13 @@
 
 namespace dana::ai {
 
-    //: The default verification request appended to every relay turn.
+    /// The default verification request appended to every relay turn.
     inline constexpr std::string_view kDebateDefaultInstruction =
       "Verify the other AI's answer against the question above. Point out anything wrong, unsupported or missing, and "
       "say where you agree. Then give your own corrected answer; if the other answer is already right, say so and keep "
       "it.";
 
-    //: Added to the instruction by `--until-agree` so the relay can stop early.
+    /// Added to the instruction by `--until-agree` so the relay can stop early.
     inline constexpr std::string_view kDebateVerdictSuffix =
       "End your answer with one line: `VERDICT: AGREE` if you agree with the other answer's conclusion, or "
       "`VERDICT: DISAGREE` if you still disagree.";

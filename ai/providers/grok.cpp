@@ -26,11 +26,11 @@ namespace dana::ai {
         constexpr std::string_view kWsUrl      = "wss://grok.com/ws/mgw/?uid={uid}";
         constexpr std::string_view kUploadPath = "/rest/app-chat/upload-file";
 
-        //: How many transcript entries to replay when a conversation is resumed from a
-        //: new process (the socket cannot be reattached).
+        /// How many transcript entries to replay when a conversation is resumed from a
+        /// new process (the socket cannot be reattached).
         constexpr std::size_t kMaxReplay = 20;
 
-        //: Whole-turn attempts when the socket drops before any text was emitted.
+        /// Whole-turn attempts when the socket drops before any text was emitted.
         constexpr int kTurnRetries = 2;
 
         std::string replace_all(std::string text, std::string_view needle, std::string_view replacement) {

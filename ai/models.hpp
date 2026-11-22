@@ -28,27 +28,27 @@ namespace dana::ai::models {
     };
 
     struct [[nodiscard]] entry {
-        //: Canonical provider name (`dseek`, not `deepseek`).
+        /// Canonical provider name (`dseek`, not `deepseek`).
         std::string_view       provider;
         std::string_view       default_model;
         text::string_views     models;
         std::span<alias const> aliases;
     };
 
-    //: Every provider, in catalog order.
+    /// Every provider, in catalog order.
     std::span<entry const> all();
 
-    //: The entry for a canonical (or alias) provider name, or nullptr.
+    /// The entry for a canonical (or alias) provider name, or nullptr.
     entry const* find(std::string_view provider);
 
-    //: The provider's models as a vector (empty for an unknown provider).
+    /// The provider's models as a vector (empty for an unknown provider).
     std::vector<std::string> list(std::string_view provider);
 
-    //: The provider's default model (empty for an unknown provider).
+    /// The provider's default model (empty for an unknown provider).
     std::string_view default_model(std::string_view provider);
 
-    //: The site id a friendly name maps to. `nullopt` means there is no alias
-    //: entry; an empty value means the alias explicitly asks for the site default.
+    /// The site id a friendly name maps to. `nullopt` means there is no alias
+    /// entry; an empty value means the alias explicitly asks for the site default.
     std::optional<std::string_view> resolve_alias(std::string_view provider, std::string_view name);
 
 } // namespace dana::ai::models

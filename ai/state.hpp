@@ -18,10 +18,10 @@
 
 namespace dana::ai::state {
 
-    //: How many transcript entries to keep alongside the id.
+    /// How many transcript entries to keep alongside the id.
     inline constexpr std::size_t kMaxHistory = 20;
 
-    //: A saved conversation older than this is ignored by --continue.
+    /// A saved conversation older than this is ignored by --continue.
     inline constexpr double kMaxAge = 7 * 24 * 3600;
 
     struct [[nodiscard]] conversation_record {

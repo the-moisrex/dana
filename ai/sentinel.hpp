@@ -19,11 +19,11 @@ namespace dana::ai::sentinel {
         using std::runtime_error::runtime_error;
     };
 
-    //: `gAAAAAC` — the requirements token prefix.
+    /// `gAAAAAC` — the requirements token prefix.
     inline constexpr std::string_view kRequestPrefix = "gAAAAAC";
-    //: `gAAAAAB` — the proof token prefix.
+    /// `gAAAAAB` — the proof token prefix.
     inline constexpr std::string_view kProofPrefix   = "gAAAAAB";
-    //: The proof-of-work hash the server currently verifies.
+    /// The proof-of-work hash the server currently verifies.
     inline constexpr std::string_view kProofHash     = "zvt";
 
     // The 25-element array the client serialises into the `p` token.

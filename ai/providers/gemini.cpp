@@ -30,9 +30,9 @@ namespace dana::ai {
           "https://gemini.google.com/_/BardChatUi/data/assistant.lamda.BardFrontendService/StreamGenerate";
         constexpr std::string_view kUploadUrl = "https://content-push.googleapis.com/upload";
 
-        //: The model selector header and the (id, capacity, number) triple each model
-        //: needs.  The id is Google's internal model id; the number is mirrored into
-        //: the request body.  ``auto`` sends no header and lets Google pick.
+        /// The model selector header and the (id, capacity, number) triple each model
+        /// needs.  The id is Google's internal model id; the number is mirrored into
+        /// the request body.  ``auto`` sends no header and lets Google pick.
         constexpr std::string_view kModelHeaderKey = "x-goog-ext-525001261-jspb";
 
         std::string trim(std::string_view value) {
@@ -156,9 +156,9 @@ namespace dana::ai {
             return out;
         }
 
-        //: The part of `next` that is not already in `previous`.  The common prefix
-        //: and suffix are kept, so an insertion in the middle emits just the inserted
-        //: text while an ordinary streaming extension emits the new tail.
+        /// The part of `next` that is not already in `previous`.  The common prefix
+        /// and suffix are kept, so an insertion in the middle emits just the inserted
+        /// text while an ordinary streaming extension emits the new tail.
         std::string_view delta_of(std::string_view const next, std::string_view const previous) {
             if (next == previous) {
                 return {};

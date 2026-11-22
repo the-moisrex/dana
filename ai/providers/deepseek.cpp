@@ -34,11 +34,11 @@ namespace dana::ai {
         constexpr std::string_view kChallengePath     = "/api/v0/chat/create_pow_challenge";
         constexpr std::string_view kClientVersion     = "2.5.0";
 
-        //: The site cuts a long answer (or a slow reasoning run) short and offers a
-        //: "Continue" button; each click is one more stream, so this bounds the chain.
+        /// The site cuts a long answer (or a slow reasoning run) short and offers a
+        /// "Continue" button; each click is one more stream, so this bounds the chain.
         constexpr int kMaxContinuations = 8;
 
-        //: How long to wait for an uploaded file to become referenceable.
+        /// How long to wait for an uploaded file to become referenceable.
         constexpr int kFilePollSeconds = 120;
 
         std::string trim(std::string_view value) {

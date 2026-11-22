@@ -31,12 +31,12 @@ namespace dana::ai {
         constexpr std::string_view kUploadSubscribePath = "/rest/sse/attachment_processing/subscribe";
         constexpr std::string_view kApiVersion          = "2.18";
 
-        //: How many stored turns a fresh process replays when it cannot reattach to
-        //: the thread id (the site keeps the transcript, so this is only a fallback).
+        /// How many stored turns a fresh process replays when it cannot reattach to
+        /// the thread id (the site keeps the transcript, so this is only a fallback).
         constexpr std::size_t kMaxReplay = 40;
 
-        //: The block use-cases the current web client advertises.  The schematized API
-        //: validates this list, so it mirrors the browser's request body.
+        /// The block use-cases the current web client advertises.  The schematized API
+        /// validates this list, so it mirrors the browser's request body.
         constexpr std::array<std::string_view, 32> kSupportedBlockUseCases{
           {
            "answer_modes", "media_items",

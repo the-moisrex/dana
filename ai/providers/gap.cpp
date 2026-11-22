@@ -32,8 +32,8 @@ namespace dana::ai {
         constexpr std::string_view kChatPath     = "/api/v1/get_chat/token/{token}";
         constexpr std::string_view kUploadPath   = "/api/v1/upload_file";
 
-        //: The site's edge (ArvanCloud) intermittently stalls the upgrade, so the
-        //: connect plus the first frame are retried and every wait has its own bound.
+        /// The site's edge (ArvanCloud) intermittently stalls the upgrade, so the
+        /// connect plus the first frame are retried and every wait has its own bound.
         constexpr double                kHeartbeatSeconds  = 12.0;
         constexpr int                   kRecvTimeoutMs     = 2000;
         constexpr double                kPollAfterSeconds  = 4.0;
@@ -41,11 +41,11 @@ namespace dana::ai {
         constexpr int                   kConnectAttempts   = 3;
         constexpr std::array<double, 2> kConnectBackoff{0.5, 1.5};
 
-        //: Fragment types that carry the model's reasoning rather than the answer.
+        /// Fragment types that carry the model's reasoning rather than the answer.
         constexpr std::array<std::string_view, 4> kThinkingTypes{"reasoning", "agent_turn", "thinking", "thoughts"};
         constexpr std::array<std::string_view, 1> kSkipTypes{"text-loading"};
 
-        //: `message.extra_display.status` / `message.status` values that end a turn.
+        /// `message.extra_display.status` / `message.status` values that end a turn.
         constexpr std::array<std::string_view, 2> kDoneStatus{"completed", "stopped"};
         constexpr std::array<std::string_view, 2> kFailedStatus{"error", "failed"};
 
@@ -212,7 +212,7 @@ namespace dana::ai {
             return {};
         }
 
-        //: Friendly labels accepted by `--model` (the site's own ids are also accepted).
+        /// Friendly labels accepted by `--model` (the site's own ids are also accepted).
         std::string alias_model(std::string_view requested) {
             std::string key   = trim(requested);
             std::string upper = key;

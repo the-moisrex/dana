@@ -28,16 +28,16 @@ namespace dana::ai {
         constexpr std::string_view kListMessagesPath = "/apiv2/kimi.gateway.chat.v1.ChatService/ListMessages";
         constexpr std::string_view kContinuePath     = "/apiv2/kimi.gateway.chat.v1.ChatService/ContinueChat";
 
-        //: Renew the access token this many seconds before it expires.
+        /// Renew the access token this many seconds before it expires.
         constexpr double kRefreshMargin = 60.0;
 
-        //: The status the site stores on an answer it cut short (the Continue button).
+        /// The status the site stores on an answer it cut short (the Continue button).
         constexpr std::string_view kTruncatedStatus = "MESSAGE_STATUS_TRUNCATED";
 
-        //: Each continuation is a new stream, so this only bounds a pathological chain.
+        /// Each continuation is a new stream, so this only bounds a pathological chain.
         constexpr int kMaxContinuations = 8;
 
-        //: The site titles a new chat from this much of the first prompt.
+        /// The site titles a new chat from this much of the first prompt.
         constexpr std::size_t kTitleLimit = 60;
 
         std::string trim(std::string_view value) {
