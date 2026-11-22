@@ -4,10 +4,18 @@
 
 #include <algorithm>
 #include <array>
-#include <cstdio>
+#include <cstdint>
+#include <cstdlib>
+#include <filesystem>
 #include <fstream>
+#include <iomanip>
+#include <optional>
 #include <ranges>
+#include <sstream>
+#include <stdexcept>
 #include <string>
+#include <string_view>
+#include <system_error>
 #include <unistd.h>
 #include <vector>
 
@@ -40,6 +48,10 @@ namespace dana::ai {
           "200000-character limit",
         };
 
+        constexpr std::size_t kBytesPerKiB   = 1024;
+        constexpr std::size_t kBytesPerMiB   = kBytesPerKiB * kBytesPerKiB;
+        constexpr int         kSizePrecision = 1;
+
         bool contains_any(std::string_view text, auto const& markers) {
             return std::ranges::any_of(markers, [text](std::string_view marker) {
                 return text.contains(marker);
@@ -48,12 +60,18 @@ namespace dana::ai {
 
         std::string lower(std::string_view value) {
             std::string out(value);
-            for (char& c : out) {
-                if (c >= 'A' && c <= 'Z') {
-                    c = static_cast<char>(c + ('a' - 'A'));
+            for (char& character : out) {
+                if (character >= 'A' && character <= 'Z') {
+                    character = static_cast<char>(character + ('a' - 'A'));
                 }
             }
             return out;
+        }
+
+        std::string format_size(double amount, std::string_view unit) {
+            std::ostringstream stream;
+            stream << std::fixed << std::setprecision(kSizePrecision) << amount << ' ' << unit;
+            return stream.str();
         }
 
     } // namespace
@@ -66,17 +84,13 @@ namespace dana::ai {
         if (count == 1) {
             return "1 byte";
         }
-        if (count < 1024) {
+        if (count < kBytesPerKiB) {
             return std::to_string(count) + " bytes";
         }
-        if (count < 1024UL * 1024UL) {
-            std::array<char, 32> buffer{};
-            std::snprintf(buffer.data(), buffer.size(), "%.1f KiB", static_cast<double>(count) / 1024.0);
-            return buffer.data();
+        if (count < kBytesPerMiB) {
+            return format_size(static_cast<double>(count) / static_cast<double>(kBytesPerKiB), "KiB");
         }
-        std::array<char, 32> buffer{};
-        std::snprintf(buffer.data(), buffer.size(), "%.1f MiB", static_cast<double>(count) / (1024.0 * 1024.0));
-        return buffer.data();
+        return format_size(static_cast<double>(count) / static_cast<double>(kBytesPerMiB), "MiB");
     }
 
     std::size_t limit_for(std::size_t provider_limit, std::optional<std::int64_t> override) {
@@ -86,9 +100,9 @@ namespace dana::ai {
         return provider_limit;
     }
 
-    bool should_attach(std::string_view         prompt,
-                       std::size_t              inline_limit,
-                       std::optional<bool>      mode,
+    bool should_attach(std::string_view            prompt,
+                       std::size_t                 inline_limit,
+                       std::optional<bool>         mode,
                        std::optional<std::int64_t> override) {
         if (prompt.empty() || (mode && !*mode)) {
             return false;
@@ -128,10 +142,10 @@ namespace dana::ai {
         if (path.empty()) {
             return;
         }
-        std::error_code ec;
-        std::filesystem::remove(path, ec);
-        if (ec) {
-            note("could not remove " + path.string() + ": " + ec.message());
+        std::error_code removal_error;
+        std::filesystem::remove(path, removal_error);
+        if (removal_error) {
+            note("could not remove " + path.string() + ": " + removal_error.message());
         }
     }
 
@@ -142,20 +156,20 @@ namespace dana::ai {
                "only a pointer to it.";
     }
 
-    bool looks_too_large(std::string_view message) {
+    bool looks_too_large(std::string_view const message) {
         return contains_any(lower(message), kTooLargeMarkers);
     }
 
     std::string annotate_error(
-      std::string_view         message,
-      std::string_view         provider,
-      std::string_view         label,
-      std::string_view         prompt,
-      bool                     used_file,
-      bool                     disabled,
-      bool                     has_upload,
-      bool                     auto_attach,
-      std::optional<std::int64_t> limit) {
+      std::string_view const            message,
+      std::string_view const            provider,
+      std::string_view const            label,
+      std::string_view const            prompt,
+      bool const                        used_file,
+      bool const                        disabled,
+      bool const                        has_upload,
+      bool const                        auto_attach,
+      std::optional<std::int64_t> const limit) {
         (void) provider;
         std::string const lowered = lower(message);
         if (!looks_too_large(lowered)) {
@@ -171,7 +185,7 @@ namespace dana::ai {
         while (!out.empty() && (out.back() == '\n' || out.back() == '\r')) {
             out.pop_back();
         }
-        auto add = [&out](std::string_view line) {
+        auto const add = [&out](std::string_view const line) {
             out += '\n';
             out += line;
         };
