@@ -50,3 +50,19 @@ endif()
 #        FetchContent_MakeAvailable(benchmark)
 #    endif()
 #endif()
+
+
+# libgit2
+find_package(libgit2 CONFIG QUIET)
+if (NOT libgit2_FOUND)
+    include(FetchContent)
+    set(BUILD_TESTS OFF CACHE BOOL "Build libgit2 tests" FORCE)
+    set(BUILD_CLI OFF CACHE BOOL "Build libgit2 CLI" FORCE)
+
+    FetchContent_Declare(
+            libgit2
+            GIT_REPOSITORY https://github.com/libgit2/libgit2.git
+            GIT_TAG v1.8.4
+    )
+    FetchContent_MakeAvailable(libgit2)
+endif()

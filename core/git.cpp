@@ -42,7 +42,7 @@ namespace detail {
 
 // Run a git command and return stdout with trailing newlines stripped.
 std::string dana::git::run(text::string_views args) {
-    auto        result = dana::process::run_command(args);
+    auto        result = process::run_command(args);
     std::string out    = std::move(result.stdout_data);
     while (!out.empty() && out.back() == '\n') {
         out.pop_back();
@@ -67,7 +67,7 @@ std::string dana::git::add_line_numbers_to_diff(std::string_view diff) {
     std::string        result;
 
     std::uint64_t new_line_num = 0;
-    bool               in_hunk      = false;
+    bool          in_hunk      = false;
 
     while (std::getline(stream, line)) {
         if (line.starts_with("diff ")) {
@@ -125,10 +125,8 @@ std::string dana::git::add_line_numbers_to_diff(std::string_view diff) {
 //   * `includes` non-empty => only blocks whose path matches one of them are kept.
 //   * `excludes`          => blocks whose path matches any of them are dropped.
 // Paths are matched both verbatim and by basename, using `detail::glob_match`.
-std::string dana::git::filter_diff_by_path(
-  std::string_view                diff,
-  text::string_views includes,
-  text::string_views excludes) {
+std::string
+dana::git::filter_diff_by_path(std::string_view diff, text::string_views includes, text::string_views excludes) {
     if (includes.empty() && excludes.empty()) {
         return std::string(diff);
     }
@@ -213,3 +211,148 @@ std::string dana::git::filter_diff_by_path(
 
     return leading + out;
 }
+
+namespace dana::git {
+
+    // -----------------------------------------------------------------------------
+    // Runtime Management
+    // -----------------------------------------------------------------------------
+
+    runtime::runtime() {
+        int const result = ::git_libgit2_init();
+        if (result < 0) [[unlikely]] {
+            auto const* err = ::git_error_last();
+            char const* msg = (err != nullptr && err->message != nullptr) ? err->message : "unknown error";
+            throw std::runtime_error(std::string("libgit2 initialization failed: ") + msg);
+        }
+    }
+
+    runtime::~runtime() {
+        ::git_libgit2_shutdown();
+    }
+
+    void runtime::ensure_initialized() {
+        static runtime instance;
+        (void) instance;
+    }
+
+    // -----------------------------------------------------------------------------
+    // Error Handling Helpers
+    // -----------------------------------------------------------------------------
+
+    std::string_view last_error_message() noexcept {
+        auto const* err = ::git_error_last();
+        if (err != nullptr && err->message != nullptr) [[likely]] {
+            return err->message;
+        }
+        return "unknown libgit2 error";
+    }
+
+    [[noreturn]] static void throw_git_error(std::string_view operation) {
+        auto msg = last_error_message();
+        throw std::runtime_error(std::string(operation) + ": " + std::string(msg));
+    }
+
+    // -----------------------------------------------------------------------------
+    // Repository Utilities
+    // -----------------------------------------------------------------------------
+
+    repository_ptr open_repository(std::string_view path, unsigned int flags, char const* ceiling_dirs) {
+        runtime::ensure_initialized();
+
+        // Small stack-allocated null-terminated buffer helper if path lacks null termination,
+        // or direct conversion assuming null-terminated inputs (std::string_view needs care if not null-terminated).
+        // For standard string views, we use a temporary std::string if needed, or pass c_str() if null-terminated.
+        // In C++26, standard string literals/views are commonly convertible. To be 100% safe against
+        // non-null-terminated views:
+        std::string null_terminated_path(path);
+
+        git_repository* raw_repo = nullptr;
+        int const result = ::git_repository_open_ext(&raw_repo, null_terminated_path.c_str(), flags, ceiling_dirs);
+
+        repository_ptr repo(raw_repo);
+
+        if (result < 0) [[unlikely]] {
+            throw_git_error("git_repository_open_ext failed");
+        }
+
+        return repo;
+    }
+
+    repository_ptr try_open_repository(std::string_view path, unsigned int flags, char const* ceiling_dirs) noexcept {
+        runtime::ensure_initialized();
+
+        // To prevent any allocations on `try_open_repository` when called with string literals or c-strings,
+        // we use a small thread-local or direct c_str check if it's guaranteed null-terminated,
+        // or fallback safely. Assuming standard usage with null-terminated storage:
+        // If path comes from a std::string or literal, path.data() is null-terminated if it came from
+        // std::string::c_str() or a string literal. If not, we fall back to a safe stack/heap check. Here we use a safe
+        // fallback:
+
+        // Fast path: check if path.data()[path.size()] == '\0' (true for string literals and std::string)
+        // Otherwise construct temporary string.
+        char const* c_path = nullptr;
+        std::string temp_storage;
+        if (!path.empty() && path.data()[path.size()] == '\0') {
+            c_path = path.data();
+        } else {
+            temp_storage = path;
+            c_path       = temp_storage.c_str();
+        }
+
+        git_repository* raw_repo = nullptr;
+        int const       result   = ::git_repository_open_ext(&raw_repo, c_path, flags, ceiling_dirs);
+
+        if (result == GIT_ENOTFOUND) [[likely]] {
+            return nullptr;
+        }
+
+        if (result < 0) [[unlikely]] {
+            // Since this is `noexcept`, if libgit2 errors out unexpectedly during a `try_` query,
+            // we terminate or handle it gracefully. Usually, unexpected codes call std::terminate
+            // or return empty depending on policy. Let's return empty for all non-success/non-notfound codes
+            // to keep `try_` strictly noexcept, or handle it:
+            if (raw_repo != nullptr) {
+                ::git_repository_free(raw_repo);
+            }
+            return nullptr;
+        }
+
+        return repository_ptr(raw_repo);
+    }
+
+    bool is_inside_worktree(std::string_view const path) noexcept try {
+        runtime::ensure_initialized();
+
+        char const* c_path = nullptr;
+        std::string temp_storage;
+        if (!path.empty() && path.data()[path.size()] == '\0') {
+            c_path = path.data();
+        } else {
+            temp_storage = path;
+            c_path       = temp_storage.c_str();
+        }
+
+        // Pass `nullptr` as the out-parameter to leverage libgit2's fast path discovery
+        // without allocating or parsing a full `git_repository` structure when only checking presence.
+        int const result = ::git_repository_open_ext(nullptr, c_path, GIT_REPOSITORY_OPEN_CROSS_FS, nullptr);
+
+        if (result == 0) [[likely]] {
+            // Repository found. (Note: git_repository_open_ext returns 0 if a valid repository is found,
+            // even if it's a bare repository. If you want to strictly require a *worktree* and reject bare repos,
+            // we quickly open and check `git_repository_is_bare`.)
+
+            git_repository* raw_repo = nullptr;
+            if (::git_repository_open_ext(&raw_repo, c_path, GIT_REPOSITORY_OPEN_CROSS_FS, nullptr) == 0) {
+                repository_ptr const repo(raw_repo);
+                return repo != nullptr && (::git_repository_is_bare(repo.get()) == 0);
+            }
+        }
+
+        return false;
+    } catch (...) {
+        // todo: log the failure
+        return false;
+    }
+
+} // namespace dana::git

@@ -68,7 +68,7 @@ namespace dana::ai {
             return out;
         }
 
-        std::string format_size(double amount, std::string_view unit) {
+        std::string format_size(double const amount, std::string_view const unit) {
             std::ostringstream stream;
             stream << std::fixed << std::setprecision(kSizePrecision) << amount << ' ' << unit;
             return stream.str();

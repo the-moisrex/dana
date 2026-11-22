@@ -14,8 +14,7 @@
 namespace dana::ai::sentinel {
 
     // The sentinel gate rejected us, or a puzzle could not be solved.
-    class error : public std::runtime_error {
-      public:
+    struct [[nodiscard]] error : std::runtime_error {
         using std::runtime_error::runtime_error;
     };
 
@@ -41,8 +40,8 @@ namespace dana::ai::sentinel {
 
     // The `gAAAAAB…` proof token for `seed` / `difficulty`.
     std::string solve_proof(
-      std::string_view    seed,
-      std::string_view    difficulty,
+      std::string_view      seed,
+      std::string_view      difficulty,
       nlohmann::json const& fingerprint,
       std::string_view      algo  = kProofHash,
       int                   limit = 500'000);

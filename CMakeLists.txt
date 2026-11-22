@@ -131,6 +131,7 @@ target_include_directories(dana_lib PUBLIC
 )
 target_link_libraries(dana_lib PUBLIC
         nlohmann_json::nlohmann_json
+        libgit2::libgit2package
 )
 
 # Curl integration for AI engine

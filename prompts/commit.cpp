@@ -99,7 +99,7 @@ Keep it specific and practical, not generic. Only return copyable commit message
             return;
         }
 
-        if (process::run_command({"git", "rev-parse", "--is-inside-work-tree"}).exit_code != 0) {
+        if (!git::is_inside_worktree()) [[unlikely]] {
             throw soft_error{"prompt commit: Error: Not inside a git repository.\n"};
         }
 
