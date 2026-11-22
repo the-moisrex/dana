@@ -2,6 +2,7 @@
 #include "../runtime/errors.hpp"
 #include "../runtime/prompt_registry.hpp"
 #include "../runtime/stage.hpp"
+#include "core/git.hpp"
 
 #include <algorithm>
 #include <cstddef>
@@ -308,7 +309,7 @@ namespace dana {
         // repo.sh scans every arg for --help/-h itself (before the git check);
         // the native dispatcher already intercepted those before we run.
 
-        if (process::run_command({"git", "rev-parse", "--is-inside-work-tree"}).exit_code != 0) [[unlikely]] {
+        if (!git::is_inside_worktree()) [[unlikely]] {
             throw soft_error{"prompt repo: Not inside a git repository.\n"};
         }
 

@@ -128,7 +128,7 @@ namespace dana {
             output_files = true;
         }
 
-        if (process::run_command({"git", "rev-parse", "--is-inside-work-tree"}).exit_code != 0) {
+        if (!git::is_inside_worktree()) [[unlikely]] {
             throw soft_error{"prompt git-dirty: Error: Not inside a git repository.\n"};
         }
 

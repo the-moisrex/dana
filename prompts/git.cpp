@@ -1,3 +1,5 @@
+#include "core/git.hpp"
+
 #include "../core/process.hpp"
 #include "../runtime/args.hpp"
 #include "../runtime/embed.hpp"
@@ -81,8 +83,7 @@ Common scenarios you can help with:
 )PROMPT";
 
         // Embed git status context if in a git repo.
-        std::vector<char const*> rev = {"git", "rev-parse", "--is-inside-work-tree", nullptr};
-        if (process::run_command({"git", "rev-parse", "--is-inside-work-tree"}).exit_code == 0) {
+        if (git::is_inside_worktree()) {
             output += "Current git context:\n\n```text\n";
             output += std::format("Branch: {}\n", git_branch());
             output += "Status:\n";

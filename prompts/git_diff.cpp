@@ -36,7 +36,7 @@ namespace dana {
     static void execute_git_diff(view const& v, result& r) {
         auto opts = file_options_or_throw(v);
 
-        if (process::run_command({"git", "rev-parse", "--is-inside-work-tree"}).exit_code != 0) {
+        if (!git::is_inside_worktree()) [[unlikely]] {
             throw soft_error{"prompt git.diff: Error: Not inside a git repository.\n"};
         }
 

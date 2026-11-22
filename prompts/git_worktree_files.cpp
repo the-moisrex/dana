@@ -5,6 +5,7 @@
 #include "../runtime/file_filter.hpp"
 #include "../runtime/file_scope.hpp"
 #include "../runtime/prompt_registry.hpp"
+#include "core/git.hpp"
 
 #include <cstddef>
 #include <optional>
@@ -68,7 +69,7 @@ namespace dana {
     static void execute_git_worktree_files(view const& v, result& r) {
         auto opts = file_options_or_throw(v);
 
-        if (dana::process::run_command({"git", "rev-parse", "--is-inside-work-tree"}).exit_code != 0) {
+        if (!git::is_inside_worktree()) [[unlikely]] {
             throw soft_error{"prompt git.worktree.files: Error: Not inside a git repository.\n"};
         }
 
