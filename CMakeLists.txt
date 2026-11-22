@@ -93,6 +93,7 @@ add_library(dana_lib OBJECT
     src/core/clipboard.cpp
     src/core/fs.cpp
     src/core/git.cpp
+    src/core/glob.cpp
     src/core/process.cpp
     src/core/sanitize.cpp
     src/core/strings.cpp
