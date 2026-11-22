@@ -1,0 +1,409 @@
+#include "../core/clipboard.hpp"
+#include "../core/fs.hpp"
+#include "../core/process.hpp"
+#include "../runtime/embed.hpp"
+#include "../runtime/prompt_registry.hpp"
+
+#include <cstdint>
+#include <regex>
+#include <string>
+#include <vector>
+
+namespace dana {
+
+    namespace {
+
+        bool is_compiler_output(std::string_view content) {
+            // The match is case-insensitive and can start on any line.
+            static std::regex const compiler_regex(
+              R"(:[0-9]+:([0-9]+:)? (error|warning|fatal error|note):|In file included from|undefined reference to|no matching function for call to|ld: symbol\(s\) not found|FAILED:|ninja: build stopped|make\[[0-9]+\]: \*\*\*)",
+              std::regex::icase);
+            std::string content_str(content);
+            return std::regex_search(content_str, compiler_regex);
+        }
+
+        bool is_stock_identifier(std::string_view content, std::string& out_identifier) {
+            static std::regex const isin_re(R"(^IR[A-Za-z0-9]{10}$)");
+            static std::regex const inscode_re(R"(^[0-9]{15,}$)");
+            static std::regex const easytrader_re(
+              R"(^https?://d\.easytrader\.ir/(easy-chart|stock-details)/[A-Za-z0-9]{12}(/|\?|$))");
+            static std::regex const tsetmc_re(R"(^https?://(www\.)?tsetmc\.com/instInfo/[0-9]{15,}(/|\?|$))");
+            static std::regex const codal_re(
+              R"(^https?://(www\.)?codal\.ir/ReportList\.aspx\?([^&]*&)?Symbol=[^&[:space:]]+)");
+
+            auto start = content.find_first_not_of(" \t\r\n");
+            if (start == std::string_view::npos) {
+                return false;
+            }
+            auto end = content.find_last_not_of(" \t\r\n");
+            content  = content.substr(start, end - start + 1);
+
+            if (content.contains('\n')) {
+                return false;
+            }
+
+            std::string content_str(content);
+            if (std::regex_match(content_str, isin_re) || std::regex_match(content_str, inscode_re) ||
+                std::regex_match(content_str, easytrader_re) || std::regex_match(content_str, tsetmc_re) ||
+                std::regex_match(content_str, codal_re))
+            {
+                out_identifier = content_str;
+                return true;
+            }
+            return false;
+        }
+
+        bool extract_stock_identifier(std::string_view content, std::string& out_identifier) {
+            static std::regex const combined_re(
+              R"(https?://d\.easytrader\.ir/(easy-chart|stock-details)/[A-Za-z0-9]{12}|https?://(www\.)?tsetmc\.com/instInfo/[0-9]{15,}|https?://(www\.)?codal\.ir/ReportList\.aspx\?([^&]*&)?Symbol=[^&[:space:]]+|IR[A-Za-z0-9]{10}|[0-9]{15,})");
+            std::smatch match;
+            std::string content_str(content);
+            if (std::regex_search(content_str, match, combined_re)) {
+                out_identifier = match[0];
+                return true;
+            }
+            return false;
+        }
+
+        // Approximation of a perl `\p{L}` test: only letter
+        // characters count, English letters and Arabic-script letters (outside the
+        // Arabic-only forms ة ي ك) stay untranslated, everything else translates.
+        bool is_letter_codepoint(std::uint32_t cp) {
+            if (cp < 0x80U) {
+                return (cp >= 'a' && cp <= 'z') || (cp >= 'A' && cp <= 'Z');
+            }
+            auto in = [cp](std::uint32_t lo, std::uint32_t hi) {
+                return cp >= lo && cp <= hi;
+            };
+            return in(0x00C0, 0x00D6) || in(0x00D8, 0x00F6) || in(0x00F8, 0x02AF) || // Latin
+                   in(0x0370, 0x03FF) || in(0x1F00, 0x1FFF) ||                       // Greek
+                   in(0x0400, 0x052F) ||                                             // Cyrillic
+                   in(0x0530, 0x058F) ||                                             // Armenian
+                   in(0x0590, 0x05FF) ||                                             // Hebrew
+                   in(0x0600, 0x06FF) || in(0x0750, 0x077F) || in(0x08A0, 0x08FF) || // Arabic
+                   in(0xFB50, 0xFDFF) || in(0xFE70, 0xFEFF) ||                       // Arabic forms
+                   in(0x0900, 0x097F) || in(0x0980, 0x09FF) || in(0x0A00, 0x0A7F) || // Indic
+                   in(0x0A80, 0x0AFF) || in(0x0B00, 0x0B7F) || in(0x0B80, 0x0BFF) || in(0x0C00, 0x0C7F) ||
+                   in(0x0C80, 0x0CFF) || in(0x0D00, 0x0D7F) || in(0x0D80, 0x0DFF) || in(0x0E00, 0x0E7F) || // Thai
+                   in(0x10A0, 0x10FF) || in(0x2D00, 0x2D2F) ||                                             // Georgian
+                   in(0x1100, 0x11FF) || in(0x3130, 0x318F) || in(0xAC00, 0xD7AF) ||                       // Hangul
+                   in(0x2E80, 0x2EFF) || in(0x3005, 0x3007) || in(0x3400, 0x4DBF) ||                       // CJK
+                   in(0x4E00, 0x9FFF) || in(0xF900, 0xFAFF) || in(0x3040, 0x309F) || in(0x30A0, 0x30FF) || // Kana
+                   in(0xFF21, 0xFF3A) || in(0xFF41, 0xFF5A);                                               // Fullwidth
+        }
+
+        bool should_translate_to_english(std::string_view content) {
+            std::size_t i = 0;
+            while (i < content.size()) {
+                auto          lead = static_cast<unsigned char>(content[i]);
+                std::uint32_t cp   = 0;
+                std::size_t   len  = 1;
+                if (lead < 0x80U) {
+                    cp = lead;
+                } else if ((lead & 0xE0U) == 0xC0U) {
+                    cp  = lead & 0x1FU;
+                    len = 2;
+                } else if ((lead & 0xF0U) == 0xE0U) {
+                    cp  = lead & 0x0FU;
+                    len = 3;
+                } else if ((lead & 0xF8U) == 0xF0U) {
+                    cp  = lead & 0x07U;
+                    len = 4;
+                } else {
+                    ++i;
+                    continue;
+                }
+                if (i + len > content.size()) {
+                    break;
+                }
+                bool valid = true;
+                for (std::size_t k = 1; k < len; ++k) {
+                    auto cont = static_cast<unsigned char>(content[i + k]);
+                    if ((cont & 0xC0U) != 0x80U) {
+                        valid = false;
+                        break;
+                    }
+                    cp = (cp << 6U) | (static_cast<unsigned>(cont) & 0x3FU);
+                }
+                i += len;
+                if (!valid) {
+                    continue;
+                }
+
+                if (!is_letter_codepoint(cp)) {
+                    continue;
+                }
+                if (cp >= 'a' && cp <= 'z') {
+                    continue;
+                }
+                if (cp >= 'A' && cp <= 'Z') {
+                    continue;
+                }
+                // Arabic-script letters are Farsi except the Arabic-only forms.
+                bool arabic =
+                  (cp >= 0x0600 && cp <= 0x06FF) || (cp >= 0x0750 && cp <= 0x077F) || (cp >= 0x08A0 && cp <= 0x08FF) ||
+                  (cp >= 0xFB50 && cp <= 0xFDFF) || (cp >= 0xFE70 && cp <= 0xFEFF);
+                if (arabic) {
+                    if (cp == 0x0629 || cp == 0x064A || cp == 0x0643) {
+                        return true; // ة ي ك
+                    }
+                    continue;
+                }
+                return true;
+            }
+            return false;
+        }
+
+    } // namespace
+
+    static void execute_auto(view const& v, result& r) {
+        std::string input_buffer;
+        bool        has_stdin = v.in.piped();
+
+        if (has_stdin) {
+            // Command substitution strips every trailing newline; drop a trailing
+            // carriage return too.
+            input_buffer = v.in.text();
+            while (!input_buffer.empty() && input_buffer.back() == '\n') {
+                input_buffer.pop_back();
+            }
+            if (!input_buffer.empty() && input_buffer.back() == '\r') {
+                input_buffer.pop_back();
+            }
+        }
+
+        if (input_buffer.empty()) {
+            input_buffer = clipboard_content(v.env);
+        }
+
+        std::string target_script              = "summarize";
+        // A stock identifier is answered by the split pair: the raw dataset
+        // (`tse`) followed by the data-free analysis instructions (`tse.analyze`).
+        bool                     want_analysis = false;
+        std::string              stock_identifier;
+        std::vector<std::string> extra_args;
+
+        if (!input_buffer.empty()) {
+            if (is_compiler_output(input_buffer)) {
+                target_script = "cpp";
+            } else if (input_buffer.contains("youtube.com") || input_buffer.contains("youtu.be")) {
+                target_script = "yt";
+            } else if (
+              std::regex_search(
+                input_buffer,
+                std::regex(R"((^|\n)(FROM |RUN |COPY |CMD |ENTRYPOINT |docker-compose|services:))", std::regex::icase)))
+            {
+                target_script = "docker";
+            } else if (
+              std::regex_search(input_buffer,
+                                std::regex(R"((^|\n)\.github/workflows/|\.gitlab-ci\.yml|Jenkinsfile|stages:|jobs:)",
+                                           std::regex::icase)))
+            {
+                target_script = "ci";
+            } else if (
+              std::regex_search(
+                input_buffer,
+                std::regex(
+                  R"(Traceback \(most recent call last\)|File ".*", line|Fatal error|panic:|Segmentation fault|stack trace|Exception in)",
+                  std::regex::icase)))
+            {
+                target_script = "debug";
+            } else if (is_stock_identifier(input_buffer, stock_identifier) ||
+                       extract_stock_identifier(input_buffer, stock_identifier))
+            {
+                target_script = "tse";
+                want_analysis = true;
+                extra_args.push_back(stock_identifier);
+            } else if (input_buffer.contains("class ") || input_buffer.contains("struct ") ||
+                       input_buffer.contains("#include <"))
+            {
+                target_script = "cpp-reviewer";
+            } else if (should_translate_to_english(input_buffer)) {
+                target_script = "english";
+            } else {
+                target_script = "summarize";
+            }
+        }
+
+        for (std::string_view arg : v.args) {
+            std::string arg_stock;
+            if (is_stock_identifier(arg, arg_stock)) {
+                // The identifier is passed along as this prompt's argument.
+                target_script = "tse";
+                want_analysis = true;
+                extra_args.clear();
+                break;
+            }
+            if (arg.contains("youtube.com") || arg.contains("youtu.be")) {
+                target_script = "yt";
+                break;
+            }
+            std::filesystem::path p(arg);
+            if (std::filesystem::exists(p)) {
+                auto ext   = p.extension().string();
+                auto fname = p.filename().string();
+                // These extensions share one identical body; they stay separate
+                // arms only for readability of the extension list.
+                // NOLINTBEGIN(bugprone-branch-clone)
+                if (ext == ".cpp" || ext == ".hpp" || ext == ".cxx" || ext == ".hxx" || ext == ".cc" || ext == ".c" ||
+                    ext == ".h")
+                {
+                    target_script = "cpp-reviewer";
+                } else if (
+                  ext == ".sh" || ext == ".bash" || ext == ".py" || ext == ".rb" || ext == ".go" || ext == ".rs" ||
+                  ext == ".java" || ext == ".kt" || ext == ".swift" || ext == ".ts" || ext == ".js")
+                {
+                    target_script = "review";
+                } else if (ext == ".yml" || ext == ".yaml") {
+                    if (fname.contains("docker-compose") || fname.contains("compose")) {
+                        target_script = "docker";
+                    } else if (fname.contains(".gitlab-ci")) {
+                        target_script = "ci";
+                    } else {
+                        target_script = "review";
+                    }
+                } else if (ext == ".json") {
+                    target_script = "review";
+                } else if (ext == ".md") {
+                    target_script = "readme";
+                } else if (p.filename() == "Dockerfile" || fname.contains("Dockerfile")) {
+                    target_script = "docker";
+                } else if (fname == "Jenkinsfile" || fname == ".gitlab-ci.yml" || fname == "Makefile" ||
+                           fname == "CMakeLists.txt")
+                {
+                    target_script = "review";
+                }
+                // NOLINTEND(bugprone-branch-clone)
+            }
+        }
+
+        if (!v.in.piped() && target_script != "tse") {
+            if (auto id = clipboard_identifier(v.env)) {
+                target_script = "tse";
+                want_analysis = true;
+                extra_args.push_back(*id);
+            }
+        }
+
+        // The buffered input (stdin or clipboard) is echoed before running the
+        // chosen target, so the output shows what was detected.
+        std::string echo = input_buffer + "\n";
+
+        // The buffer-derived stock identifier is only handed over when the
+        // target is still tse and the buffer came from a pipe (bash pipes
+        // the buffer only when stdin was piped; interactively each prompt
+        // reads the clipboard itself).
+        bool pass_extra = has_stdin && target_script == "tse" && !extra_args.empty();
+
+        // Dispatch in-process when the target prompt is implemented in this
+        // binary; avoid re-spawning `prompt` which would recurse. A stock target
+        // runs the split pair: `tse` (dataset) followed by `tse.analyze`
+        // (data-free instructions).
+        if (dana::find_prompt(target_script) != nullptr) {
+            std::vector<std::string_view> targets{target_script};
+            if (want_analysis) {
+                targets.emplace_back("tse.analyze");
+            }
+
+            std::string combined = echo;
+            std::string errors;
+            bool        first_segment = true;
+            bool        no_clipboard  = false;
+            for (std::size_t t = 0; t < targets.size(); ++t) {
+                auto const* target = dana::find_prompt(targets[t]);
+                if (target == nullptr) {
+                    throw prompt_error{3,
+                                       "prompt auto: prompt '" + std::string(targets[t]) + "' not found\n",
+                                       std::move(combined),
+                                       false,
+                                       has_stdin};
+                }
+
+                std::vector<std::string_view> sub_args;
+                if (t == 0) {
+                    if (pass_extra) {
+                        for (auto const& a : extra_args) {
+                            sub_args.push_back(a);
+                        }
+                    }
+                    for (auto const& a : v.args) {
+                        sub_args.push_back(a);
+                    }
+                }
+
+                // `printf '%s\n' "$input_buffer"` re-adds the trailing newline that
+                // $(cat) stripped.
+                std::optional<std::string> stdin_text;
+                if (has_stdin) {
+                    stdin_text = input_buffer + "\n";
+                }
+
+                result sub;
+                try {
+                    sub = run_sub_prompt(v, targets[t], sub_args, stdin_text);
+                } catch (prompt_error const& err) {
+                    combined += err.partial_output();
+                    throw prompt_error{err.exit_code(), err.what(), std::move(combined), err.no_clipboard(), has_stdin};
+                }
+                // Separate the instructions from the dataset the way the
+                // dispatcher separates chained prompt segments.
+                if (!first_segment) {
+                    combined += '\n';
+                }
+                combined      += sub.out;
+                first_segment  = false;
+                errors        += sub.err;
+                no_clipboard   = no_clipboard || sub.no_clipboard;
+                r.published.merge(sub.published, true);
+            }
+            // The echoed decision line comes first, then the dataset and, for a
+            // stock identifier, the analysis instructions. The chain's stdin is
+            // spent regardless of what the targets did.
+            r.out          = std::move(combined);
+            r.err          = std::move(errors);
+            r.no_clipboard = no_clipboard;
+            if (has_stdin) {
+                v.in.spend();
+            }
+            return;
+        }
+
+        // Every dispatch target is implemented natively, so the dispatch above
+        // always resolves. (A missing target is a bug — report it as an unknown
+        // prompt.)
+        throw prompt_error{3,
+                           "prompt auto: prompt '" + std::string(target_script) + "' not found\n",
+                           {},
+                           false,
+                           has_stdin};
+    }
+
+    static void render_help_auto(std::ostream& os) {
+        os << R"EOF(Usage: prompt auto [FILE...]
+       some-command | prompt auto [FILE...]
+
+Automatically chooses and executes the most appropriate prompt script based on the input.
+For example, if it detects YouTube URLs, it delegates to the 'yt' prompt.
+If it detects C++ files, it delegates to 'cpp-reviewer'.
+A bare stock identifier (ISIN, insCode, or easytrader/tsetmc/codal URL) delegates to 'tse' + 'tse.analyze'.
+Defaults to 'summarize' for English and Farsi text, or 'english' (translate) for other languages like Arabic.
+
+Options:
+  --help, -h   Show this help message
+  (Any other options like --head are passed through to the selected script)
+)EOF";
+    }
+
+    // This file is the prompt: it implements it and registers it at static-init time
+    // (no central list — see sdk/prompt_registry.hpp).
+    [[maybe_unused]] bool const registered = dana::register_prompt(
+      "auto",
+      "Automatically chooses and executes the most appropriate prompt script based on the input. For "
+      "example, if it detects YouTube URLs, it delegates to the 'yt' prompt. If it detects C++ files, "
+      "it delegates to 'cpp-reviewer'. A bare stock identifier (ISIN, insCode, or "
+      "easytrader/tsetmc/codal URL) delegates to 'tse' + 'tse.analyze'. Defaults to 'summarize' for English and Farsi "
+      "text, or 'english' (translate) for other languages like Arabic.",
+      &execute_auto,
+      &render_help_auto);
+
+} // namespace dana

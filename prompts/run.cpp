@@ -1,0 +1,256 @@
+#include "../core/fs.hpp"
+#include "../core/process.hpp"
+#include "../core/sanitize.hpp"
+#include "../runtime/args.hpp"
+#include "../runtime/embed.hpp"
+#include "../runtime/facts.hpp"
+#include "../runtime/prompt_registry.hpp"
+#include "../runtime/signals.hpp"
+
+#include <array>
+#include <regex>
+#include <string>
+#include <unordered_set>
+#include <vector>
+
+namespace dana {
+
+    namespace {
+
+        // Port of run.sh extract_failed_gtests: `[  FAILED  ] Suite.Test` lines, each
+        // test kept once, and only names that carry a suite separator.
+        std::vector<std::string> extract_failed_gtests(std::string_view text) {
+            static std::regex const         failed_re(R"(^\[  FAILED  \] +([[:alnum:]_][^\s(),]*))");
+            std::vector<std::string>        found;
+            std::unordered_set<std::string> seen;
+
+            std::size_t start = 0;
+            while (start <= text.size()) {
+                std::size_t      end  = text.find('\n', start);
+                std::string_view line = text.substr(start, end == std::string_view::npos ? end : end - start);
+                if (!line.empty() && line.back() == '\r') {
+                    line.remove_suffix(1);
+                }
+
+                std::smatch match;
+                std::string line_str(line);
+                if (std::regex_search(line_str, match, failed_re)) {
+                    std::string test = match[1];
+                    if (test.contains('.') && seen.insert(test).second) {
+                        found.push_back(std::move(test));
+                    }
+                }
+
+                if (end == std::string_view::npos) {
+                    break;
+                }
+                start = end + 1;
+            }
+            return found;
+        }
+
+        // Port of `head -n N` feeding a $(...) capture: first N lines, no trailing
+        // newline (a missing trailing newline in the input is preserved as-is).
+        std::string head_n(std::string_view text, std::size_t n) {
+            return head_output(text, n);
+        }
+
+        // `.run` always builds a debugging prompt, so the intent is a constant and can
+        // be declared from argv before the batch forks (a sibling `.compress` reads it
+        // without a sink barrier). The *focus* needs the run output, so it is published
+        // as an artifact instead — visible to a later batch.
+        void declare_run(declaration& d) {
+            if (!d.prior.get(keys::mode)) {
+                d.declared.set(keys::mode, signals::to_string(signals::intent::debug));
+            }
+        }
+
+    } // namespace
+
+    static void execute_run(view const& v, result& r) {
+        auto head_lines = head_lines_or_throw(v);
+
+        bool                     include_gtest = false;
+        std::vector<std::string> run_args;
+        for (std::size_t i = 0; i < v.args.size(); ++i) {
+            if (v.args[i] == "--head") {
+                ++i;
+            } else if (v.args[i] == "--gtest") {
+                include_gtest = true;
+            } else {
+                run_args.emplace_back(v.args[i]);
+            }
+        }
+
+        std::string run_output;
+        std::string status_text;
+        std::string description;
+
+        if (!run_args.empty()) {
+            auto                     run_path = dana::fs::bin_tool("run", v.env.exe_path, v.env.git_root).string();
+            std::vector<std::string> cmd;
+            cmd.push_back(run_path);
+            for (auto const& arg : run_args) {
+                cmd.push_back(arg);
+            }
+
+            // run.sh redirects both streams into one file: >tmp 2>&1
+            std::vector<std::string> storage = {"bash", "-c", R"("$0" "$@" 2>&1)", run_path};
+            for (std::size_t i = 1; i < cmd.size(); ++i) {
+                storage.push_back(cmd[i]);
+            }
+
+            bool const        had_stdin = v.in.available();
+            std::string const piped(v.in.text());
+
+            auto result = dana::process::run_command(storage, piped);
+            if (had_stdin) {
+                v.in.spend();
+            }
+            run_output = dana::sanitize::strip_osc(result.stdout_data);
+            while (!run_output.empty() && run_output.back() == '\n') {
+                run_output.pop_back();
+            }
+            status_text = std::to_string(result.exit_code);
+            description = "the `run` command";
+        } else if (v.in.available()) {
+            // Piped input is the run output: `make test 2>&1 | prompt run`.
+            run_output = std::string(v.in.text());
+            v.in.spend();
+            while (!run_output.empty() && run_output.back() == '\n') {
+                run_output.pop_back();
+            }
+            status_text = "unknown";
+            description = "the piped `run` output";
+        } else {
+            status_text = "unknown";
+            description = "the piped `run` output";
+        }
+
+        std::string search_output = run_output;
+        if (head_lines) {
+            run_output = head_n(run_output, *head_lines);
+        }
+
+        // The failed tests and error sites are the chain's focus: `.compress` keeps
+        // those regions whole. Published as an artifact because it needs the output.
+        auto const focus = dana::signals::extract_focus(search_output);
+        if (!focus.empty()) {
+            r.published.set(keys::focus, dana::signals::join_focus(focus));
+        }
+
+        std::string output;
+        std::string error;
+        output += "Debug the output from " + description +
+                  ". Identify the root cause, explain the failure clearly, and suggest the smallest "
+                  "useful fix. If the build succeeded but the program failed at runtime, focus on the "
+                  "runtime issue.\n\n";
+        output += std::format("Exit status: {}\n\n```text\n{}\n```\n", status_text, run_output);
+
+        if (include_gtest) {
+            auto failed = extract_failed_gtests(search_output);
+            if (!failed.empty()) {
+                output += '\n';
+                std::vector<std::string> gtest_args;
+                gtest_args.emplace_back("--exact");
+                for (auto const& name : failed) {
+                    gtest_args.push_back(name);
+                }
+
+                // Native gtest-case prompt, invoked in-process exactly as the
+                // script would be (`gtest-case` with --exact + the test names).
+                std::vector<std::string_view> sub_args;
+                sub_args.reserve(gtest_args.size());
+                for (auto const& a : gtest_args) {
+                    sub_args.push_back(a);
+                }
+                auto sub  = run_sub_prompt(v, "gtest-case", sub_args);
+                output   += sub.out;
+                error    += sub.err;
+            } else {
+                output += "\nNo failed Google Test cases were detected in the output.\n";
+            }
+        }
+
+        r.out = std::move(output);
+    }
+
+    static void render_help_run(std::ostream& os) {
+        os << R"EOF(Usage: prompt run [--head N] [--gtest] [run-args...]
+       run target | prompt run [--head N] [--gtest]
+
+Runs `bin/run` with the provided arguments and builds a debugging prompt from its output.
+If stdin is piped in, it debugs the piped run output instead.
+
+Options:
+  --head N   Keep only the first N lines of run output
+  --gtest    Include source for failed Google Test cases
+  -h, --help Show this help
+)EOF";
+    }
+
+    // The `bin/run` subcommands `run.sh`/the old fish completions offered, plus the
+    // CMake targets `bin/run print-targets` knows (empty outside a build tree).
+    static void complete_run(completion_request const& req, std::ostream& os) {
+        if (req.prefix.starts_with('-')) {
+            return;
+        }
+        static constexpr std::array<dana::completion::item, 5> kRunArgs = {
+          {
+           {.value = "lldb", .description = "Debug in lldb"},
+           {.value = "gdb", .description = "Debug in gdb"},
+           {.value = "watch", .description = "Watch for changes"},
+           {.value = "print-targets", .description = "Print CMake targets"},
+           {.value = "help", .description = "Print bin/run help"},
+           },
+        };
+        auto const                       exe  = fs::self_path().value_or(std::filesystem::path{});
+        auto const                       tool = fs::bin_tool("run", exe, fs::find_git_root());
+        std::array<std::string, 2> const cmdline{tool.string(), "print-targets"};
+        auto const                       result = process::command{cmdline}.discard_stderr().run();
+        if (result.exit_code == 0) {
+            std::size_t start = 0;
+            while (start < result.stdout_data.size()) {
+                auto const             end  = result.stdout_data.find('\n', start);
+                auto const             stop = end == std::string::npos ? result.stdout_data.size() : end;
+                std::string_view const line(result.stdout_data.data() + start, stop - start);
+                start = end == std::string::npos ? result.stdout_data.size() : end + 1;
+                if (!line.empty() && completion::matches(req.prefix, line)) {
+                    completion::write_item(os, line, {});
+                }
+            }
+        }
+        completion::write_items(os, req.prefix, kRunArgs);
+    }
+
+    // The tool declaration: a descriptor keeps a pointer to it, so it is a static.
+    // NOLINTNEXTLINE(bugprone-throwing-static-initialization)
+    schema::tool const k_run_tool = schema::make_tool(
+      "run",
+      "Runs `bin/run` with the provided arguments and builds a debugging prompt from its output.",
+      {
+        schema::int_flag("head", "Keep only the first N lines of the run output"),
+        schema::bool_flag("gtest", "Include Google Test output"),
+      },
+      {
+        schema::argument("TARGET", "Build target or run arguments", false, true),
+      });
+
+    // This file is the prompt: it implements it and registers it at static-init time
+    // (no central list — see sdk/prompt_registry.hpp).
+    [[maybe_unused]] bool const registered = dana::register_prompt(
+      "run",
+      "Runs `bin/run` with the provided arguments and builds a debugging prompt from its output. If "
+      "stdin is piped in, it debugs the piped run output instead.",
+      &execute_run,
+      &render_help_run,
+      &complete_run,
+      chain_role::normal,
+      true,
+      nullptr,
+      &declare_run,
+      false,
+      true,
+      &k_run_tool);
+
+} // namespace dana

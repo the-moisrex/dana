@@ -1,0 +1,136 @@
+#include "../runtime/args.hpp"
+#include "../runtime/embed.hpp"
+#include "../runtime/prompt_registry.hpp"
+#include "prompt_assets.hpp"
+
+#include <filesystem>
+#include <string>
+#include <string_view>
+
+using dana::result;
+using dana::view;
+
+namespace {
+
+
+    // The fenced-block form the native prompts use for embedded context.
+    std::string embed_text(
+      std::string_view           content,
+      std::string_view           lang,
+      std::string_view           label,
+      std::optional<std::size_t> head_lines,
+      bool                       numbered = false) {
+        std::string out;
+        out += std::format("\nFile: {}\n", std::string(label));
+        out += std::format("```{}\n", std::string(lang));
+        out += dana::number_lines(dana::trim_context_nl(content, head_lines), numbered);
+        out += "```\n";
+        return out;
+    }
+
+    std::string embed_block(std::filesystem::path const& path, dana::file_options opts) {
+        if (!std::filesystem::is_regular_file(path)) {
+            return {};
+        }
+        return embed_text(
+          dana::read_file(path),
+          dana::infer_lang(path),
+          path.filename().string(),
+          opts.head_lines,
+          opts.numbered);
+    }
+
+    void execute_new(view const& v, result& r) {
+        auto opts = file_options_or_throw(v);
+
+        std::string output;
+        if (v.in.piped()) {
+            std::string content(v.in.text());
+            while (!content.empty() && content.back() == '\n') {
+                content.pop_back();
+            }
+            if (!content.empty()) {
+                output += content + "\n\n";
+            }
+        }
+
+        output += R"NEWTEXT(Write a new native (C++) prompt for the prompt dispatcher in `prompts/`.
+
+Goal:
+Create a complete, ready-to-use implementation in `prompts/prompts/<name>.cpp` that generates an AI prompt.
+The dispatcher in `prompts/` implements one file per prompt; match the style, structure, and helpers of the prompts already there.
+
+Requirements for the generated prompt:
+- Implement `static void execute_<name>(dana::view const& v, dana::result& r)` and `static void render_help_<name>(std::ostream&)`, then register the prompt at the end of the file:
+    [[maybe_unused]] bool const registered = dana::register_prompt("<name>", "<summary>", &execute_<name>, &render_help_<name>);
+  CMake globs prompts/*.cpp, so the file registers itself and no other file changes.
+- "<summary>" is the first paragraph of render_help_<name>'s help (verbatim), and it is what `prompt list` prints; it must read as a complete standalone summary.
+- The prompt is invoked as `prompt <name> ...`, so the help's Usage line must say `Usage: prompt <name>`.
+- The `view` is read-only: `v.args`, `v.in.text()`, `v.env.git_root`/`v.env.exe_path`, `v.text` (the chain context when this prompt is a sink) and `v.prior` (facts earlier segments declared or published). Never mutate chain state.
+- Write the result onto the `result`: r.out for stdout (sanitised, piped onward and copied to the clipboard), r.err for stderr (the exit status stays 0). Set r.no_clipboard = true to opt this output out of the clipboard.
+- A prompt that reads stdin spends the shared pipe: call `v.in.spend()` after reading `v.in.text()`, so a later prompt in the chain sees it already consumed. File prompts share a chain-wide record (`keys::files`, `sdk/file_scope.hpp`): a prompt that embeds file content constructs a `file_scope` from `v.prior`, skips `scope.seen(file)` files, `scope.mark(file)`s the ones it emits and publishes `scope.fact()`; register it with `dana::register_file_prompt(...)` so the dispatcher runs a batch containing it in argv order. `--no-dedup` (parsed by `file_options`) bypasses the skip for a continuation read.
+- To tell later segments something, publish facts on the result: `r.published.set(key, value)`, with the key spelled as a `dana::keys::` constant when one exists. Sibling prompts that must agree before they fork (like the `tse` family's instrument) also register a cheap `declare_fn` that publishes argv-derived facts; see `facts.hpp`/`stage.hpp` below.
+- Report failures by throwing usage_error (exit 2) or soft_error (exit 1) with a message ending in a newline; never call std::exit and never return a non-zero status directly. A segment may run in parallel with unrelated siblings in a forked child: it must not assume it is alone or that it runs first.
+- Accept `--head N`, the value-less `--num`/`--numbered` and `--no-dedup` with file_options_or_throw(v); pass the returned file_options to the embedding helpers (embed_file_block, or number_lines + trim_context_nl + infer_lang) so --num prefixes each embedded line with its line number; split the file arguments with collect_file_args(v) (or positional_args(v) when each token needs custom handling) and embed stdin with embed_stdin(v.in.text(), opts.head_lines) when v.in.piped().
+- Render the help from the shared pieces: file_usage_help("<name>"[, tail, pipe, prefix]) for the usage lines and file_options_help("<what>"[, show_help]) for the --head/--num options, so they stay consistent with the other file prompts.
+- Locate repository tools with dana::fs::bin_tool and run subprocesses with dana::process::command / run_command (argv arrays, no shell quoting).
+- Optional shell completion: a prompt that knows its own operands can register a fifth argument, a `completion_fn` (`void complete_<name>(dana::completion_request const&, std::ostream&)`), and print `value<TAB>description` candidates for `prompt <name> --complete <prefix> [args...]`. Flags are completed automatically from the help's Options block, so the callback only adds positional/flag-value candidates (see completion.hpp below).
+- Keep the prompt focused, minimal, and consistent with the prompts already in prompts/.
+- Do not invent SDK helpers that are not in the references embedded below.
+
+If a task description appears above or below, implement exactly that prompt behaviour.
+If extra reference files are provided, treat them as examples or domain context for the new prompt.
+
+Return:
+1. A short explanation of the design choices.
+2. The full contents of `prompts/prompts/<name>.cpp`.
+3. The <name> you chose and one or two example invocations.
+)NEWTEXT";
+
+        for (auto const& asset : dana::prompt_assets::assets) {
+            output += embed_text(asset.text, asset.lang, asset.label, opts.head_lines);
+        }
+
+        std::string error;
+        for (auto const& wanted : positional_args(v)) {
+            std::filesystem::path resolved;
+            if (auto found = resolve_input_file(v.env, wanted)) {
+                resolved = *found;
+            }
+            if (!resolved.empty() && std::filesystem::is_regular_file(resolved)) {
+                output += embed_block(resolved, opts);
+            } else if (std::filesystem::is_regular_file(std::filesystem::path(wanted))) {
+                output += embed_block(std::filesystem::path(wanted), opts);
+            } else {
+                error += std::format("Warning: File not found or is not a regular file: {}\n", std::string(wanted));
+            }
+        }
+
+        r.out = std::move(output);
+        r.err = std::move(error);
+    }
+
+    void render_help_new(std::ostream& os) {
+        os << dana::file_usage_help("new", "[FILE...]", "echo \"what the prompt should do\"") << R"EOF(
+Builds a prompt that asks an AI to write a new native (C++) prompt for the `prompts/` dispatcher following its conventions.
+
+Always embeds the SDK headers and an example prompt so the AI has enough
+context to generate a good, consistent prompt.
+
+Provide the desired prompt behavior on stdin and/or extra reference
+files as arguments.
+
+Options:
+)EOF" << dana::file_options_help("each embedded context file");
+    }
+
+    // This file is the prompt: it implements it and registers it at static-init time
+    // (no central list — see sdk/prompt_registry.hpp).
+    [[maybe_unused]] bool const registered = dana::register_prompt(
+      "new",
+      "Builds a prompt that asks an AI to write a new native (C++) prompt "
+      "for the `prompts/` dispatcher following its conventions.",
+      &execute_new,
+      &render_help_new);
+
+} // namespace
