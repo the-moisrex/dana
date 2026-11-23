@@ -1,11 +1,11 @@
 ---
 name: History Store
-description: The dana history store (sdk/history, .history family, .last, .history.find, .history.purge) — file layout, deltas/replay, API, prompts, child runs and env knobs.
+description: The dana history store (runtime/history, .history family, .last, .history.find, .history.purge) — file layout, deltas/replay, API, prompts, child runs and env knobs.
 ---
 
-# History store (`sdk/history.{hpp,cpp}`, `src/prompts/history*.cpp`)
+# History store (`runtime/history.{hpp,cpp}`, `prompts/history*.cpp`)
 
-Companion skills: `chain-contract`, `sinks`, `sdk-helpers`.
+Companion skills: `chain-contract`, `sinks`, `runtime-helpers`.
 
 The dispatcher records **every invocation** under
 `${PROMPT_HISTORY_DIR:-${XDG_STATE_HOME:-~/.local/state}/prompt/runs/}`, so an
@@ -49,7 +49,7 @@ a write failure is swallowed and can never fail a prompt run.
   (oldest first, never the run passed as protected), and `display_path` (a path
   relative to the cwd when possible, so `$HOME` redaction does not corrupt a
   printed path).
-- **Prompts.** `src/prompts/history.cpp` registers `.history` (default emitted
+- **Prompts.** `prompts/history.cpp` registers `.history` (default emitted
   text; `--segment`, `--input`, `--all`, `--meta`, `--head`, `--here`; publishes
   `keys::save_stem`, the run's command-line slug such as `tse-foolad` or
   `note-one`, falling back to the run id), `.last`/`.history.last` (the
@@ -63,10 +63,10 @@ a write failure is swallowed and can never fail a prompt run.
   `--here`, and `--all`/`--empty`: by default it skips runs that emitted nothing
   and previews a run with the first line of its last emitted segment) and
   `.history.dir`;
-  `src/prompts/history_find.cpp` registers `.history.find` (QUERY, `--regex`,
+  `prompts/history_find.cpp` registers `.history.find` (QUERY, `--regex`,
   `--case-sensitive`, `--name`, `--since`, `--limit`, `--context`, `--paths`,
   `--json`, `--here`; exit 1 via `soft_error` on no match);
-  `src/prompts/history_purge.cpp` registers `.history.purge` (`--older-than`,
+  `prompts/history_purge.cpp` registers `.history.purge` (`--older-than`,
   `--keep`, `--max-size`, `--all`, `--dry-run`; protects `--keep` newest runs and
   `PROMPT_HISTORY_CURRENT`; `no_clipboard`). All register with `record = false`.
 - **Child runs.** An `.each` item (and a `.exec` child `prompt` chain) records its
@@ -78,11 +78,11 @@ a write failure is swallowed and can never fail a prompt run.
   `PROMPT_HISTORY_INNER`, `PROMPT_HISTORY_PRUNE` (0 = no automatic pass),
   `PROMPT_HISTORY_CURRENT`, plus the terminal identity overrides
   `PROMPT_TERMINAL_SID`/`PROMPT_TERMINAL_TTY`/`PROMPT_TERMINAL_KEY` (see
-  `sdk-helpers`).
-- **Tests.** `tests/test_history.cpp` (marker framing, a fake marker inside a
+  `runtime-helpers`).
+- **Tests.** `tests/unit/test_history.cpp` (marker framing, a fake marker inside a
   body, truncation, replay, ordering/ranks, the terminal identity and scoping,
   prune) and
-  `tests/test_history.sh` (end-to-end: `.history` == stdout for plain and sink
+  `tests/integration/test_history.sh` (end-to-end: `.history` == stdout for plain and sink
   chains, list/find/purge, `.last`/`--here`/`--any` and the fallback note, the
   env knobs, inner-run tagging, completion). The
   tests `ENVIRONMENT` every ctest in `tests/CMakeLists.txt` onto a scratch

@@ -3,9 +3,9 @@ name: Tool Calling
 description: The dana typed tool-schema system and tool calling — schema declarations, from_help fallback, schema::parse, .tools catalog, .tools.run, inline DSML markup, the toolcall extractor, and .skill.gen.
 ---
 
-# Tool schemas and tool calling (`sdk/schema.*`, `sdk/tool_call.*`, `.tools`, `.tools.run`)
+# Tool schemas and tool calling (`runtime/schema.*`, `runtime/tool_call.*`, `.tools`, `.tools.run`)
 
-Companion skills: `agentic-chains`, `agent-loop`, `completion`, `sdk-helpers`.
+Companion skills: `agentic-chains`, `agent-loop`, `completion`, `runtime-helpers`.
 
 A prompt can describe itself as a typed *tool* — the shape an agent reads before
 composing a chain — and, when it does, it is also **callable**: a model's JSON
@@ -35,8 +35,8 @@ by the trailing defaulted argument of `register_prompt`/`register_sink`.
   **catalog-only**: `.tools` uses it so every prompt is described, but
   `schema::parse` is never run against it, so a guessed flag can never become
   an execution contract.
-- **The execution contract.** `schema::parse(tool, json)` (`sdk/tool_call.cpp`,
-  declared in `sdk/tool_call.hpp` so `schema.hpp` stays JSON-free) turns an
+- **The execution contract.** `schema::parse(tool, json)` (`runtime/tool_call.cpp`,
+  declared in `runtime/tool_call.hpp` so `schema.hpp` stays JSON-free) turns an
   `input` object into argv: flags first (a `true` boolean emits its flag, a
   `false` one is omitted, a repeatable flag takes an array, an enum value is
   checked), then operands in declared order (variadic takes an array; operand
@@ -57,7 +57,7 @@ by the trailing defaulted argument of `register_prompt`/`register_sink`.
   (used by `.glob`/`.grep`, whose `complete_fn` is a thin
   `schema::complete(*find_prompt(name)->input, req, os)`).
 - **`.tools [--category …] [--only NAME,…] [--exclude NAME,…] [--compact] [--for human|chat] [--format markdown|json|names]`**
-  (`src/prompts/tools.cpp`) is the catalog face: it walks `get_all_prompts()`,
+  (`prompts/tools.cpp`) is the catalog face: it walks `get_all_prompts()`,
   keeps each prompt's declared schema or derives one with `from_help`, filters
   by `prompt_category` (derived from the name by `category_for`; `core`, `ai`,
   `history`, `catalog`, `code`, `git`, `tse`, `other`), orders the prompts with
@@ -71,7 +71,7 @@ by the trailing defaulted argument of `register_prompt`/`register_sink`.
   one answer (one block per call) so a chat turn does not cost a round trip per
   call. `--only`/`--exclude` narrow the catalog by prompt name (the agent loop
   uses them to advertise a short, task-specific list).
-- **`.tools.run`** (`src/prompts/tools_run.cpp`) is the sink that closes the
+- **`.tools.run`** (`prompts/tools_run.cpp`) is the sink that closes the
   loop. It extracts the calls from the accumulated context with
   `tool_call::extract` (a fenced ```json block, a bare JSON document, or a
   top-level array; only objects with a `tool` key count, so ordinary code
@@ -83,7 +83,7 @@ by the trailing defaulted argument of `register_prompt`/`register_sink`.
   whatever `--on-call-error` says), runs it in-process with `run_sub_prompt`
   and appends a `### Tool: <name>` block (`tool_call::format_result`) to the
   context. Every call in the answer runs, in order, so batching several calls
-  costs one turn. The execution itself lives in `sdk/tool_exec.*`
+  costs one turn. The execution itself lives in `runtime/tool_exec.*`
   (`tool_exec::run`), which `.tools.run` and the `.ai.loop` agent loop share, so
   the two can never disagree about what a call is or how it runs. `extract` also
   accepts the envelope shapes models actually
@@ -120,13 +120,13 @@ by the trailing defaulted argument of `register_prompt`/`register_sink`.
   shows an `<invoke>` example is not a call. It runs after the bare-JSON
   attempt and before fenced-block scanning, so `.tools.run`, `.ai.loop` and
   the `toolcall` extractor all accept the markup unchanged.
-- **The `toolcall` extractor** (`src/extract/toolcall.cpp`) exposes the same
+- **The `toolcall` extractor** (`extract/toolcall.cpp`) exposes the same
   calls to `.extract toolcall`/`.each toolcall … .end` (one item per call, its
   text the `input` object), so the extractor grammar and the sink never
   disagree about what a call is.
-- **The first opencode ports.** `prompt glob` (`src/prompts/glob.cpp`) lists
+- **The first opencode ports.** `prompt glob` (`prompts/glob.cpp`) lists
   files matching a glob (`rg --files -g PATTERN`, `find` fallback; `--path DIR`,
-  `--head N`), `prompt grep` (`src/prompts/grep.cpp`) searches file contents
+  `--head N`), `prompt grep` (`prompts/grep.cpp`) searches file contents
   (`rg -n` with `--include`/`-i`/`--max`, `grep -rnI` fallback; `PATTERN [PATH]`,
   `--head N`), `prompt read` reads a file/directory with numbered lines, and
   `files`, `cli`, `run`, `edit` and `write` declare their own schemas too. Each
@@ -135,13 +135,11 @@ by the trailing defaulted argument of `register_prompt`/`register_sink`.
   `dry-run`/`head`; `write` takes the `file` operand plus `--content TEXT`,
   which writes exactly that text instead of the chain context — necessary
   because a tool call runs in a child prompt whose context starts empty.
-  Tests: `tests/test_schema.cpp` (factories, renderers, `from_help`, schema
-  completion), `tests/test_tool_call.cpp` (`parse`, `extract`, formatting) plus
-  the `schema`/`tool_call`/`glob_lists`/`grep_finds`/`tools_names`/`tools_json`/
-  `tools_compact`/`tools_category`/`tools_chat`/`tools_only`/`tools_exclude`/
-  `tools_run_print`/`tools_run_call`/`write_content` ctests.
+  Tests: `tests/unit/test_schema.cpp` (factories, renderers, `from_help`, schema
+  completion) and `tests/unit/test_tool_call.cpp` (`parse`, `extract`,
+  formatting, argv conversion).
 
-**`.skill.gen`** (`src/prompts/skill_gen.cpp`) builds on the same save-hint
+**`.skill.gen`** (`prompts/skill_gen.cpp`) builds on the same save-hint
 machinery as `.delegate`: it turns a task (an argument or stdin) into a request
 for a `SKILL.md`, appends the loader's format and an output contract, publishes
 `keys::expect = code:markdown` (plus `save.stem=field:filename` when a later

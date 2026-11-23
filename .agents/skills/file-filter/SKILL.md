@@ -1,15 +1,15 @@
 ---
 name: File Filter
-description: The chain-wide file filter in dana (.files.exclude, .files.scope) and the shared file_filter/file_scope SDK helpers that every file-selecting prompt applies.
+description: The chain-wide file filter in dana (.files.exclude, .files.scope) and the shared runtime file_filter/file_scope helpers that every file-selecting prompt applies.
 ---
 
 # Chain-wide file filter (`.files.exclude`, `.files.scope`)
 
-Companion skills: `chain-contract`, `sdk-helpers`, `prompt-development`.
+Companion skills: `chain-contract`, `runtime-helpers`, `prompt-development`.
 
 Two silent chain steps narrow what every file prompt in the same batch sees;
 they emit nothing (their report goes to stderr), so they never alter the context
-or the clipboard. `src/prompts/files_exclude.cpp` and `files_scope.cpp` register
+or the clipboard. `prompts/files_exclude.cpp` and `files_scope.cpp` register
 with `register_file_filter` (sets `prompt_descriptor::filters_files`, serializing
 a batch so a later `.files`/`.read` in it sees the fact). Filter steps are
 **batch-global, not positional**: `main.cpp`'s `batch_execution_order` runs every
@@ -37,7 +37,7 @@ batch, so a filter after it only affects the following batch.
   `.commit`. With no DIRECTORY it opens `fzf -m` over the directories (plus the
   scope itself). `--clear`/`--list` as above.
 
-`sdk/file_filter.hpp` is the shared read-only filter: `file_filter::from(prior,
+`runtime/file_filter.hpp` is the shared read-only filter: `file_filter::from(prior,
 env)` builds it from the facts, `excluded(path)` matches the patterns,
 `resolve(env, arg)` tries the scope before the normal resolver,
 `candidates()`/`directories()` produce the picker's (git-listed or walked)

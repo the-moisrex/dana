@@ -9,7 +9,7 @@ Companion skills: `prompt-development`, `completion`.
 
 `*.prompt` files hold the chain DSL that otherwise goes on the command line:
 `prompt debug.prompt` behaves exactly as if the file's tokens had been typed
-after `prompt`. `sdk/prompt_file.{hpp,cpp}` is a lexical pre-pass over argv that
+after `prompt`. `runtime/prompt_file.{hpp,cpp}` is a lexical pre-pass over argv that
 runs in `main.cpp` before `parse_chain`, so chain parsing, sinks, `.each` bodies,
 `.exec` ownership, the clipboard and the history store only ever see an ordinary
 argv (the history records the _effective_ tokens, which is what a replay wants).
@@ -39,15 +39,15 @@ argv (the history records the _effective_ tokens, which is what a replay wants).
   depth cap and the cycle check, which is why both carry a
   `misc-no-recursion` suppression.
 
-Tests: `tests/test_prompt_file.cpp` (tokenizer, inlining, nesting, cycle, depth,
-lookup order, `--`, `--no-prompt-files`) and the `prompt_file_run`/
-`prompt_file_missing` ctests over `tests/fixtures/hello.prompt`.
+Tests: `tests/unit/test_prompt_file.cpp` (tokenizer, inlining, nesting, cycle, depth,
+lookup order, `--`, `--no-prompt-files`, and the run/missing cases over
+`tests/fixtures/hello.prompt`).
 
 # Functions (`.func NAME(params) … .end`, called as `.name`)
 
 A **function** is the third kind of step, next to a prompt and a sink: a named,
 parameterized chain template the user defines and invokes exactly like a prompt.
-`sdk/function.{hpp,cpp}` is a lexical pre-pass in `main.cpp` that runs
+`runtime/function.{hpp,cpp}` is a lexical pre-pass in `main.cpp` that runs
 immediately after the `*.prompt` pass and before `parse_chain`, so sinks,
 `.each` bodies, `.exec` ownership, the clipboard and the history store only ever
 see an ordinary argv.
@@ -82,8 +82,8 @@ see an ordinary argv.
   after `--` verbatim, and a function called inside an `.each` body is expanded
   by the parent so inline definitions stay visible to the child processes.
 
-Tests: `tests/test_function.cpp` (definition/call, params/defaults/named flags/
+Tests: `tests/unit/test_function.cpp` (definition/call, params/defaults/named flags/
 `{@}`/`{0}`/`{N}`, nesting, `.each`-body and `--` preservation, every error
-case, `funcs`-file loading and override) plus the
-`function_inline`/`function_params`/`function_shadow` ctests. The suite's global
-`ENVIRONMENT` sets `PROMPT_FUNCS=` so a developer's own funcs never leak in.
+case, `funcs`-file loading and override, and the inline/params/shadow cases).
+The suite's global `ENVIRONMENT` sets `PROMPT_FUNCS=` so a developer's own funcs
+never leak in.

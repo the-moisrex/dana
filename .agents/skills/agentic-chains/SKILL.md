@@ -31,7 +31,7 @@ prompts call it directly rather than shelling out.
 - **`.each [SELECTOR] [loop flags] BODY .end`** is a sink that loops `BODY` over
   the engine's items (table rows, code blocks, sections, commands), one child
   `prompt` per item, in parallel. A selector omitted here means the plan's
-  primary (`agent::primary_selector`).
+  primary (`extract::primary`).
 
 ## Bodies and the parser
 
@@ -73,7 +73,7 @@ Each `.each` item is a child `prompt` process with `PROMPT_INNER=1`,
 `PROMPT_INNER_ALLOW` (the static-program grants). The parent owns the clipboard
 and prints one redaction legend, so an inner process does neither.
 
-`policy::engine` (`sdk/policy.*`) decides commands: built-ins (`tse*` and
+`policy::engine` (`runtime/policy.*`) decides commands: built-ins (`tse*` and
 `md.extract` allow; `sudo`, `su`, `dd`, `mkfs*`, `shutdown`, `reboot`,
 `poweroff`, `halt` deny; everything else ask), then
 `$XDG_CONFIG_HOME/prompt/policy` (or `~/.config/prompt/policy`), then
@@ -93,29 +93,29 @@ whole and approved through `require_chain`. `.each` pre-approves the static
 `--on-item-error stop|skip|keep`, `--timeout SEC` (600), `--yes`. `--print`
 prints the substituted body commands without running them.
 
-Tests: the `agent_*` ctests (`expect` and its `plan`, `extract`, its `field`
-selector and the `test_extract_bind.sh` binding/save round-trip, `exec`
-print/allowed/denied/`--` chain/verbatim args, `each` print/run/list) plus the
-body and `--` cases in `tests/test_chaining.cpp` and the offline
-`md_extract_unit` (`tests/test_md_extract.py`: the `field` selector and the
-combined contract).
+Tests: `tests/unit/test_chaining.cpp` covers the `.expect` plan, the selector
+grammar and `split_command`/`parse_exec_args` (`test_agent_commands`), the
+`.each` body and `--` cases, and the `.exec` chain cases;
+`tests/integration/test_extract_bind.sh` exercises the binding/`save.stem`
+round-trip end to end; `tests/unit/test_agent_loop.cpp` covers the loop's tool
+feed-back and exhaustion.
 
-# Markdown extractor engine (`sdk/extract.*`)
+# Markdown extractor engine (`runtime/extract.*`)
 
 The selector grammar, the response contracts and the extraction itself are one
 in-process engine; the four agentic prompts and the standalone `bin/md.extract`
 CLI share it, so they can never disagree.
 
-- **One file = one extractor.** An extractor is `src/extract/<name>.cpp`
+- **One file = one extractor.** An extractor is `extract/<name>.cpp`
   implementing a `run(text, qualifier, options)` function and ending with one
   `dana::extract::register_extractor("<name>", "<summary>", &run_<name>);`.
   CMake globs the sources, so no other file changes. The registry is a fixed
-  array of `extract_registry_capacity` slots and aborts at startup when it
+  array of `extractor_capacity` slots and aborts at startup when it
   overflows (like the prompt registry) rather than silently dropping a kind.
   The registered kinds are `code`, `table`, `section`, `frontmatter`,
   `command`, `field`, `auto`, `json`, `function`, `filename`, plus the `any`
   alias.
-- **Grammar** (`src/sdk/extract.cpp`): `entry := [BIND "="] pipeline`,
+- **Grammar** (`runtime/extract.cpp`): `entry := [BIND "="] pipeline`,
   `pipeline := step ("/" step)*`, `step := NAME [":" QUALIFIER] ["@" N]`.
   `/` splits only before a registered extractor name (`\/` escapes), so a
   qualifier may contain slashes; a bare word that is not a kind is `section`
@@ -124,14 +124,14 @@ CLI share it, so they can never disagree.
   plan, and `is_selector_token` classifies a token (the `.exec`/`.each` flag
   parser inherits it, which is why `json`/`function`/`filename` count as
   selectors).
-- **Sharing the document.** `src/extract/document.{hpp,cpp}` parses Markdown
+- **Sharing the document.** `extract/document.{hpp,cpp}` parses Markdown
   once into context-carrying `block`s (enclosing heading path plus the prose
-  before/after) that every extractor reads; `src/extract/render.*` holds the
+  before/after) that every extractor reads; `extract/render.*` holds the
   output modes (`render_selection`, `drop_first_line`/`join_blocks`) and the
-  `--pick` fzf picker, and `src/extract/common.hpp` the comma-list, language
+  `--pick` fzf picker, and `extract/common.hpp` the comma-list, language
   family and `label: value` helpers. The four prompts include
   `"../extract/render.hpp"` and call the engine directly — no subprocess.
-- **Standalone CLI.** `src/md_extract_main.cpp` is `bin/md.extract`: the
+- **Standalone CLI.** `app/md-extract/main.cpp` is `bin/md.extract`: the
   flag-based interface (`--kind`/`--lang`/`--select`/`--items`/`--contract`/
   `--json`/`-o`, …) that predates the selector language, byte-compatible for
   pipelines (`… | git apply`). It uses `std::regex` for its qualifier/heading/

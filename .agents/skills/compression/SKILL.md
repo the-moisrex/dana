@@ -1,9 +1,9 @@
 ---
 name: Compression Engine
-description: The deterministic dana context-compression layer (src/compress, .compress, .compress.list, .project, .compress.delegate) — compressors, regions, signals, intent wiring and AI-driven composition.
+description: The deterministic dana context-compression layer (compress/, .compress, .compress.list, .project, .compress.delegate) — compressors, regions, signals, intent wiring and AI-driven composition.
 ---
 
-# Compression engine (`src/compress/*`, `.compress`, `.project`)
+# Compression engine (`compress/*`, `.compress`, `.project`)
 
 Companion skills: `chain-contract`, `agentic-chains`, `file-filter`.
 
@@ -12,19 +12,19 @@ sources, Google Test files, CSV dumps, included headers) with a compact
 high-signal summary while recording what was elided, so the AI sees the shape of
 the code without the bodies. It is deterministic and local: no AI call and no
 network. The registry, the fenced-region scanner and the planner live in
-`src/compress/compress.{hpp,cpp}`.
+`compress/compress.{hpp,cpp}`.
 
-- **One file = one compressor.** A compressor is `src/compress/<name>.cpp`
+- **One file = one compressor.** A compressor is `compress/<name>.cpp`
   implementing an `applies_fn` (does this unit claim the region?) and a
   `compress_fn` (a `region const&` and a `signals const&` → one `outcome`), and
   ending with one `compress::register_compressor(compressor{…})`. CMake globs
-  `src/compress/*.cpp` (like the extractors), so adding a compressor is a single
+  `compress/*.cpp` (like the extractors), so adding a compressor is a single
   new file. The registry is a fixed array of `compressor_capacity` (128) slots
   and aborts at startup on overflow rather than silently dropping a unit.
 - **A region, not a document.** A compressor only ever sees a `region` — the
   body of one fenced block (context mode) or one file (source mode), plus its
   inferred `path`, normalized `lang`, first `line` and `focused` flag — so every
-  unit is testable on a plain string (`tests/test_compress.cpp` does exactly
+  unit is testable on a plain string (`tests/unit/test_compress.cpp` does exactly
   that, with no fixture file). One compressor wins a region: the highest
   `priority`, registration order breaking a tie.
 - **The signals.** `compress::signals` carries the chain's `intent`
@@ -55,7 +55,7 @@ network. The registry, the fenced-region scanner and the planner live in
   error sites and the `[  FAILED  ]` test names). `keys::focus` is
   newline-separated (`signals::parse_focus`/`join_focus`), and `.compress` reads
   both facts from `v.prior`; `--for MODE` overrides the intent.
-- **`.compress [FILE…]`** (`src/prompts/compress.cpp`) is an ordinary prompt:
+- **`.compress [FILE…]`** (`prompts/compress.cpp`) is an ordinary prompt:
   with FILEs it compresses those files, and with no FILE it compresses the piped
   input (a fence-less source file is wrapped in a fence with a guessed language;
   a document already carrying fences is scanned for regions). A FILE argument is
@@ -67,7 +67,7 @@ network. The registry, the fenced-region scanner and the planner live in
   intent is not `general` or `--project` is given.
 - **`.compress.list`** prints the project line and every registered compressor
   with its one-line summary — the catalog face of the subsystem, and the menu an
-  AI reads to choose a unit. **`.project`** (`src/prompts/project.cpp`) detects
+  AI reads to choose a unit. **`.project`** (`prompts/project.cpp`) detects
   the project shape (`project::detect`) and publishes
   `keys::project_language`/`project_build`/`project_build_dir`/`project_package`/
   `project_tests`; `.compress` shares the same (process-cached) detection and
@@ -85,7 +85,6 @@ network. The registry, the fenced-region scanner and the planner live in
   delegate/`.extract`/`.exec` pattern as `.delegate`). FILE arguments resolve
   like `.compress`'s; with no FILE it reads the piped input.
 
-Tests: `tests/test_compress.cpp` (signals, `cpp.symbols`, `csv.sample` including
+Tests: `tests/unit/test_compress.cpp` (signals, `cpp.symbols`, `csv.sample` including
 sniffing and short input, `gtest.units` in general/fix/no-failure modes, the
-document engine's round-trip/focal/budget/`--only`/`--skip`, and the catalog)
-plus the `compress` ctest.
+document engine's round-trip/focal/budget/`--only`/`--skip`, and the catalog).

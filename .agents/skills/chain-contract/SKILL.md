@@ -13,7 +13,7 @@ Two types, one direction each: `dana::view` is everything a segment may
 **read**, `dana::result` is everything it may **produce**. Nothing in a prompt
 mutates chain state, which is what makes forked parallel segments safe.
 
-- **Reading** (`sdk/stage.hpp`): `v.name`, `v.args` (a span — `.empty()`,
+- **Reading** (`runtime/stage.hpp`): `v.name`, `v.args` (a span — `.empty()`,
   `.size()`, indexed), `v.in.text()` (the shared stdin, a `string_view`),
   `v.env.git_root`/`v.env.exe_path`, `v.text` (the accumulated chain context,
   which a sink reads), `v.body` (the raw `.each` body tokens, empty for every
@@ -24,7 +24,7 @@ mutates chain state, which is what makes forked parallel segments safe.
   `r.err` (stderr, exit stays 0), `r.stderr_buffer` (sink streaming only),
   `r.published` (facts later segments read), `r.no_clipboard`, `r.clear`
   (sinks: drop the accumulated context after this sink succeeds).
-- **Fail by throwing** (`src/sdk/errors.hpp`): `usage_error` (exit 2),
+- **Fail by throwing** (`runtime/errors.hpp`): `usage_error` (exit 2),
   `soft_error` (exit 1), or `prompt_error` with `message`, `partial_output`,
   `no_clipboard`, `stdin_consumed`. `main.cpp` catches them once; a failed
   prompt's partial stdout is still accumulated and the chain continues.
@@ -45,14 +45,14 @@ mutates chain state, which is what makes forked parallel segments safe.
   prior facts, which is what lets a later file prompt skip what an earlier one
   emitted and see the filter an earlier `.files.exclude`/`.files.scope` set.
 
-### Facts (`sdk/facts.hpp`)
+### Facts (`runtime/facts.hpp`)
 
 Facts are the only inter-prompt channel: an ordered string→string store with
-well-known keys in `namespace dana::keys`. Values are length-prefixed on the
+well-known keys in `enum struct dana::keys`. Values are length-prefixed on the
 wire, so any content (newlines, UTF-8) survives. There are exactly two write
 points, with two merge rules:
 
-- **Declarations** — `register_prompt`'s last argument, a
+- **Declarations** — `register_prompt`'s `declare` hook, a
   `void declare_<name>(declaration& d)`. They run in the parent _before_ any
   batch forks and keep the **first** writer, so parallel siblings agree on
   identity derived purely from `d.args`/`d.env` (cheap: no I/O, no fzf, no
@@ -71,12 +71,12 @@ order resolve the same instrument. `.delegate` and `.expect` publish
 `.delegate` can ask the AI to name the file. File prompts share `keys::files`
 (`files.emitted`), the newline-separated canonical paths whose content the chain
 has already embedded: a prompt builds a `file_scope` from `v.prior`
-(`sdk/file_scope.hpp`), skips `seen()` files, `mark()`s what it embeds and
+(`runtime/file_scope.hpp`), skips `seen()` files, `mark()`s what it embeds and
 publishes the ordered union as its artifact, so
 `prompt .read.grep X .files.grep X .files X .read X` embeds each file once. A
 prompt opts in by registering with `register_file_prompt` (which sets
 `prompt_descriptor::emits_files`, serializing a batch that contains one) and
-`--no-dedup` (`sdk/args.hpp`'s `kNoDedupFlag`, carried in `file_options.dedup`)
+`--no-dedup` (`runtime/args.hpp`'s `kNoDedupFlag`, carried in `file_options.dedup`)
 re-emits a file for a continuation read like `.read X --offset 100`. Facts are
 deliberately opt-in: add a key when two prompts genuinely cannot work it out
 from their own arguments, not as a general channel.
@@ -85,12 +85,12 @@ The chain-wide file filter rides the same channel: `.files.exclude` publishes
 `keys::excluded_files` (`files.excluded`, newline-separated patterns that
 accumulate) and `.files.scope` publishes `keys::file_root` (`files.root`, an
 absolute directory, last writer wins). Every file prompt builds a
-`file_filter` from `v.prior` (`sdk/file_filter.hpp`) and applies it before
+`file_filter` from `v.prior` (`runtime/file_filter.hpp`) and applies it before
 `file_scope` dedup and emission; a filter step registers with
 `register_file_filter` (which sets `prompt_descriptor::filters_files`, also
 serializing a batch). See the `file-filter` skill.
 
-The fork wire (`sdk/wire.hpp`) carries a `segment_outcome` — stdout, stderr, the
+The fork wire (`runtime/wire.hpp`) carries a `segment_outcome` — stdout, stderr, the
 separate stderr buffer, the published facts, the output flags and the exit
 status — as one length-prefixed blob per child; `drain_all()` polls every child
 pipe at once instead of draining them in turn.
@@ -102,7 +102,7 @@ on; there is no other implementation to stay compatible with. Three behaviours
 are deliberate and worth keeping in mind:
 
 - **One text-fold rule.** Every emitted segment goes through
-  `text::append_block` (`src/core/strings.{hpp,cpp}`): the block is trimmed of
+  `text::append_block` (`core/strings.{hpp,cpp}`): the block is trimmed of
   leading and trailing newlines, an empty segment contributes nothing (no stray
   separator), consecutive blocks are separated by exactly one blank line, and the
   buffer ends with exactly one newline. The chain context (`chain_state::append`),
@@ -128,7 +128,7 @@ When changing output, prefer the shared helpers (`file_usage_help`,
 - Prefer a raw string literal (`R"PROMPT(...)PROMPT"`) for multi-line prose and
   `std::format` for interpolation.
 - The usage lines and the shared `--head`/`--num` options come from
-  `file_usage_help` / `file_options_help` (`sdk/args.hpp`); don't re-type them.
+  `file_usage_help` / `file_options_help` (`runtime/args.hpp`); don't re-type them.
 - `new` (`new.cpp`) generates a new native prompt and embeds the SDK headers
   plus `fix.cpp` as assets. Those snapshots are baked in at build time from
   `PROMPT_ASSETS` in `CMakeLists.txt` (add a header there when the guidance

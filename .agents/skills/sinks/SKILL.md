@@ -15,7 +15,7 @@ touch the AI code or the dispatcher: the descriptor role makes `main.cpp` batch
 everything before it, hand the sink the accumulated `v.text`, and let its answer
 become the context later segments see.
 
-- **Shared flags are dispatcher-owned** (`sdk/sink_types.hpp` + `sink.hpp`):
+- **Shared flags are dispatcher-owned** (`runtime/sink_types.hpp` + `sink.hpp`):
   `--on-error abort|continue|skip` (default abort), `--with-context`,
   `--show-context` and `--head N`. `parse_sink_args` removes them once in
   `main.cpp`; the sink implementation only sees its own arguments.
@@ -31,12 +31,12 @@ become the context later segments see.
   `process::command`'s `on_stdout`/`on_stderr` tee callbacks.
 - **Terminal rendering:** a tool-backed sink's stdout is a pipe, so a tool that
   checks `isatty()` would drop its colour/Markdown. Pass its force-terminal flag
-  (as `ai.*` does with `bin/ai --tty`) when `isatty(STDOUT_FILENO)`, keep the
-  styled bytes display-only, and take the chain context from a plain side
-  channel — `ai.*` reads `bin/ai --context-file` back into `r.out`, so rich
-  frames never reach the clipboard or the next prompt. Forward the terminal size
-  too (`bin/ai --width`/`--height`, from `TIOCGWINSZ`): the child cannot measure
-  a terminal it is not attached to.
+  when `isatty(STDOUT_FILENO)`, keep the styled bytes display-only, and take the
+  chain context from a plain side channel (a `--context-file` read back into
+  `r.out`), so rich frames never reach the clipboard or the next prompt. Forward
+  the terminal size too (`--width`/`--height`, from `TIOCGWINSZ`): the child
+  cannot measure a terminal it is not attached to. The native `ai.*` sinks now
+  render in-process, but the same split applies to any external tool sink.
 - **Help:** call `render_sink_help(out)` for the shared `Options:` block; the
   prompt's own help follows it. Completion derives every flag from that block.
 - **Failure:** throw `prompt_error` like any prompt. The dispatcher catches it,
@@ -55,13 +55,13 @@ become the context later segments see.
   `r.no_clipboard`): once that sink succeeds, the dispatcher drops the
   accumulated text, the filename hint, the redaction flag, the barrier stderr
   and the source-batch taint, while emitted output, the clipboard and the exit
-  status stay untouched. `.clear` (`src/prompts/clear.cpp`) does only that;
-  `.flush` (`src/prompts/save.cpp`) does it after a completed write, so a failed
+  status stay untouched. `.clear` (`prompts/clear.cpp`) does only that;
+  `.flush` (`prompts/save.cpp`) does it after a completed write, so a failed
   save keeps the context. A prompt that knows a good filename publishes the
   basename stem as the `keys::save_stem` fact (`r.published.set(keys::save_stem,
   stem)`), which the dispatcher carries through parallel children to later
   sinks; a prompt with no preferred name simply publishes nothing. `.save`
-  (`src/prompts/save.cpp`) is the reference passthrough sink: it writes the same
+  (`prompts/save.cpp`) is the reference passthrough sink: it writes the same
   context an AI sink receives, refuses to overwrite unless `--force`, sanitizes
   the hint and appends `.md` to derived names. With no explicit `FILE`/`DIR` its
   `declare_` hook additionally publishes `keys::save_wants_name`, which is what
@@ -70,15 +70,15 @@ become the context later segments see.
   suppresses the request. `tse`, `tse.codal`,
   `tse.intraday` and `files` provide hints. `.flush` shares `.save`'s parser,
   preflight and writer, with its own command name in messages. `.c.c`
-  (`src/prompts/clipboard.cpp`) is the clipboard passthrough: it copies the
+  (`prompts/clipboard.cpp`) is the clipboard passthrough: it copies the
   context to the system clipboard and leaves it unchanged, so it can sit before
   another sink. Its paste counterparts `.clipboard` and `.c.p` are ordinary
   source prompts — a source never receives the chain context, which is exactly
   why copying has to be a sink.
-- **Stash snapshots:** `.stash` (`src/prompts/stash.cpp`) is a silent sink that
+- **Stash snapshots:** `.stash` (`prompts/stash.cpp`) is a silent sink that
   reads `view.chain` (the raw `chain_state`, not the legend-prefixed
   `view.text`) and `view.prior`, and writes one JSON file per name through
-  `sdk/stash.{hpp,cpp}`. `.stashed` (`src/prompts/stashed.cpp`) is the restore
+  `runtime/stash.{hpp,cpp}`. `.stashed` (`prompts/stashed.cpp`) is the restore
   sink: it sets `result::restore` (a whole `chain_state`) and
   `result::restore_append`; the dispatcher assigns it in `update_from_sink`
   without deriving anything from the sink's output. It registers
@@ -88,16 +88,16 @@ become the context later segments see.
   still restored. `.stash.list`/`.stash.show`/`.stash.drop` are ordinary
   `record=false` prompts.
 - **Path transforms:** `.paths.hide` and `.paths.reveal`
-  (`src/prompts/paths_alias.cpp`) are silent sinks that rewrite the context in
+  (`prompts/paths_alias.cpp`) are silent sinks that rewrite the context in
   place and emit nothing. `.paths.hide` maps the working directory, the git root
   and any PATH arguments to stable placeholders and publishes
   `keys::path_alias`; `.paths.reveal` restores the real paths from that fact.
   Every `.ai.*` sink reads the fact to hide what it sends and reveal the answer.
   See the `agent-loop` skill.
-- `ai.*` (`src/prompts/ai.cpp`) is the reference family: eight web provider
-  registrations plus the `ai.debate` relay, one shared executor,
-  `--print-prompt` passed through to `bin/ai`, and `--stdin-only` so positional
-  prompt text cannot silently replace the chain. Three more registrations
+- `ai.*` (`prompts/ai.cpp`) is the reference family: eight web provider
+  registrations plus `.ai.debate`, one shared in-process executor,
+  `--print-prompt` printing exactly what would be sent, and `--stdin-only` so
+  positional prompt text cannot silently replace the chain. Three more registrations
   (`.ai.lms`, `.ai.openai`, `.ai.openrouter`) reuse that executor for the
   OpenAI-compatible HTTP providers; the `ai_provider` struct carries an `api`
   flag (and `local` for the local server), which switches the help's
@@ -106,19 +106,18 @@ become the context later segments see.
   the sink plumbing is untouched. `--list`/`--models` (and `--list --json`/
   `--list --all`) are handled by the in-process engine for the endpoint's model
   catalogue. **Every model list and friendly-name alias lives in one file,
-  `src/ai/models.{hpp,cpp}`**; each provider's `provider_info` reads it, so
+  `ai/models.{hpp,cpp}`**; each provider's `provider_info` reads it, so
   adding/removing a model is a one-line edit there and both `--list` and the
   `-m`/`--model` completion (one `complete_ai_<provider>` wrapper per sink,
   `--model=` included) pick it up. The API providers (`lms`, `openai`,
   `openrouter`) have empty static lists because they discover their models from
   the endpoint.
-  `.ai.debate` is a thin wrapper
-  over `bin/ai.debate` (the providers passed as leading arguments, API ones
-  included); the
+  `.ai.debate` runs in-process through the same executor (the providers passed
+  as leading arguments, API ones included); the
   relay loop, framing and context-file writing live in
-  `prompts/src/ai/debate.{hpp,cpp}`, which reuses
-  `prompts/src/ai/cli.{hpp,cpp}`'s turn/renderer/context helpers. `-c`/`--new`
-  are forwarded too; the panel state is stored by `prompts/src/ai/state.cpp`
+  `ai/debate.{hpp,cpp}`, which reuses
+  `ai/cli.{hpp,cpp}`'s turn/renderer/context helpers. `-c`/`--new`
+  are forwarded too; the panel state is stored by `ai/state.cpp`
   under `$XDG_STATE_HOME/ai/debate-<providers>.json`. Its completion
   callback (`complete_ai_debate`) offers the provider names (aliases included),
   `PROVIDER=` after `-m`/`--model`, and that provider's models once the
@@ -133,13 +132,13 @@ become the context later segments see.
   otherwise re-send and keeps only the newly appended text. `.ai.loop` and its
   eleven `.ai.<provider>.loop` aliases reuse the same session setup and run
   many turns on one conversation (see the `agent-loop` skill). The state layout
-  lives in `prompts/src/ai/state.cpp`: the plain `ai/<provider>.json` (for `-c`) is
+  lives in `ai/state.cpp`: the plain `ai/<provider>.json` (for `-c`) is
   mirrored per terminal under `ai/terminals/<scope>/<provider>.json` with a
   `last` marker (and a global `ai/last`); `<scope>` is
-  `dana::terminal::scope` (`src/sdk/terminal.cpp`), matched byte-for-byte by
+  `dana::terminal::scope` (`runtime/terminal.cpp`), matched byte-for-byte by
   `state::terminal_scope()`. `.ai.debate` mirrors each participant and sets
   `last` to `debate`, so `.ai.reply <provider>` is required to continue one.
-- **Network resilience.** `src/ai/http.cpp` owns the retry policy so every
+- **Network resilience.** `ai/http.cpp` owns the retry policy so every
   provider inherits it: a request is retried on a transient status
   (408/425/429/500/502/503/504) or a transport failure (DNS, connect, TLS,
   reset, stalled transfer), with exponential backoff + jitter, an honoured
@@ -158,44 +157,29 @@ become the context later segments see.
   failures; `is_transient` is the broader gate the providers use for
   turn-level recovery.
 
-Tests: `tests/test_sink.cpp` (flag parsing, streaming/tee, timeout), the
+Tests: `tests/unit/test_sink.cpp` (flag parsing, streaming/tee, timeout), the
 `plan_chain`/`ai.*`/`save` registration and `tse` declaration cases in
-`tests/test_chaining.cpp`, `tests/test_facts.cpp` (the fact store and its two
-merge rules, the wire codec, `segment_outcome` round-trip), `tests/test_clipboard.cpp`
-(the pasted-text → instrument policy), `tests/test_clipboard_prompt.sh`
+`tests/unit/test_chaining.cpp`, `tests/unit/test_facts.cpp` (the fact store and its two
+merge rules, the wire codec, `segment_outcome` round-trip), `tests/unit/test_clipboard.cpp`
+(the pasted-text → instrument policy), `tests/integration/test_clipboard_prompt.sh`
 (end-to-end `.clipboard`/`.c.p` paste and `.c.c` copy through a stubbed xclip),
-`tests/test_ai_sink.sh` (end-to-end `--tty`/`--width`/`--height` and
-`--context-file` plumbing through stub providers), `tests/test_ai_debate_sink.sh`
+`tests/integration/test_ai_sink.sh` (end-to-end `--tty`/`--width`/`--height` and
+`--context-file` plumbing through stub providers), `tests/integration/test_ai_debate_sink.sh`
 (the same plumbing for `.ai.debate`, plus provider/flag forwarding),
-`tests/test_save.sh` (end-to-end save targets, passthrough, `--head`,
-no-clobber and sanitized names), `tests/test_clear.sh` (context reset between
+`tests/integration/test_save.sh` (end-to-end save targets, passthrough, `--head`,
+no-clobber and sanitized names), `tests/integration/test_clear.sh` (context reset between
 sections, piped stdin, hint and failure-taint reset, `.flush` == `.save` +
-`.clear`, preflight), `tests/test_stash.cpp` (name validation, scope paths, the
+`.clear`, preflight), `tests/unit/test_stash.cpp` (name validation, scope paths, the
 JSON round-trip, append merging, shadowing, sanitization, malformed files and
-the cross-process append lock) and `tests/test_stash.sh` (end-to-end
+the cross-process append lock) and `tests/integration/test_stash.sh` (end-to-end
 `.stash`/`.stashed`, scope shadowing, fact/flag restoration, the management
-subcommands and completion); `tests/test_ai_reply.sh` (end-to-end `.ai.reply` through
+subcommands and completion); `tests/integration/test_ai_reply.sh` (end-to-end `.ai.reply` through
 stub providers: terminal-scoped provider selection, exact `--reply` resumption,
-`--any`, explicit providers and the only-new-text rule), `tests/test_ai_state.py`
+`--any`, explicit providers and the only-new-text rule), `tests/unit/test_ai.cpp`
 (the `ai.state` terminal scope, mirroring, `last` markers, expiry, clear and
-debate participant mirroring), `tests/test_ai_debate.py` exercises the relay
-loop offline (turn order, framing, `--rounds`/`--until-agree`, context
-selection, failure), `tests/test_ai_lms.py` drives the API providers against a
-threaded `http.server` stub (SSE mapping, discovery + caching, model defaulting,
-`--param` forwarding, inline attachments, `-c` transcript replay, the
-`--prompt-file` refusal and the error remedies), `tests/test_ai_gap.py` checks
-the GapGPT turn-recovery path offline (the ack's `chat_token` becomes the
-conversation id and a resumed send carries it back under `chat_token`, the poll
-fallback carries the `accessToken` bearer and reads
-the turn, a transport error or a `StreamError` is non-fatal, and `_read_turn`
-survives a raising poll), `tests/test_ai_perplexity.py` covers the Perplexity
-block stream offline (markdown diffs, workflow items, thinking steps, the
-`COMPLETED` step-blob fallback and stored-thread extraction),
-`tests/test_ai_gemini.py` covers Gemini's length-prefixed frames (UTF-16
-lengths, text/thinking deltas, error frames, model aliases and the
-batchexecute history bodies), `tests/test_ai_claude.py` covers Claude's
-Messages SSE stream (chat creation/resume, the `parent_message_uuid` chain, the
-wiggle upload attachment shape and history normalisation), and the
-`ai_help`/`ai_lms_help`/`ai_openai_help`/`ai_openrouter_help`/`ai_claude_help`/`ai_print_prompt`/`ai_debate_help`/
-`ai_debate_print_prompt`/`ai_reply_help` ctest smokes exercise an offline sink
-chain.
+debate participant mirroring, the provider registry, the HTTP retry policy
+against a stub server, and rendering), `tests/unit/test_ai_debate.cpp` exercises
+the relay loop offline (turn order, framing, `--rounds`/`--until-agree`, context
+selection, failure), `tests/unit/test_ai_pow.cpp` covers the proof-of-work
+solver, and `tests/integration/test_ai_native.sh` drives the native `ai.cli`
+binary end to end.

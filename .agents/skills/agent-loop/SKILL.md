@@ -1,6 +1,6 @@
 ---
 name: Agent Loop and Path Aliasing
-description: The dana .ai.loop agentic session (driver, session setup, tool execution, first message, budgets, output) and the path-aliasing layer (.paths.hide/.paths.reveal, sdk/alias) used by AI sinks.
+description: The dana .ai.loop agentic session (driver, session setup, tool execution, first message, budgets, output) and the path-aliasing layer (.paths.hide/.paths.reveal, runtime/alias) used by AI sinks.
 ---
 
 # Agentic loop (`.ai.loop`, `.ai.<provider>.loop`)
@@ -14,15 +14,15 @@ is the same executor with the provider baked into the prompt name
 (`.ai.gap.loop`, `.ai.dseek.loop`, …); `.ai.loop [PROVIDER]` takes it as a
 leading argument or `--provider`.
 
-- **Three pieces, each independently testable.** `src/ai/agent_loop.{hpp,cpp}`
+- **Three pieces, each independently testable.** `ai/agent_loop.{hpp,cpp}`
   is the pure driver (`run_agent_loop`): everything with a side effect is
   injected (`turn`, `run_tools`, `status`), so it is unit-tested with no
-  provider (`tests/test_agent_loop.cpp`). `src/ai/sink_session.{hpp,cpp}` is the
+  provider (`tests/unit/test_agent_loop.cpp`). `ai/sink_session.{hpp,cpp}` is the
   setup half the plain `.ai.*` sink and the loop share (`prepare_sink`,
   `open_sink_session`, `make_turn_options`, `save_sink_state`), so provider
   resolution, `--print-prompt`/`--list`/`--print-session`, session loading,
   model resolution, resume state and the terminal-scope save cannot drift apart.
-  `src/sdk/tool_exec.{hpp,cpp}` is the execution half `.tools.run` and the loop
+  `runtime/tool_exec.{hpp,cpp}` is the execution half `.tools.run` and the loop
   share (`tool_exec::run`): extract, `to_argv`, policy approval, in-process
   `run_sub_prompt`, `### Tool:` blocks, the JSON report and the per-turn call
   cap.
@@ -32,7 +32,7 @@ leading argument or `--provider`.
   `--agents`) and the chain context under `# Task`. Later turns carry only the
   tool results, so the conversation stays coherent and the task is not re-sent.
 - **Path hiding.** By default the real workspace paths are replaced with a
-  stable placeholder (`sdk/alias.hpp`): the header shows
+  stable placeholder (`runtime/alias.hpp`): the header shows
   `/prompt-ws-<hash>/…`, the assembled message is hidden, every tool call is
   revealed before it runs and its `### Tool:` result is hidden again, and the
   final answer (or transcript) is revealed. `--real-paths` sends the real paths.
@@ -55,17 +55,15 @@ leading argument or `--provider`.
   the assembled first message before any session is opened). The mapping is
   published as `keys::path_alias`, so a later `.ai.reply` hides its instruction
   and reveals the answer.
-- **Tests.** `tests/test_agent_loop.cpp` (turn order, the tool feedback prompt,
-  the no-call stop, exhaustion, failure, truncation), `tests/test_alias.cpp`
-  (the mapping itself) plus the
-  `agent_loop`/`alias`/`ai_loop_help`/`ai_loop_print_prompt`/`ai_loop_real_paths`/
-  `ai_loop_complete`/`paths_hide`/`paths_reveal` ctests.
+- **Tests.** `tests/unit/test_agent_loop.cpp` (turn order, the tool feedback prompt,
+  the no-call stop, exhaustion, failure, truncation) and `tests/unit/test_alias.cpp`
+  (the mapping itself).
 
-# Path aliasing (`sdk/alias.*`, `.paths.hide`, `.paths.reveal`)
+# Path aliasing (`runtime/alias.*`, `.paths.hide`, `.paths.reveal`)
 
 The AI-facing path layer: real absolute paths are replaced with a stable,
 non-existent placeholder directory and translated back when the model names a
-file. `src/sdk/alias.{hpp,cpp}` is the reusable mechanism; `.ai.loop` builds a
+file. `runtime/alias.{hpp,cpp}` is the reusable mechanism; `.ai.loop` builds a
 table for its workspace, and `.paths.hide` publishes one for every later
 `.ai.*` sink.
 
@@ -93,6 +91,5 @@ table for its workspace, and `.paths.hide` publishes one for every later
   context it sends and reveals the answer it gets back (`--print-prompt` keeps
   the hidden form, since that is exactly what would be sent).
 
-Tests: `tests/test_alias.cpp` (boundaries, round-trip, stable/non-existent
-placeholders, the header, the codec, the environment mapping) plus the
-`alias`/`paths_hide`/`paths_reveal` ctests.
+Tests: `tests/unit/test_alias.cpp` (boundaries, round-trip, stable/non-existent
+placeholders, the header, the codec, the environment mapping).

@@ -198,7 +198,7 @@ namespace dana {
 
     // Register a sink: the same registry entry with role=sink. Sink flags
     // (--on-error/--with-context/--show-context/--head) are handled by the
-    // dispatcher through sdk/sink.hpp, so adding a sink only needs its own
+    // dispatcher through runtime/sink.hpp, so adding a sink only needs its own
     // executor, help renderer, and stream flag.
     bool register_sink(
       std::string_view name,

@@ -1,9 +1,9 @@
 ---
-name: SDK Helpers
-description: Reference for the dana src/sdk helpers (args, file_scope, file_filter, glob, embed, stage, facts, wire, chain_state, terminal, agent, alias, extract, policy, schema, tool_call, sink, process) so prompts reuse them instead of re-open-coding loops.
+name: Runtime Helpers
+description: Reference for the dana runtime/ helpers (args, file_scope, file_filter, glob, embed, stage, facts, wire, chain_state, terminal, agent, alias, extract, policy, schema, tool_call, sink, process) so prompts reuse them instead of re-open-coding loops.
 ---
 
-# SDK helpers (`src/sdk/`)
+# Runtime helpers (`runtime/`)
 
 Companion skills: `chain-contract`, `file-filter`, `sinks`, `agentic-chains`,
 `tool-calling`, `agent-loop`, `history`.
@@ -54,7 +54,7 @@ Use these instead of re-open-coding the same loops:
   and `paths` compose other prompts) and the free services taking an
   `environment`: `clipboard_content(env)`, `clipboard_identifier(env)`,
   `select_files(env)`, `resolve_input_file(env, wanted)`. `environment` is a
-  plain data bag built once at startup (`src/environment.cpp`'s
+  plain data bag built once at startup (`core/environment.cpp`'s
   `make_environment()`, not `main.cpp`); `view` holds references to it, to the
   prior facts and to the stdin source, so it is aggregate-initialised and
   non-assignable (return it by value only when the referents outlive it). The
@@ -71,7 +71,7 @@ Use these instead of re-open-coding the same loops:
   comparison: an opaque key wins when both sides carry one, otherwise the
   session ids must agree and a differing tty rejects a recycled pid),
   `describe()` and `scope()` (the filesystem-safe `key-…` / `sid-…[_tty-…]`
-  name; `bin/ai`'s `state.terminal_scope()` keeps the same encoding, and
+  name; `ai/state.cpp`'s `state::terminal_scope()` keeps the same encoding, and
   `.ai.reply` uses it to find the provider state this terminal wrote). The
   history store is its first user (`.last`, `--here`), but it
   is deliberately history-agnostic so any future per-terminal feature can share
@@ -109,11 +109,11 @@ Use these instead of re-open-coding the same loops:
 - `sink.hpp` / `sink_types.hpp`: `register_sink` support — `parse_sink_args`,
   `render_sink_help`, `trim_context_lines`, `write_stdout`, `write_stderr` and
   `run_sink_tool` (see the `sinks` skill).
-- `src/core/process.hpp`: `process::command` / `run_command(argv, stdin, env,
+- `core/process.hpp`: `process::command` / `run_command(argv, stdin, env,
   timeout)` — fork/exec, no shell, no quoting. `on_stdout`/`on_stderr` tee each
   chunk while still accumulating it, and the poll loop enforces the timeout
   while reading. `run_command` defaults to 30 s, so a long fetch passes its own
   timeout (`tse_data::run_tool` allows 10 min and turns a timeout, non-zero exit
   or empty dataset into a `prompt <name>: bin/<tool> …` message).
-  `src/core/fs.hpp::bin_tool` locates sibling `bin/` tools (exe dir → git root →
+  `core/fs.hpp::bin_tool` locates sibling `bin/` tools (exe dir → git root →
   cwd → `$PATH`).
