@@ -13,8 +13,8 @@ location for OpenCode and other agent tools, so no config file is needed.
 
 | Skill | Use it for |
 | --- | --- |
-| `prompt-development` | Chain parsing, build/test/lint, adding or changing a prompt or sink registration. **Start here.** |
-| `dogfooding` | Use `prompt` itself while developing: gather context with `.read.grep`/`.files`/`.git.diff`, ask other AIs via `.ai.*`, and batch a whole chain into one invocation. |
+| `prompt-development` | Chain parsing, build/test/lint, adding or changing a prompt or sink registration, and porting an external `bin/` script to native C++. **Start here.** |
+| `dogfooding` | Use `prompt` itself **before** exploring: gather context with `.read.grep`/`.files`/`.git.diff`, offload judgment to `.ai.*`, and batch a whole chain into one invocation. |
 | `chain-contract` | `dana::view`/`dana::result`, errors, stdin, parallelism, facts and merge rules, output bytes, text rendering. |
 | `file-filter` | `.files.exclude` / `.files.scope` and the shared `file_filter`/`file_scope` helpers. |
 | `prompt-files-and-functions` | `*.prompt` splicing/tokenizer/resolution and the `.func` chain-template pre-pass. |

@@ -1,6 +1,6 @@
 ---
 name: Prompt Development
-description: Work on the dana native C++ prompt dispatcher. Covers chain parsing, the build/test/lint workflow, and how to add or change a prompt or sink registration.
+description: Work on the dana native C++ prompt dispatcher. Covers chain parsing, the build/test/lint workflow, how to add or change a prompt or sink registration, and how to port an external bin/ script into native C++.
 ---
 
 # Prompt Development — `dana`
@@ -104,3 +104,40 @@ whole tree must stay clang-format clean. `CMakePresets.json` also provides
   recorded passes `false, false`.
 - `preflight` runs before the batch forks (cheap validation only); `declare`
   publishes argv-derived facts before the batch (see `chain-contract`).
+
+## Porting an external `bin/` tool into a prompt
+
+A prompt that shells out to `dana::fs::bin_tool("name", ...)` can usually be
+made native. Do this when the tool is a self-contained script (bash/Python) and
+the prompt is its only caller.
+
+1. **Read the contract, not just the happy path.** Open the script and the
+   prompt together (`prompt .read SCRIPT prompts/<name>.cpp` — see the
+   `dogfooding` skill). Note: argument parsing and the `Suite Test`-style
+   combinations, file discovery, dedup/order, the exact stdout bytes, every
+   stderr message, exit codes, and whether stdin is consumed or embedded.
+2. **Keep the prompt's CLI, then decide how faithful to be.** The prompt's help
+   is the contract. Implement the subset it documents; if the old prompt passed
+   extra forms through to the script (explicit files, two-token names), preserve
+   them or update the help deliberately.
+3. **Reuse the core helpers instead of re-opening loops.** `git::tracked_files`
+   for the index, `git::grep` for a boolean search, `text::regex_escape`,
+   `text::strip`, `text::split_lines`, `embed::trim_context_nl`, and
+   `process::run_command` only when a real external tool is unavoidable. Put
+   one-off helpers in an anonymous namespace in the prompt file; add a
+   `core/` module only when a second caller appears.
+4. **Match the bytes.** The prompt output is consumed by chains and compared in
+   reviews. Mirror separators, trailing newlines, the `// File:`/`// Test:`
+   headers, the `--head` trimming, and the no-match/usage messages exactly.
+5. **Verify against the original.** Create a throwaway git repo with fixtures
+   (macros, comments, strings, raw strings, nested braces, duplicate suites) and
+   diff the old script's output against the new prompt's fenced output and
+   stderr for several queries (`--exact`, prefix, slash/macro forms, missing
+   names, explicit files). Then build Release + Debug, run
+   `clang-format -i`, and `clang-tidy -p build` on the file. Newer LLVM
+   clang-tidy reports baseline warnings that existing prompts also emit; fix the
+   ones in your new code and do not chase the pre-existing noise.
+6. **Finish with a dogfooding review** (`prompt .note "Review this port."
+   .git.diff .ai.dseek --no-thinking`; in an agent harness stdin is not a TTY,
+   so pass `.git.diff` explicitly instead of relying on `.verify`) before
+   declaring the port done.
