@@ -117,7 +117,7 @@ namespace dana::ai::state {
             std::vector<std::string> sorted_names{names.begin(), names.end()};
             std::ranges::sort(sorted_names);
             std::string key = "debate";
-            for (auto const& name : names) {
+            for (auto const& name : sorted_names) {
                 key += '-';
                 key += name;
             }
