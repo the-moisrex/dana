@@ -1,6 +1,5 @@
 #include "../core/fs.hpp"
 #include "../core/git.hpp"
-#include "../core/process.hpp"
 #include "../runtime/args.hpp"
 #include "../runtime/embed.hpp"
 #include "../runtime/file_filter.hpp"
@@ -18,10 +17,6 @@ namespace dana {
 
     namespace {
 
-        std::string git_raw(text::string_views args) {
-            return dana::process::run_command(args).stdout_data;
-        }
-
         std::string strip_trailing_newlines(std::string_view s) {
             std::string out(s);
             while (!out.empty() && out.back() == '\n') {
@@ -30,6 +25,14 @@ namespace dana {
             return out;
         }
 
+        std::string join_lines(std::vector<std::string> const& lines) {
+            std::string out;
+            for (auto const& line : lines) {
+                out += line;
+                out.push_back('\n');
+            }
+            return out;
+        }
 
     } // namespace
 
@@ -56,13 +59,14 @@ namespace dana {
 
         std::string output;
         if (!files.empty()) {
-            std::vector<std::string> args = {"git", "diff", "--"};
+            std::vector<std::string> pathspec;
             for (auto const& f : files) {
                 if (!filter.excluded(git_root / f)) {
-                    args.push_back(f);
+                    pathspec.push_back(f);
                 }
             }
-            std::string diff_output = strip_trailing_newlines(git_raw(args));
+            std::string diff_output = strip_trailing_newlines(
+              git::diff(".", {.target = git::diff_target::workdir, .pathspec = std::move(pathspec)}));
             if (!filter.exclude().empty()) {
                 diff_output = dana::git::filter_diff_by_path(diff_output, {}, filter.exclude());
             }
@@ -76,17 +80,13 @@ namespace dana {
                 return;
             }
         } else {
-            auto diff_args      = std::vector<std::string>{"git", "diff"};
-            auto untracked_args = std::vector<std::string>{"git", "ls-files", "--others", "--exclude-standard"};
+            std::vector<std::string> pathspec;
             if (!spec.empty()) {
-                diff_args.emplace_back("--");
-                diff_args.push_back(spec);
-                untracked_args.emplace_back("--");
-                untracked_args.push_back(spec);
+                pathspec.push_back(spec);
             }
-            std::string unstaged_diff      = strip_trailing_newlines(git_raw(diff_args));
-            std::string untracked          = git_raw(untracked_args);
-            std::string untracked_stripped = strip_trailing_newlines(untracked);
+            std::string unstaged_diff =
+              strip_trailing_newlines(git::diff(".", {.target = git::diff_target::workdir, .pathspec = pathspec}));
+            std::string untracked = strip_trailing_newlines(join_lines(git::untracked_files(".", pathspec)));
 
             if (!filter.exclude().empty()) {
                 unstaged_diff = dana::git::filter_diff_by_path(unstaged_diff, {}, filter.exclude());
@@ -98,20 +98,19 @@ namespace dana {
                 output += "```\n\n";
             }
 
-            if (!untracked_stripped.empty()) {
+            if (!untracked.empty()) {
                 output            += "Untracked files:\n\n";
                 // `while IFS= read -r filepath; do ... done <<< "$untracked"` — the
                 // <<< adds one trailing newline, so split the stripped list on \n.
                 std::size_t start  = 0;
-                while (start <= untracked_stripped.size()) {
-                    std::size_t const nl = untracked_stripped.find('\n', start);
+                while (start <= untracked.size()) {
+                    std::size_t const nl = untracked.find('\n', start);
                     std::string const filepath =
-                      (nl == std::string::npos) ? untracked_stripped.substr(start)
-                                                : untracked_stripped.substr(start, nl - start);
-                    std::filesystem::path const full = git_root / filepath;
+                      (nl == std::string::npos) ? untracked.substr(start) : untracked.substr(start, nl - start);
                     std::error_code             ec;
-                    if (
-                      !filepath.empty() && std::filesystem::is_regular_file(full, ec) && !ec && !filter.excluded(full))
+                    std::filesystem::path const full = std::filesystem::absolute(filepath, ec);
+                    if (!filepath.empty() && !ec && std::filesystem::is_regular_file(full, ec) && !ec &&
+                        !filter.excluded(full))
                     {
                         auto const        lang     = infer_lang(std::string_view{filepath.data(), filepath.size()});
                         std::string const content  = read_file(full);
@@ -128,7 +127,7 @@ namespace dana {
                 }
             }
 
-            if (unstaged_diff.empty() && untracked_stripped.empty()) {
+            if (unstaged_diff.empty() && untracked.empty()) {
                 r.out.clear();
                 r.err = "No changes found in the working tree.\n";
                 return;

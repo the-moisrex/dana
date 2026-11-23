@@ -1,5 +1,4 @@
 #include "../core/fs.hpp"
-#include "../core/process.hpp"
 #include "../runtime/args.hpp"
 #include "../runtime/embed.hpp"
 #include "../runtime/file_filter.hpp"
@@ -19,12 +18,6 @@ namespace dana {
 
     namespace {
 
-        // bash captures with `2>/dev/null` — the tool's diagnostics never reach the
-        // user (git_raw is for `$(...)` of a command that may legitimately fail).
-        std::string git_raw(text::string_views args) {
-            return dana::process::command{args}.discard_stderr().run().stdout_data;
-        }
-
         std::string strip_trailing_newlines(std::string_view s) {
             std::string out(s);
             while (!out.empty() && out.back() == '\n') {
@@ -33,22 +26,20 @@ namespace dana {
             return out;
         }
 
-        // Port of `changed_files=($(git diff ... --name-only))` — bash word-splits the
-        // captured output on IFS (space/tab/newline).
-        std::vector<std::string> word_split(std::string_view s) {
+        // Split a newline-separated name list into its non-empty entries.
+        std::vector<std::string> split_lines(std::string_view s) {
             std::vector<std::string> out;
-            std::size_t              i = 0;
-            while (i < s.size()) {
-                while (i < s.size() && (s.at(i) == ' ' || s.at(i) == '\t' || s.at(i) == '\n' || s.at(i) == '\r')) {
-                    ++i;
+            std::size_t              start = 0;
+            while (start <= s.size()) {
+                std::size_t const      nl   = s.find('\n', start);
+                std::string_view const line = s.substr(start, nl == std::string_view::npos ? nl : nl - start);
+                if (!line.empty()) {
+                    out.emplace_back(line);
                 }
-                std::size_t start = i;
-                while (i < s.size() && s.at(i) != ' ' && s.at(i) != '\t' && s.at(i) != '\n' && s.at(i) != '\r') {
-                    ++i;
+                if (nl == std::string_view::npos) {
+                    break;
                 }
-                if (i > start) {
-                    out.emplace_back(s.substr(start, i - start));
-                }
+                start = nl + 1;
             }
             return out;
         }
@@ -57,7 +48,7 @@ namespace dana {
             if (!given.empty()) {
                 return std::string(given);
             }
-            std::string upstream = strip_trailing_newlines(git_raw({"git", "rev-parse", "--abbrev-ref", "@{u}"}));
+            std::string upstream = git::upstream_branch();
             if (upstream.empty()) {
                 return "origin/main";
             }
@@ -102,31 +93,22 @@ namespace dana {
         file_filter const filter = file_filter::from(v.prior, v.env);
         std::string       spec;
         if (filter.has_root() && !v.env.git_root.empty()) {
-            spec = filter.root().lexically_relative(v.env.git_root).generic_string();
-            if (spec == ".") {
-                spec.clear();
-            }
+            spec = filter.root().string();
         }
 
         std::vector<std::string> changed_files;
         if (!files.empty()) {
             changed_files = files;
         } else {
-            std::vector<std::string> diff_args = {base_branch};
-            if (!not_commit.empty()) {
-                diff_args.emplace_back("--not");
-                diff_args.push_back(not_commit);
-            }
-            std::vector<std::string> git_cmd = {"git", "diff"};
-            for (auto const& a : diff_args) {
-                git_cmd.push_back(a);
-            }
-            git_cmd.emplace_back("--name-only");
-            git_cmd.emplace_back("--");
+            git::diff_request request;
+            request.target           = git::diff_target::revision;
+            request.revision         = base_branch;
+            request.exclude_revision = not_commit;
+            request.name_only        = true;
             if (!spec.empty()) {
-                git_cmd.push_back(spec);
+                request.pathspec.push_back(spec);
             }
-            changed_files = word_split(git_raw(git_cmd));
+            changed_files = split_lines(git::diff(".", request));
         }
 
         if (!filter.exclude().empty()) {

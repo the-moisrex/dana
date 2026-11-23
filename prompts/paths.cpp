@@ -1,4 +1,5 @@
 #include "../core/fs.hpp"
+#include "../core/git.hpp"
 #include "../core/process.hpp"
 #include "../core/strings.hpp"
 #include "../runtime/args.hpp"
@@ -65,16 +66,8 @@ namespace dana {
             return {clean, line_num};
         }
 
-        // git ls-files --error-unmatch <path> &>/dev/null — silence both streams.
-        bool git_tracked(std::string_view path) noexcept try {
-            std::array<std::string_view, 4> const cmdline{
-              "bash",
-              "-c",
-              "git ls-files --error-unmatch \"$0\" >/dev/null 2>&1",
-              path,
-            };
-            return process::run_command(cmdline).exit_code == 0;
-        } catch (...) {
+        // git ls-files --error-unmatch <path>: true when the index tracks it.
+        bool git_tracked(std::string_view path) noexcept try { return git::is_tracked(".", path); } catch (...) {
             return false;
         }
 

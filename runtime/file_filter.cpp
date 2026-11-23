@@ -1,5 +1,6 @@
 #include "file_filter.hpp"
 
+#include "../core/git.hpp"
 #include "../core/glob.hpp"
 #include "../core/process.hpp"
 
@@ -84,31 +85,17 @@ namespace dana {
             return false;
         }
 
-        // The file list git would show: tracked plus untracked-but-not-ignored files,
-        // NUL-separated so spaces and newlines survive.
+        // The file list git would show: tracked plus untracked-but-not-ignored files.
         std::optional<std::vector<fs_std::path>> git_listing(fs_std::path const& git_root) {
-            std::vector<std::string> const cmdline{
-              {"git", "-C", git_root.string(), "ls-files", "--cached", "--others", "--exclude-standard", "-z"}
-            };
-            auto const result = process::run_command(cmdline, "");
-            if (result.exit_code != 0) {
+            try {
+                std::vector<fs_std::path> files;
+                for (auto const& entry : dana::git::all_files(git_root.string())) {
+                    files.emplace_back(git_root / entry);
+                }
+                return files;
+            } catch (...) {
                 return std::nullopt;
             }
-
-            std::vector<fs_std::path> files;
-            std::string_view const    bytes = result.stdout_data;
-            std::size_t               begin = 0;
-            while (begin < bytes.size()) {
-                auto const end = bytes.find('\0', begin);
-                if (end == std::string_view::npos) {
-                    break;
-                }
-                if (end != begin) {
-                    files.emplace_back(git_root / std::string(bytes.substr(begin, end - begin)));
-                }
-                begin = end + 1;
-            }
-            return files;
         }
 
         // A native recursive walk, used outside a repository or when git cannot list.

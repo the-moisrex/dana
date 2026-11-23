@@ -1,6 +1,5 @@
 #include "core/git.hpp"
 
-#include "../core/process.hpp"
 #include "../runtime/args.hpp"
 #include "../runtime/embed.hpp"
 #include "../runtime/prompt_registry.hpp"
@@ -16,26 +15,6 @@
 namespace dana {
 
     namespace {
-
-        // Run `git <args>` in the inherited cwd (git.sh never uses -C / find_git_root
-        // for its own git calls, so the output is cwd-relative exactly like the script).
-        std::string git_raw(text::string_views args) {
-            return process::run_command(args).stdout_data;
-        }
-
-        // ```bash echo "$(git branch --show-current ... || echo detached)"``` only
-        // substitutes 'detached' on a non-zero exit, so the exit code matters here.
-        std::string git_branch() {
-            auto const result = process::run_command({"git", "branch", "--show-current"});
-            if (result.exit_code != 0) {
-                return "detached";
-            }
-            std::string out = result.stdout_data;
-            while (!out.empty() && out.back() == '\n') {
-                out.pop_back(); // $(...) strips them
-            }
-            return out;
-        }
 
         // Port of `git status --short | head -20` (direct to stdout, not captured):
         // the first n complete \n-terminated lines, verbatim.
@@ -85,11 +64,11 @@ Common scenarios you can help with:
         // Embed git status context if in a git repo.
         if (git::is_inside_worktree()) {
             output += "Current git context:\n\n```text\n";
-            output += std::format("Branch: {}\n", git_branch());
+            output += std::format("Branch: {}\n", git::current_branch());
             output += "Status:\n";
-            output += head_lines_raw(git_raw({"git", "status", "--short"}), 20);
+            output += head_lines_raw(git::status_short(), 20);
             output += "\nRecent commits:\n";
-            output += git_raw({"git", "log", "--oneline", "-10"});
+            output += git::log_oneline(10);
             output += "```\n\n";
         }
 

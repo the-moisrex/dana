@@ -1,11 +1,10 @@
 #include "project.hpp"
 
 #include "../core/fs.hpp"
-#include "../core/process.hpp"
+#include "../core/git.hpp"
 
 #include <algorithm>
 #include <array>
-#include <chrono>
 #include <cstdlib>
 #include <fstream>
 #include <iterator>
@@ -77,34 +76,23 @@ namespace dana::project {
             return std::nullopt;
         }
 
-        std::string run_git(path const& root, text::string_views args, std::chrono::milliseconds timeout) {
-            std::vector<std::string> argv{"git", "-C", root.string()};
-            argv.insert(argv.end(), args.begin(), args.end());
-            auto result = process::command{argv}.capture_stderr().discard_stderr().timeout(timeout).run();
-            return result.exit_code == 0 ? std::move(result.stdout_data) : std::string{};
-        }
-
         std::string git_ls_files(path const& root) {
-            return run_git(root, {"ls-files"}, std::chrono::seconds(10));
+            std::string listing;
+            for (auto const& file : dana::git::tracked_files(root.string())) {
+                listing += file;
+                listing += '\n';
+            }
+            return listing;
         }
 
-        // `git grep -E -l <patterns> -- <globs>`: one command instead of reading the
-        // tree; empty when nothing matches (git grep exits 1).
+        // `git grep -E -l <patterns> -- <globs>`: one pass over the index instead
+        // of reading the tree; false when nothing matches.
         bool git_grep(path const& root, text::string_views patterns, std::span<char const* const> globs = {}) {
-            std::vector<std::string> argv{"grep", "-E", "-l", "--no-color"};
-            for (auto const& pattern : patterns) {
-                argv.emplace_back("-e");
-                argv.emplace_back(pattern);
+            try {
+                return dana::git::grep(root.string(), patterns, globs);
+            } catch (...) {
+                return false;
             }
-            argv.emplace_back("--");
-            if (globs.empty()) {
-                argv.emplace_back(".");
-            } else {
-                for (char const* glob : globs) {
-                    argv.emplace_back(glob);
-                }
-            }
-            return !run_git(root, argv, std::chrono::seconds(5)).empty();
         }
 
         std::string lower_ext(std::string_view extension) {
@@ -263,11 +251,7 @@ namespace dana::project {
             if (is_file(root / "conftest.py") || is_file(root / "pytest.ini") || is_file(root / "tox.ini")) {
                 return test_framework::pytest;
             }
-            if (!run_git(root,
-                         {"grep", "-E", "-l", "--no-color", "-e", "^def test_", "--", "*.py"},
-                         std::chrono::seconds(5))
-                   .empty())
-            {
+            if (git_grep(root, {"^def test_"}, std::array<char const*, 1>{"*.py"})) {
                 return test_framework::pytest;
             }
             if (file_contains(root / "package.json", "\"jest\"") || file_contains(root / "package.json", "\"vitest\""))

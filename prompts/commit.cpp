@@ -1,5 +1,4 @@
 #include "../core/git.hpp"
-#include "../core/process.hpp"
 #include "../runtime/args.hpp"
 #include "../runtime/embed.hpp"
 #include "../runtime/file_filter.hpp"
@@ -104,68 +103,13 @@ Keep it specific and practical, not generic. Only return copyable commit message
         }
 
         std::string diff_type = "staged changes";
-        std::string diff      = git::run({"git", "diff", "--cached"});
+        std::string diff      = git::diff(".", {.target = git::diff_target::cached});
 
         if (diff.empty()) {
             diff_type = "unstaged and untracked changes";
-            diff      = git::run({"git", "diff"});
-
-            // Run both operations from the root so subdirectory invocations
-            // include all untracked files and resolve their paths consistently.
-            auto root_result = process::run_command({"git", "rev-parse", "--show-cdup"});
-            if (root_result.exit_code != 0) {
-                throw soft_error{"prompt commit: Error: Could not locate repository root.\n"};
-            }
-
-            std::string root = std::move(root_result.stdout_data);
-            while (!root.empty() && root.back() == '\n') {
-                root.pop_back();
-            }
-            if (root.empty()) {
-                root = ".";
-            }
-
-            // NUL-delimited names preserve newlines and other special characters.
-            std::array<std::string, 7> const
-                       cmdline{"git", "-C", root, "ls-files", "--others", "--exclude-standard", "-z"};
-            auto const listing = process::run_command(cmdline);
-            if (listing.exit_code != 0) {
-                throw soft_error{"prompt commit: Error: Could not list untracked files.\n"};
-            }
-
-            auto const& names = listing.stdout_data;
-            for (std::size_t pos = 0; pos < names.size();) {
-                auto const end = names.find('\0', pos);
-                if (end == std::string::npos) {
-                    throw soft_error{"prompt commit: Error: Invalid untracked-file list.\n"};
-                }
-
-                auto path = names.substr(pos, end - pos);
-                pos       = end + 1;
-                if (path.empty()) {
-                    continue;
-                }
-
-                if (path.ends_with('/')) {
-                    throw soft_error{
-                      std::format("prompt commit: Cannot diff untracked directory '{}'; stage it first.\n", path)};
-                }
-
-                // Let Git handle modes, symlinks, binary files, and newline markers.
-                std::array<std::string, 8> const
-                     diff_cmdline{"git", "-C", root, "diff", "--no-index", "--", "/dev/null", "./" + path};
-                auto file_diff = process::run_command(diff_cmdline);
-
-                // --no-index returns 1 when it finds a difference.
-                if (file_diff.exit_code != 0 && file_diff.exit_code != 1) {
-                    throw soft_error{std::format("prompt commit: Error: Could not diff untracked file '{}'.\n", path)};
-                }
-
-                if (!diff.empty() && diff.back() != '\n') {
-                    diff.push_back('\n');
-                }
-                diff += file_diff.stdout_data;
-            }
+            diff      = git::diff(
+              ".",
+              {.target = git::diff_target::workdir, .include_untracked = true, .show_untracked_content = true});
         }
 
         if (!opts.exclude.empty() || !opts.only.empty()) {

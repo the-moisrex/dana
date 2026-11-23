@@ -35,40 +35,23 @@ namespace dana {
             std::vector<std::string> dirs;
         };
 
-        // Single-quote a value for embedding inside a bash -c pipeline the prompt will
-        // re-parse (run_command adds the outer layer of quoting).
-        std::string sh_quote(std::string_view s) {
-            std::string out = "'";
-            for (char c : s) {
-                if (c == '\'') {
-                    out += "'\\''";
-                } else {
-                    out += c;
-                }
-            }
-            out += '\'';
-            return out;
-        }
-
-        // Port of `git ls-files [-- DIR] | tree [-L depth] --fromfile`. Run as one
-        // bash -c pipeline: tree reads the file list from the pipe exactly like the
-        // script (its colour/summary output depends on how it is invoked — run_pipeline
-        // feeds it a temp file and tree changes its default output under popen).
+        // Port of `git ls-files [-- DIR] | tree [-L depth] --fromfile`. The file
+        // list comes from libgit2; `tree` still renders it from stdin exactly like
+        // the script (its colour/summary output depends on how it is invoked).
         std::string run_tree(text::string_views ls_dirs, text::string_views tree_args) {
-            std::string ls = "git ls-files";
-            if (!ls_dirs.empty()) {
-                ls += " --";
-                for (auto const& d : ls_dirs) {
-                    ls += ' ' + sh_quote(d);
-                }
+            std::string              listing;
+            std::vector<std::string> dirs(ls_dirs.begin(), ls_dirs.end());
+            for (auto const& file : git::tracked_files(".", dirs)) {
+                listing += file;
+                listing.push_back('\n');
             }
-            std::string tr = "tree";
+
+            std::vector<std::string> argv{"tree"};
             for (auto const& a : tree_args) {
-                tr += ' ' + sh_quote(a);
+                argv.emplace_back(a);
             }
-            tr                               += " --fromfile";
-            std::vector<std::string> storage  = {"bash", "-c", ls + " | " + tr};
-            return dana::process::run_command(storage).stdout_data;
+            argv.emplace_back("--fromfile");
+            return dana::process::run_command(argv, listing).stdout_data;
         }
 
         repo_format parse_format(std::string_view value) {
@@ -141,32 +124,10 @@ namespace dana {
             return opts;
         }
 
-        // `git ls-files -z` once: the compact/paths/dirs formats need no `tree` binary,
-        // and the NUL separator keeps any path intact.
+        // `git ls-files -z` once: the compact/paths/dirs formats need no `tree` binary.
         std::vector<std::string> list_tracked(text::string_views dirs) {
-            std::vector<std::string> argv{"git", "ls-files", "-z"};
-            if (!dirs.empty()) {
-                argv.emplace_back("--");
-                argv.insert(argv.end(), dirs.begin(), dirs.end());
-            }
-            auto const res = process::command(argv).capture_stderr().run();
-            if (res.exit_code != 0) {
-                throw soft_error{"prompt repo: git ls-files failed: " + res.stderr_data};
-            }
-
-            std::vector<std::string> files;
-            std::size_t              start = 0;
-            while (start < res.stdout_data.size()) {
-                std::size_t const end  = res.stdout_data.find('\0', start);
-                std::size_t const stop = end == std::string::npos ? res.stdout_data.size() : end;
-                if (stop > start) {
-                    files.emplace_back(res.stdout_data.substr(start, stop - start));
-                }
-                if (end == std::string::npos) {
-                    break;
-                }
-                start = end + 1;
-            }
+            std::vector<std::string> pathspec(dirs.begin(), dirs.end());
+            auto                     files = git::tracked_files(".", pathspec);
             std::sort(files.begin(), files.end());
             return files;
         }

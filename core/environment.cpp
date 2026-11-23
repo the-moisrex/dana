@@ -2,6 +2,7 @@
 
 #include "core/clipboard.hpp"
 #include "core/fs.hpp"
+#include "core/git.hpp"
 #include "core/process.hpp"
 
 #include <exception>
@@ -190,24 +191,8 @@ namespace dana {
         }
 
         // Git is an optional accelerator; no listing selects native traversal.
-        [[nodiscard]] std::optional<std::string> try_git_listing(stdfs::path const& root) try {
-            std::vector<std::string> const cmdline{
-              {
-               "git", "-C",
-               root.string(),
-               "ls-files", "--cached",
-               "--others", "--exclude-standard",
-               "--full-name", "-z",
-               }
-            };
-            auto result = process::run_command(cmdline, "");
-
-            if (result.exit_code != 0) [[unlikely]] {
-                return std::nullopt;
-            }
-
-            // std::nullopt on nonzero exit before accepting partial output.
-            return std::move(result.stdout_data);
+        [[nodiscard]] std::optional<std::vector<std::string>> try_git_listing(stdfs::path const& root) try {
+            return dana::git::all_files(root.string());
         } catch (std::bad_alloc const&) {
             throw;
         } catch (std::exception const&) {
@@ -298,30 +283,16 @@ namespace dana {
             };
 
             if (git_root) {
-                // Assumes run_command executes an argv vector without a shell and
-                // preserves embedded NUL bytes in stdout_data.
                 auto const listing = try_git_listing(root);
 
                 if (listing) {
-                    std::string_view const bytes = *listing;
-                    std::size_t            begin = 0;
+                    for (auto const& entry : *listing) {
+                        stdfs::path const relative{entry};
 
-                    while (begin < bytes.size()) {
-                        auto const end = bytes.find('\0', begin);
-                        if (end == std::string_view::npos) {
-                            break; // Ignore a truncated record.
+                        // Git normally guarantees repository-relative paths.
+                        if (!relative.is_absolute()) {
+                            consider(relative);
                         }
-
-                        if (end != begin) {
-                            stdfs::path relative{std::string(bytes.substr(begin, end - begin))};
-
-                            // Git normally guarantees repository-relative paths.
-                            if (!relative.is_absolute()) {
-                                consider(relative);
-                            }
-                        }
-
-                        begin = end + 1;
                     }
                 }
 

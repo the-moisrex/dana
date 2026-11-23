@@ -1,4 +1,5 @@
 #include "../core/fs.hpp"
+#include "../core/git.hpp"
 #include "../core/process.hpp"
 #include "../runtime/args.hpp"
 #include "../runtime/embed.hpp"
@@ -87,11 +88,11 @@ Please review the build setup, dependencies, and target structures.
         std::vector<std::string> files;
         std::string              search_dir;
         if (!v.env.git_root.empty()) {
-            std::vector<std::string> storage = {"bash", "-c", R"(git -C "$0" ls-files -- "$@" 2>/dev/null)"};
-            storage.push_back(v.env.git_root.string());
-            storage.emplace_back("*CMakeLists.txt");
-            storage.emplace_back("*.cmake");
-            files      = split_lines(dana::process::run_command(storage).stdout_data);
+            try {
+                files = git::tracked_files(v.env.git_root.string(), {"*CMakeLists.txt", "*.cmake"});
+            } catch (...) {
+                files.clear();
+            }
             search_dir = v.env.git_root.string();
         } else {
             for (auto& f :

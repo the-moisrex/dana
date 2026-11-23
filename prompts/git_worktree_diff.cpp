@@ -1,5 +1,4 @@
 #include "../core/git.hpp"
-#include "../core/process.hpp"
 #include "../runtime/args.hpp"
 #include "../runtime/embed.hpp"
 #include "../runtime/file_filter.hpp"
@@ -15,12 +14,6 @@ namespace dana {
 
     namespace {
 
-        // bash captures with `2>/dev/null` — the tool's diagnostics never reach the
-        // user (git_raw is for `$(...)` of a command that may legitimately fail).
-        std::string git_raw(text::string_views args) {
-            return dana::process::command{args}.discard_stderr().run().stdout_data;
-        }
-
         std::string strip_trailing_newlines(std::string_view s) {
             std::string out(s);
             while (!out.empty() && out.back() == '\n') {
@@ -35,7 +28,7 @@ namespace dana {
             if (!given.empty()) {
                 return std::string(given);
             }
-            std::string upstream = strip_trailing_newlines(git_raw({"git", "rev-parse", "--abbrev-ref", "@{u}"}));
+            std::string upstream = git::upstream_branch();
             if (upstream.empty()) {
                 return "origin/main";
             }
@@ -81,34 +74,24 @@ namespace dana {
         file_filter const filter = file_filter::from(v.prior, v.env);
         std::string       spec;
         if (filter.has_root() && !v.env.git_root.empty()) {
-            spec = filter.root().lexically_relative(v.env.git_root).generic_string();
-            if (spec == ".") {
-                spec.clear();
-            }
+            spec = filter.root().string();
         }
 
-        std::vector<std::string> diff_args = {base_branch};
-        if (!not_commit.empty()) {
-            diff_args.emplace_back("--not");
-            diff_args.push_back(not_commit);
-        }
-
-        std::vector<std::string> git_cmd = {"git", "diff"};
-        for (auto const& a : diff_args) {
-            git_cmd.push_back(a);
-        }
-        git_cmd.emplace_back("--");
+        git::diff_request request;
+        request.target           = git::diff_target::revision;
+        request.revision         = base_branch;
+        request.exclude_revision = not_commit;
         if (!files.empty()) {
             for (auto const& f : files) {
                 if (!filter.excluded(v.env.git_root / f)) {
-                    git_cmd.push_back(f);
+                    request.pathspec.push_back(f);
                 }
             }
         } else if (!spec.empty()) {
-            git_cmd.push_back(spec);
+            request.pathspec.push_back(spec);
         }
 
-        std::string diff_output = strip_trailing_newlines(git_raw(git_cmd));
+        std::string diff_output = strip_trailing_newlines(git::diff(".", request));
         if (!filter.exclude().empty()) {
             diff_output = dana::git::filter_diff_by_path(diff_output, {}, filter.exclude());
         }

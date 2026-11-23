@@ -1,4 +1,5 @@
 #include "../core/fs.hpp"
+#include "../core/git.hpp"
 #include "../core/process.hpp"
 #include "../runtime/args.hpp"
 #include "../runtime/embed.hpp"
@@ -22,8 +23,11 @@ namespace dana {
         }
 
         std::string git_toplevel() {
-            auto const r = process::run_command({"git", "rev-parse", "--show-toplevel"});
-            return r.exit_code == 0 ? strip_trailing_newlines(r.stdout_data) : std::string{};
+            try {
+                return git::toplevel();
+            } catch (...) {
+                return {};
+            }
         }
 
     } // namespace

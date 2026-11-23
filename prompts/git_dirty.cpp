@@ -1,6 +1,5 @@
 #include "../core/fs.hpp"
 #include "../core/git.hpp"
-#include "../core/process.hpp"
 #include "../runtime/args.hpp"
 #include "../runtime/embed.hpp"
 #include "../runtime/file_filter.hpp"
@@ -20,18 +19,21 @@ namespace dana {
 
     namespace {
 
-        std::string git_raw(text::string_views args) {
-            return dana::process::run_command(args).stdout_data;
-        }
-
-        // Port of `var="$(git ...)"` — trailing newlines stripped (matters for the
-        // `[[ -n ]]` content checks and the `echo "$var"` renders).
-        std::string capture(text::string_views args) {
-            std::string out = git_raw(args);
+        std::string strip_trailing_newlines(std::string_view s) {
+            std::string out(s);
             while (!out.empty() && out.back() == '\n') {
                 out.pop_back();
             }
             return out;
+        }
+
+        std::string join_lines(std::vector<std::string> const& lines) {
+            std::string out;
+            for (auto const& line : lines) {
+                out += line;
+                out.push_back('\n');
+            }
+            return strip_trailing_newlines(out);
         }
 
         // Split an already-stripped (\n-free-trailing) string on '\n'; no trailing
@@ -138,17 +140,22 @@ namespace dana {
         // A scope is an implicit pathspec: the git commands only look below it.
         std::string spec;
         if (filter.has_root() && !git_root.empty()) {
-            spec = filter.root().lexically_relative(git_root).generic_string();
-            if (spec == ".") {
-                spec.clear();
-            }
+            spec = filter.root().string();
         }
-        auto const capture_in_scope = [&](std::vector<std::string> args) {
+        auto const capture_diff = [&](git::diff_target target, bool name_status) {
+            git::diff_request request;
+            request.target      = target;
+            request.name_status = name_status;
             if (!spec.empty()) {
-                args.emplace_back("--");
-                args.push_back(spec);
+                request.pathspec.push_back(spec);
             }
-            return capture(args);
+            return strip_trailing_newlines(git::diff(".", request));
+        };
+        auto const capture_untracked = [&] {
+            if (spec.empty()) {
+                return join_lines(git::untracked_files("."));
+            }
+            return join_lines(git::untracked_files(".", {spec}));
         };
 
         std::string staged_files;
@@ -158,22 +165,20 @@ namespace dana {
         std::string untracked_files;
 
         if (filter_staged) {
-            staged_files = capture_in_scope(std::vector<std::string>{"git", "diff", "--cached", "--name-status"});
-            staged_diff  = capture_in_scope(std::vector<std::string>{"git", "diff", "--cached"});
+            staged_files = capture_diff(git::diff_target::cached, true);
+            staged_diff  = capture_diff(git::diff_target::cached, false);
         }
         if (filter_unstaged) {
-            unstaged_files = capture_in_scope(std::vector<std::string>{"git", "diff", "--name-status"});
-            unstaged_diff  = capture_in_scope(std::vector<std::string>{"git", "diff"});
-            untracked_files =
-              capture_in_scope(std::vector<std::string>{"git", "ls-files", "--others", "--exclude-standard"});
+            unstaged_files  = capture_diff(git::diff_target::workdir, true);
+            unstaged_diff   = capture_diff(git::diff_target::workdir, false);
+            untracked_files = capture_untracked();
         }
         if (filter_all) {
-            staged_files   = capture_in_scope(std::vector<std::string>{"git", "diff", "--cached", "--name-status"});
-            staged_diff    = capture_in_scope(std::vector<std::string>{"git", "diff", "--cached"});
-            unstaged_files = capture_in_scope(std::vector<std::string>{"git", "diff", "--name-status"});
-            unstaged_diff  = capture_in_scope(std::vector<std::string>{"git", "diff"});
-            untracked_files =
-              capture_in_scope(std::vector<std::string>{"git", "ls-files", "--others", "--exclude-standard"});
+            staged_files    = capture_diff(git::diff_target::cached, true);
+            staged_diff     = capture_diff(git::diff_target::cached, false);
+            unstaged_files  = capture_diff(git::diff_target::workdir, true);
+            unstaged_diff   = capture_diff(git::diff_target::workdir, false);
+            untracked_files = capture_untracked();
         }
 
         // --except inverts the active filter. The branch order (staged, unstaged,
@@ -181,15 +186,14 @@ namespace dana {
         // takes the staged branch.
         if (except) {
             if (filter_staged) {
-                unstaged_files = capture_in_scope(std::vector<std::string>{"git", "diff", "--name-status"});
-                unstaged_diff  = capture_in_scope(std::vector<std::string>{"git", "diff"});
-                untracked_files =
-                  capture_in_scope(std::vector<std::string>{"git", "ls-files", "--others", "--exclude-standard"});
+                unstaged_files  = capture_diff(git::diff_target::workdir, true);
+                unstaged_diff   = capture_diff(git::diff_target::workdir, false);
+                untracked_files = capture_untracked();
                 staged_files.clear();
                 staged_diff.clear();
             } else if (filter_unstaged) {
-                staged_files = capture_in_scope(std::vector<std::string>{"git", "diff", "--cached", "--name-status"});
-                staged_diff  = capture_in_scope(std::vector<std::string>{"git", "diff", "--cached"});
+                staged_files = capture_diff(git::diff_target::cached, true);
+                staged_diff  = capture_diff(git::diff_target::cached, false);
                 unstaged_files.clear();
                 unstaged_diff.clear();
                 untracked_files.clear();

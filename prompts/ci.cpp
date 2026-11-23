@@ -1,5 +1,5 @@
 #include "../core/fs.hpp"
-#include "../core/process.hpp"
+#include "../core/git.hpp"
 #include "../runtime/args.hpp"
 #include "../runtime/embed.hpp"
 #include "../runtime/file_scope.hpp"
@@ -13,31 +13,14 @@ namespace dana {
 
     namespace {
 
-        // git -C <root> ls-files -- <patterns...> 2>/dev/null, non-empty lines only.
+        // git -C <root> ls-files -- <patterns...>: tracked files under the root.
         std::vector<std::string> git_ls_files(view const& v, text::string_views patterns) {
-            std::vector<std::string> storage = {"bash", "-c", R"(git -C "$0" ls-files -- "$@" 2>/dev/null)"};
-            storage.push_back(v.env.git_root.string());
-            for (auto const& p : patterns) {
-                storage.emplace_back(p);
+            std::vector<std::string> const pathspec(patterns.begin(), patterns.end());
+            try {
+                return git::tracked_files(v.env.git_root.string(), pathspec);
+            } catch (...) {
+                return {};
             }
-
-            auto const               result = process::run_command(storage);
-            std::vector<std::string> lines;
-            std::size_t              start = 0;
-            while (start <= result.stdout_data.size()) {
-                auto const end = result.stdout_data.find('\n', start);
-                if (end == std::string::npos) {
-                    if (start < result.stdout_data.size()) {
-                        lines.push_back(result.stdout_data.substr(start));
-                    }
-                    break;
-                }
-                if (end > start) {
-                    lines.push_back(result.stdout_data.substr(start, end - start));
-                }
-                start = end + 1;
-            }
-            return lines;
         }
 
         bool contains_ci_path(std::string_view line) {
