@@ -135,8 +135,12 @@ than inventing missing source or hunk coordinates.
         // Piped stdin wins; otherwise run git-dirty with the forwarded arguments.
         // Preserve context formatting: file rendering belongs to git-dirty, and
         // unified diffs already carry line coordinates in their hunk headers.
+        //
+        // A non-TTY harness (CI, an agent shell) attaches an empty pipe, so
+        // `piped()` alone is not enough: only non-empty piped input replaces the
+        // git-dirty context. Otherwise `.verify` would silently verify nothing.
         std::string context;
-        if (v.in.piped()) {
+        if (v.in.piped() && !v.in.text().empty()) {
             context = v.in.text();
         } else {
             std::vector<std::string_view> args;
@@ -188,11 +192,12 @@ than inventing missing source or hunk coordinates.
 
 Verify uncommitted changes in the current Git repository for correctness.
 
-When stdin is piped, that content is used as the context instead of
-git-dirty (e.g. from a clipboard, a saved diff, or the output of
-`git show`). Otherwise the full diff context (files + diffs) is embedded
-via git-dirty and the AI is asked to validate correctness, catch bugs,
-regressions, and missing edge cases.
+When stdin carries piped content, that content is used as the context
+instead of git-dirty (e.g. from a clipboard, a saved diff, or the output
+of `git show`). An empty pipe (as in CI or an agent shell) falls back to
+git-dirty, which embeds the full diff context (files + diffs); the AI is
+asked to validate correctness, catch bugs, regressions, and missing edge
+cases.
 
 All extra arguments are forwarded to git-dirty (e.g. --staged,
 --uncommitted, --except, --diff, --full, --full-diff). Default mode is

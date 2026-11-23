@@ -663,6 +663,8 @@ namespace dana::ai {
           "empty reply",
           "recv failure",
           "send failure",
+          "receiving data from the peer",
+          "sending data to the peer",
           "broken pipe",
           "curl: (6)",
           "curl: (7)",

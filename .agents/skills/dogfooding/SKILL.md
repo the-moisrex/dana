@@ -46,13 +46,13 @@ prompt .read prompts/gtest_case.cpp tests/unit/test_chaining.cpp
 prompt .git.diff
 
 # Review the uncommitted change with a second model.
-prompt .note "Review this diff for correctness and regressions." .git.diff .ai.dseek --no-thinking
+prompt .verify .ai.dseek --no-thinking
 ```
 
-> **Agent harness note:** stdin is not a TTY, so `.verify` sees an empty pipe
-> and skips `git-dirty`. In an agent session, use an explicit `.git.diff`
-> segment (as above) or pipe it: `prompt .git.diff | prompt .verify .ai.dseek`.
-> `.verify` works as documented only from an interactive terminal.
+`.verify` embeds the full uncommitted diff itself; piping a diff into it
+(`prompt .git.diff | prompt .verify .ai.dseek`) replaces that context. Use the
+explicit `.note "..." .git.diff` form when you want to attach a specific
+question to the diff.
 
 Only after a deterministic chain has narrowed the problem should you spend your
 own tokens reading the result or making the edit. If a task needs judgment
@@ -182,14 +182,14 @@ Do not end a non-trivial task without at least one review chain. Run it at the
 end of a change, and again after a non-trivial edit:
 
 ```bash
-prompt .note "Review this diff for correctness." .git.diff .ai.dseek --no-thinking
+prompt .verify .ai.dseek --no-thinking          # review the uncommitted diff
 prompt .git.diff .ai.grok --no-thinking         # a second opinion
 prompt .read.grep 'TODO' .ai.gap --no-thinking  # check the area you touched
 ```
 
-From an interactive terminal you can use the shorter `prompt .verify .ai.dseek
---no-thinking`; in an agent harness stdin is not a TTY, so pass `.git.diff`
-explicitly as above.
+`.verify` picks up the uncommitted diff on its own, so it is the shortest review
+chain. Add `.note "..."` when you want to ask a specific question about the
+diff.
 
 Treat a finding as a hypothesis, not an order: reproduce it with a deterministic
 prompt (`.read`, `.read.grep`, `.grep`) before editing. If the model is wrong,

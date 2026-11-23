@@ -137,7 +137,5 @@ the prompt is its only caller.
    `clang-format -i`, and `clang-tidy -p build` on the file. Newer LLVM
    clang-tidy reports baseline warnings that existing prompts also emit; fix the
    ones in your new code and do not chase the pre-existing noise.
-6. **Finish with a dogfooding review** (`prompt .note "Review this port."
-   .git.diff .ai.dseek --no-thinking`; in an agent harness stdin is not a TTY,
-   so pass `.git.diff` explicitly instead of relying on `.verify`) before
-   declaring the port done.
+6. **Finish with a dogfooding review** (`prompt .verify .ai.dseek
+   --no-thinking`) before declaring the port done.

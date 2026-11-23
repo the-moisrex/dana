@@ -184,6 +184,8 @@ namespace {
         check(is_transient("HTTP 429: too many requests"), "transient 429");
         check(is_transient("curl: (28) timed out"), "transient timeout");
         check(!is_transient("HTTP 401: unauthorized"), "not transient 401");
+        check(is_network_failure("Failure when receiving data from the peer (HTTP 200)"),
+              "libcurl receive error is a network failure");
 
         auto const payloads = sse_payloads({"data: {\"a\":1}", "", ": comment", "event: x", "data:[DONE]"});
         check(payloads.size() == 2, "sse payload count");

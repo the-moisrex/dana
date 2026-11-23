@@ -304,6 +304,13 @@ namespace dana::ai {
                 return !status_.empty() && status_ != "FINISHED";
             }
 
+            // True once the site reported the message as finished. DeepSeek often
+            // resets the SSE socket right after the final frame, which libcurl
+            // reports as a receive error even though the answer is complete.
+            [[nodiscard]] bool finished() const {
+                return status_ == "FINISHED";
+            }
+
           private:
             std::vector<stream_event> snapshot(json const& response) {
                 std::vector<stream_event> out;
@@ -717,27 +724,37 @@ namespace dana::ai {
                 request.timeout_seconds = timeout_;
                 request.debug           = debug_;
                 apply_headers(request, headers);
-                std::ignore = stream_lines(request, [&](std::string_view line) {
-                    std::string const payload = sse_payload(line);
-                    if (!payload.empty()) {
-                        json const object = json::parse(payload, nullptr, false);
-                        if (object.is_discarded()) {
-                            sink(raw(payload));
-                        } else {
-                            for (auto const& event : parser.feed(object)) {
-                                if (event.kind == event_kind::text) {
-                                    answer += event.text;
-                                } else if (event.kind == event_kind::thinking) {
-                                    thinking_text += event.text;
+                try {
+                    std::ignore = stream_lines(request, [&](std::string_view line) {
+                        std::string const payload = sse_payload(line);
+                        if (!payload.empty()) {
+                            json const object = json::parse(payload, nullptr, false);
+                            if (object.is_discarded()) {
+                                sink(raw(payload));
+                            } else {
+                                for (auto const& event : parser.feed(object)) {
+                                    if (event.kind == event_kind::text) {
+                                        answer += event.text;
+                                    } else if (event.kind == event_kind::thinking) {
+                                        thinking_text += event.text;
+                                    }
+                                    sink(event);
                                 }
-                                sink(event);
                             }
                         }
+                        if (debug_ && !line.empty() && !line.starts_with("data:") && !line.starts_with("event:")) {
+                            sink(raw(line));
+                        }
+                    });
+                } catch (http_error const& failure) {
+                    // The site closes the SSE socket abruptly once the final frame
+                    // is out; libcurl then reports a receive error even though the
+                    // message already reached FINISHED. Keep the complete answer
+                    // instead of failing a turn that actually succeeded.
+                    if (!parser.finished() || !is_network_failure(failure.what())) {
+                        throw;
                     }
-                    if (debug_ && !line.empty() && !line.starts_with("data:") && !line.starts_with("event:")) {
-                        sink(raw(line));
-                    }
-                });
+                }
             }
 
             deepseek_provider&                               owner_;
