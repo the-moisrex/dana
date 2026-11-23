@@ -107,7 +107,7 @@ namespace dana::ai {
             auto const exe =
               fs::bin_tool("clipboard", fs::self_path().value_or(std::filesystem::path{}), fs::find_git_root());
 
-            if (exe.empty()) {
+            if (exe.empty()) [[unlikely]] {
                 warn("--copy: no clipboard tool found");
                 return false;
             }
@@ -892,7 +892,7 @@ namespace dana::ai {
             return print_models(*instance, options, out);
         }
 
-        if (options.prompt_file && *options.prompt_file && !instance->info().prompt_file_upload) {
+        if (options.prompt_file && *options.prompt_file && !instance->info().prompt_file_upload) [[unlikely]] {
             warn(std::string("ai.") + *canonical + ": --prompt-file is not supported: " + instance->info().label +
                    " has no upload endpoint, so the prompt is always sent inline; "
                    "raise the model's context length instead",
@@ -900,7 +900,7 @@ namespace dana::ai {
             return 2;
         }
 
-        if (options.stdin_only && !options.prompt.empty()) {
+        if (options.stdin_only && !options.prompt.empty()) [[unlikely]] {
             warn(std::string("ai.") + *canonical +
                    ": positional prompt text is not supported in a chain; "
                    "put instructions in `.note \"...\"` before the sink or use --system",
@@ -921,12 +921,12 @@ namespace dana::ai {
         }
 
         if (options.interactive) {
-            if (options.json) {
+            if (options.json) [[unlikely]] {
                 warn(std::string("ai.") + *canonical + ": -i cannot be combined with --json", "ai");
                 return 2;
             }
 
-            if (::isatty(STDIN_FILENO) == 0) {
+            if (::isatty(STDIN_FILENO) == 0) [[unlikely]] {
                 warn(std::string("ai.") + *canonical + ": -i needs a terminal on stdin", "ai");
                 return 2;
             }
@@ -945,7 +945,7 @@ namespace dana::ai {
             try {
                 auto found = session::load(instance->info().session_target, session_options);
 
-                if (!found) {
+                if (!found) [[unlikely]] {
                     warn(std::string("ai.") + *canonical + ": no signed-in session found for " +
                            instance->info().session_target + "; open " + instance->info().origin + " in a browser once",
                          "ai");
@@ -981,12 +981,12 @@ namespace dana::ai {
 
             std::error_code error_code;
 
-            if (!std::filesystem::exists(full, error_code)) {
+            if (!exists(full, error_code)) [[unlikely]] {
                 warn(std::string("ai.") + *canonical + ": " + path + ": no such file", "ai");
                 return 1;
             }
 
-            if (!std::filesystem::is_regular_file(full, error_code)) {
+            if (!is_regular_file(full, error_code)) [[unlikely]] {
                 warn(std::string("ai.") + *canonical + ": " + path + ": not a regular file", "ai");
                 return 1;
             }
@@ -1006,7 +1006,7 @@ namespace dana::ai {
         } else if (options.reply) {
             resume = state::load_terminal(*canonical, scope);
 
-            if (!resume) {
+            if (!resume) [[unlikely]] {
                 warn(std::string("ai.") + *canonical + ": no chat in this terminal to reply to; start one with ai." +
                        *canonical + " (or run it without --reply)",
                      "ai");
@@ -1015,7 +1015,7 @@ namespace dana::ai {
         } else if (options.continue_) {
             resume = state::load(*canonical);
 
-            if (!resume) {
+            if (!resume) [[unlikely]] {
                 warn(std::string("ai.") + *canonical + ": no saved conversation to continue; starting a new one", "ai");
             }
         }
@@ -1100,8 +1100,10 @@ namespace dana::ai {
             provider const* instance  = canonical ? find_provider(*canonical) : nullptr;
 
             if (instance == nullptr) [[unlikely]] {
-                warn(std::string(name) + ": unknown provider", "ai");
-                continue;
+                [[unlikely]] {
+                    warn(std::string(name) + ": unknown provider", "ai");
+                    continue;
+                }
             }
 
             std::array<std::string_view, 1> const environment_names{
