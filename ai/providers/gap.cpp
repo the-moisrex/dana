@@ -236,8 +236,8 @@ namespace dana::ai {
               : info_{
                   .name                = "gap",
                   .label               = "GapGPT",
-                  .origin              = "https://gapgpt.app",
-                  .session_target      = "gapgpt.app",
+                  .origin              = "https://gapgpt.ir",
+                  .session_target      = "gapgpt.ir",
                   .default_model       = std::string(models::default_model("gap")),
                   .models              = models::list("gap"),
                   .inline_limit        = 24UL * 1024UL,
