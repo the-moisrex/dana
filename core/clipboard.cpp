@@ -3,148 +3,423 @@
 #include "process.hpp"
 
 #include <algorithm>
-#include <array>
 #include <chrono>
-#include <cstdio>
+#include <cstdint>
 #include <cstdlib>
-#include <filesystem>
-#include <memory>
+#include <format>
+#include <optional>
 #include <regex>
 #include <string>
 #include <string_view>
 #include <thread>
-#include <unistd.h>
+#include <vector>
 
 namespace dana::clipboard {
 
+    static constexpr std::chrono::milliseconds default_timeout{3000};
+
     namespace {
-        backend current_backend = backend::none;
-        bool    initialized     = false;
 
-        struct stdin_tmpfile {
-            std::filesystem::path path;
+        using namespace std::chrono_literals;
 
-            explicit stdin_tmpfile(std::string_view data) {
-                std::string tmpl = "/tmp/prompt_clip_XXXXXX";
-                int         fd   = mkstemp(tmpl.data());
-                if (fd >= 0) {
-                    auto n = ::write(fd, data.data(), data.size());
-                    (void) n;
-                    ::close(fd);
-                    path = tmpl;
-                }
-            }
-
-            ~stdin_tmpfile() {
-                if (!path.empty()) {
-                    std::error_code ec;
-                    std::filesystem::remove(path, ec);
-                }
-            }
+        enum struct family : std::uint8_t {
+            wayland,
+            x11,
         };
+
+        struct session_config {
+            family                    session{family::x11};
+            bool                      kde{false};
+            std::chrono::milliseconds timeout{3s};
+            bool                      initialized{false};
+        };
+
+        session_config config;
+        std::string    error_text;
+
+        bool env_set(char const* name) {
+            char const* value = std::getenv(name);
+            return value != nullptr && *value != '\0';
+        }
+
+        bool env_equals(char const* name, std::string_view expected) {
+            char const* value = std::getenv(name);
+            return value != nullptr && expected == value;
+        }
+
+        family detect_family() {
+            // An actual display socket wins over XDG_SESSION_TYPE: a test or a
+            // nested session may advertise one type while only the other is
+            // reachable, and the clipboard family must follow the socket.
+            if (env_set("WAYLAND_DISPLAY")) {
+                return family::wayland;
+            }
+            if (env_set("DISPLAY")) {
+                return family::x11;
+            }
+            return env_equals("XDG_SESSION_TYPE", "wayland") ? family::wayland : family::x11;
+        }
+
+        void ensure_init() {
+            if (!config.initialized) {
+                init();
+            }
+        }
+
+        struct run_result {
+            std::string out;
+            std::string err;
+            int         exit_code{0};
+            bool        timed_out{false};
+        };
+
+        // Runs a session utility directly (no shell). `discard_output` is for the
+        // tools that fork a clipboard owner: a captured pipe would stay open in
+        // the daemon and make the parent wait for it.
+        run_result run(std::vector<std::string> argv, std::string_view stdin_data = {}, bool discard_output = false) {
+            process::command cmd{std::move(argv)};
+            cmd.stdin_data(std::string(stdin_data));
+            cmd.timeout(config.timeout);
+            if (discard_output) {
+                cmd.discard_stdout();
+                cmd.discard_stderr();
+            } else {
+                cmd.capture_stderr();
+            }
+
+            auto result = cmd.run();
+            return {
+              .out       = std::move(result.stdout_data),
+              .err       = std::move(result.stderr_data),
+              .exit_code = result.exit_code,
+              .timed_out = result.timed_out,
+            };
+        }
+
+        std::string failure(std::string_view tool, run_result const& result) {
+            if (result.timed_out) {
+                return std::format("{} timed out after {}ms", tool, config.timeout.count());
+            }
+            if (!result.err.empty()) {
+                auto message = result.err;
+                while (!message.empty() && (message.back() == '\n' || message.back() == '\r')) {
+                    message.pop_back();
+                }
+                return std::format("{} failed (exit {}): {}", tool, result.exit_code, message);
+            }
+            return std::format("{} failed (exit {})", tool, result.exit_code);
+        }
+
+        std::optional<std::string> qdbus_tool() {
+            for (std::string_view const name : {"qdbus6", "qdbus", "qdbus-qt5"}) {
+                if (process::tool_exists(name)) {
+                    return std::string(name);
+                }
+            }
+            return std::nullopt;
+        }
+
+        bool is_empty_selection(std::string_view const tool, run_result const& result) {
+            if (tool == "wl-paste") {
+                return result.exit_code == 1 && result.err.contains("Nothing is copied");
+            }
+            if (tool == "xclip") {
+                return result.err.contains("not available");
+            }
+            if (tool == "xsel") {
+                return result.exit_code != 0 || result.out.empty();
+            }
+            return false;
+        }
+
+        bool klipper_get(std::string& out) {
+            auto const qdbus = qdbus_tool();
+            if (!qdbus) {
+                return false;
+            }
+
+            auto result = run({*qdbus, "org.kde.klipper", "/klipper", "org.kde.klipper.klipper.getClipboardContents"});
+            if (result.exit_code != 0) {
+                error_text = failure(*qdbus, result);
+                return false;
+            }
+
+            out = std::move(result.out);
+            // qdbus appends exactly one newline to a string reply; strip it.
+            if (!out.empty() && out.back() == '\n') {
+                out.pop_back();
+            }
+            return true;
+        }
+
+        bool klipper_set(std::string_view data) {
+            auto const qdbus = qdbus_tool();
+            if (!qdbus) {
+                return false;
+            }
+
+            auto const result = run({
+              *qdbus,
+              "org.kde.klipper",
+              "/klipper",
+              "org.kde.klipper.klipper.setClipboardContents",
+              std::string(data),
+            });
+            if (result.exit_code != 0) {
+                error_text = failure(*qdbus, result);
+                return false;
+            }
+            return true;
+        }
+
+        bool klipper_call(char const* method) {
+            auto const qdbus = qdbus_tool();
+            if (!qdbus) {
+                return false;
+            }
+
+            auto const result = run({*qdbus, "org.kde.klipper", "/klipper", method});
+            if (result.exit_code != 0) {
+                error_text = failure(*qdbus, result);
+                return false;
+            }
+            return true;
+        }
+
     } // namespace
 
     backend detect_backend() {
-        if (std::getenv("WAYLAND_DISPLAY") != nullptr) {
-            return backend::wayland;
-        }
-        if (std::getenv("KDE_SESSION_VERSION") != nullptr) {
+        if (env_set("KDE_SESSION_VERSION")) {
             return backend::kde;
         }
-        if (std::getenv("DISPLAY") != nullptr) {
+        if (env_set("WAYLAND_DISPLAY")) {
+            return backend::wayland;
+        }
+        if (env_set("DISPLAY")) {
             return backend::x11;
         }
         return backend::none;
     }
 
-    static std::string
-    run_with_timeout(char const* const* argv, std::string_view stdin_data = {}, bool discard_output = false) {
-        std::string cmd;
-        for (int i = 0; argv[i] != nullptr; ++i) {
-            if (i > 0) {
-                cmd += ' ';
-            }
-            cmd += '\'';
-            cmd += argv[i];
-            cmd += '\'';
-        }
-
-        std::unique_ptr<stdin_tmpfile> tmp;
-        if (!stdin_data.empty()) {
-            tmp  = std::make_unique<stdin_tmpfile>(stdin_data);
-            cmd += " < '";
-            cmd += tmp->path.string();
-            cmd += '\'';
-        }
-
-        // Copy backends (wl-copy, xclip) daemonize and inherit our pipe, so
-        // popen would never see EOF — discard their output instead.
-        if (discard_output) {
-            cmd    += " >/dev/null 2>&1";
-            // The clipboard helpers are the user's session tools, not shell input.
-            int rc  = std::system(cmd.c_str()); // NOLINT(bugprone-command-processor)
-            (void) rc;
-            return "";
-        }
-
-        // The command is a fixed backend argv built above, never caller-supplied.
-        FILE* pipe = popen(cmd.c_str(), "r"); // NOLINT(bugprone-command-processor)
-        if (pipe == nullptr) {
-            return "";
-        }
-
-        std::array<char, 4096> buffer;
-        std::string            output;
-        while (fgets(buffer.data(), buffer.size(), pipe) != nullptr) {
-            output += buffer.data();
-        }
-        pclose(pipe);
-        return output;
-    }
-
-    void init([[maybe_unused]] std::chrono::seconds timeout) {
-        if (initialized) {
+    void init(std::chrono::milliseconds const timeout) {
+        config.timeout = timeout.count() > 0 ? timeout : default_timeout;
+        if (config.initialized) {
             return;
         }
-        current_backend = detect_backend();
-        initialized     = true;
+
+        config.session     = detect_family();
+        config.kde         = env_set("KDE_SESSION_VERSION");
+        config.initialized = true;
+    }
+
+    bool available() {
+        ensure_init();
+
+        if (config.kde && qdbus_tool()) {
+            return true;
+        }
+        if (config.session == family::wayland) {
+            return process::tool_exists("wl-paste") || process::tool_exists("wl-copy");
+        }
+        return process::tool_exists("xclip") || process::tool_exists("xsel");
     }
 
     std::string paste() {
-        if (!initialized) {
-            init();
+        ensure_init();
+        error_text.clear();
+
+        if (config.session == family::wayland) {
+            if (process::tool_exists("wl-paste")) {
+                auto result = run({"wl-paste", "--no-newline"});
+                if (result.exit_code == 0) {
+                    return std::move(result.out);
+                }
+                if (is_empty_selection("wl-paste", result)) {
+                    return {};
+                }
+                error_text = failure("wl-paste", result);
+            } else {
+                error_text = "no wayland clipboard utility found (install wl-clipboard)";
+            }
+        } else {
+            if (process::tool_exists("xclip")) {
+                auto result = run({"xclip", "-selection", "clipboard", "-o"});
+                if (result.exit_code == 0) {
+                    error_text.clear();
+                    return std::move(result.out);
+                }
+                if (is_empty_selection("xclip", result)) {
+                    error_text.clear();
+                    return {};
+                }
+                error_text = failure("xclip", result);
+            }
+            if (process::tool_exists("xsel")) {
+                auto result = run({"xsel", "--clipboard", "--output"});
+                if (result.exit_code == 0) {
+                    error_text.clear();
+                    return std::move(result.out);
+                }
+                if (is_empty_selection("xsel", result)) {
+                    error_text.clear();
+                    return {};
+                }
+                error_text = failure("xsel", result);
+            }
+            if (error_text.empty()) {
+                error_text = "no x11 clipboard utility found (install xclip or xsel)";
+            }
         }
 
-        switch (current_backend) {
-            case backend::wayland: {
-                std::array<char const*, 3> argv = {"wl-paste", "--no-newline", nullptr};
-                return run_with_timeout(argv.data());
+        // Klipper is a fallback on either family; its "current" item is history
+        // entry 0, which is why it is not the primary paste path.
+        if (config.kde) {
+            std::string out;
+            if (klipper_get(out)) {
+                error_text.clear();
+                return out;
             }
-            case backend::x11: {
-                std::array<char const*, 5> argv   = {"xclip", "-selection", "clipboard", "-o", nullptr};
-                auto                       result = run_with_timeout(argv.data());
-                if (result.empty()) {
-                    std::array<char const*, 4> argv2 = {"xsel", "--clipboard", "--output", nullptr};
-                    result                           = run_with_timeout(argv2.data());
-                }
-                return result;
-            }
-            case backend::kde: {
-                std::array<char const*, 5> argv = {
-                  "qdbus6",
-                  "org.kde.klipper",
-                  "/klipper",
-                  "org.kde.klipper.klipper.getClipboardContents",
-                  nullptr,
-                };
-                auto result = run_with_timeout(argv.data());
-                if (!result.empty() && result.back() == '\n') {
-                    result.pop_back();
-                }
-                return result;
-            }
-            default: return "";
         }
+        return {};
+    }
+
+    bool copy(std::string_view const data) {
+        ensure_init();
+        error_text.clear();
+
+        if (config.session == family::wayland) {
+            if (process::tool_exists("wl-copy")) {
+                // wl-copy occasionally loses the race with a compositor that is
+                // still starting; retry a couple of times unless it timed out.
+                for (int attempt = 0; attempt < 3; ++attempt) {
+                    auto result = run({"wl-copy", "--type", "text/plain"}, data, true);
+                    if (result.exit_code == 0) {
+                        error_text.clear();
+                        return true;
+                    }
+                    error_text = failure("wl-copy", result);
+                    if (result.timed_out) {
+                        break;
+                    }
+                    if (attempt < 2) {
+                        std::this_thread::sleep_for(200ms);
+                    }
+                }
+            } else {
+                error_text = "no wayland clipboard utility found (install wl-clipboard)";
+            }
+        } else {
+            if (process::tool_exists("xclip")) {
+                auto result = run({"xclip", "-selection", "clipboard", "-i"}, data, true);
+                if (result.exit_code == 0) {
+                    error_text.clear();
+                    return true;
+                }
+                error_text = failure("xclip", result);
+            }
+            if (process::tool_exists("xsel")) {
+                auto result = run({"xsel", "--clipboard", "--input"}, data, true);
+                if (result.exit_code == 0) {
+                    error_text.clear();
+                    return true;
+                }
+                error_text = failure("xsel", result);
+            }
+            if (error_text.empty()) {
+                error_text = "no x11 clipboard utility found (install xclip or xsel)";
+            }
+        }
+
+        if (config.kde && klipper_set(data)) {
+            error_text.clear();
+            return true;
+        }
+        return false;
+    }
+
+    bool clear() {
+        ensure_init();
+        error_text.clear();
+
+        // Klipper first: it repopulates the selection from history right after a
+        // plain X11/Wayland clear.
+        if (config.kde && klipper_call("org.kde.klipper.klipper.clearClipboardContents")) {
+            error_text.clear();
+            return true;
+        }
+
+        if (config.session == family::wayland) {
+            if (process::tool_exists("wl-copy")) {
+                auto result = run({"wl-copy", "--clear"}, {}, true);
+                if (result.exit_code == 0) {
+                    error_text.clear();
+                    return true;
+                }
+                error_text = failure("wl-copy --clear", result);
+            } else {
+                error_text = "no wayland clipboard utility found (install wl-clipboard)";
+            }
+        } else {
+            if (process::tool_exists("xclip")) {
+                auto const result = run({"xclip", "-selection", "clipboard", "-i"}, {}, true);
+                if (result.exit_code == 0) {
+                    error_text.clear();
+                    return true;
+                }
+                error_text = failure("xclip", result);
+            }
+            if (process::tool_exists("xsel")) {
+                auto const result = run({"xsel", "--clipboard", "--delete"}, {}, true);
+                if (result.exit_code == 0) {
+                    error_text.clear();
+                    return true;
+                }
+                error_text = failure("xsel", result);
+            }
+            if (error_text.empty()) {
+                error_text = "no x11 clipboard utility found (install xclip or xsel)";
+            }
+        }
+        return false;
+    }
+
+    std::string history() {
+        ensure_init();
+        error_text.clear();
+
+        if (!config.kde) {
+            error_text = "clipboard history is only supported with klipper";
+            return {};
+        }
+
+        auto const qdbus = qdbus_tool();
+        if (!qdbus) {
+            error_text = "klipper history needs qdbus6/qdbus";
+            return {};
+        }
+
+        auto result = run({*qdbus, "org.kde.klipper", "/klipper", "org.kde.klipper.klipper.getClipboardHistoryMenu"});
+        if (result.exit_code != 0) {
+            error_text = failure(*qdbus, result);
+            return {};
+        }
+        error_text.clear();
+        return std::move(result.out);
+    }
+
+    bool clear_history() {
+        ensure_init();
+        error_text.clear();
+
+        if (!config.kde) {
+            error_text = "clipboard history is only supported with klipper";
+            return false;
+        }
+        return klipper_call("org.kde.klipper.klipper.clearClipboardHistory");
+    }
+
+    std::string const& last_error() {
+        return error_text;
     }
 
     std::optional<std::string> detect_identifier(std::string_view pasted) {
@@ -185,71 +460,6 @@ namespace dana::clipboard {
         }
 
         return std::nullopt;
-    }
-
-    bool copy(std::string_view data) {
-        if (!initialized) {
-            init();
-        }
-
-        switch (current_backend) {
-            case backend::wayland: {
-                std::array<char const*, 4> argv = {"wl-copy", "--type", "text/plain", nullptr};
-                run_with_timeout(argv.data(), data, true);
-                return true;
-            }
-            case backend::x11: {
-                std::array<char const*, 5> argv = {"xclip", "-selection", "clipboard", "-i", nullptr};
-                run_with_timeout(argv.data(), data, true);
-                return true;
-            }
-            case backend::kde: {
-                // bash's bin/clipboard prefers the dbus-send/qdbus call over its
-                // python-dbus client; klipper takes the text as an argv element.
-                process::command cmd{
-                  std::vector<std::string>{
-                                           "qdbus", "org.kde.klipper",
-                                           "/klipper", "org.kde.klipper.klipper.setClipboardContents",
-                                           std::string(data),
-                                           }
-                };
-                cmd.timeout(std::chrono::seconds(5));
-                auto const res = cmd.run();
-                return res.exit_code == 0;
-            }
-            default: return false;
-        }
-    }
-
-    bool clear() {
-        if (!initialized) {
-            init();
-        }
-
-        switch (current_backend) {
-            case backend::wayland: {
-                std::array<char const*, 3> argv = {"wl-copy", "--clear", nullptr};
-                run_with_timeout(argv.data(), {}, true);
-                return true;
-            }
-            case backend::x11: {
-                std::array<char const*, 6> argv = {"xclip", "-selection", "clipboard", "-i", "/dev/null", nullptr};
-                run_with_timeout(argv.data(), {}, true);
-                return true;
-            }
-            case backend::kde: {
-                std::array<char const*, 5> argv = {
-                  "qdbus6",
-                  "org.kde.klipper",
-                  "/klipper",
-                  "org.kde.klipper.klipper.clearClipboardContents",
-                  nullptr,
-                };
-                run_with_timeout(argv.data());
-                return true;
-            }
-            default: return false;
-        }
     }
 
 } // namespace dana::clipboard

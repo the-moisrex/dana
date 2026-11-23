@@ -138,6 +138,11 @@ namespace dana::process {
         return *this;
     }
 
+    command& command::discard_stdout() {
+        m_discard_stdout = true;
+        return *this;
+    }
+
     command& command::inherit_stderr() {
         m_stderr_mode = stderr_mode::inherit;
         return *this;
@@ -164,7 +169,7 @@ namespace dana::process {
         std::array<int, 2> in_pipe{};  // parent -> child
         std::array<int, 2> out_pipe{}; // child -> parent
         std::array<int, 2> err_pipe{}; // child -> parent (capture mode only)
-        if (::pipe(in_pipe.data()) != 0 || ::pipe(out_pipe.data()) != 0) {
+        if (::pipe(in_pipe.data()) != 0 || (!m_discard_stdout && ::pipe(out_pipe.data()) != 0)) {
             result.exit_code   = -1;
             result.stderr_data = "pipe failed";
             return result;
@@ -197,14 +202,17 @@ namespace dana::process {
         // NOTE: no threads exist yet — fork first, then feed the child's stdin
         // from a writer thread in the parent only. Forking while another thread
         // holds a libc lock deadlocks the child inside execvpe.
-        pid_t pid = ::fork();
+        auto const started = std::chrono::steady_clock::now();
+        pid_t      pid     = ::fork();
         if (pid < 0) {
             result.exit_code   = -1;
             result.stderr_data = "fork failed";
             ::close(in_pipe.at(0));
             ::close(in_pipe.at(1));
-            ::close(out_pipe.at(1));
-            ::close(out_pipe.at(0));
+            if (!m_discard_stdout) {
+                ::close(out_pipe.at(1));
+                ::close(out_pipe.at(0));
+            }
             if (capture_err) {
                 ::close(err_pipe.at(0));
                 ::close(err_pipe.at(1));
@@ -216,11 +224,19 @@ namespace dana::process {
             // Child: stdin/stdout are pipes; stderr is inherited (bash's `$(...)`),
             // captured, or merged onto stdout (2>&1).
             ::dup2(in_pipe.at(0), STDIN_FILENO);
-            ::dup2(out_pipe.at(1), STDOUT_FILENO);
+            if (m_discard_stdout) {
+                int null_fd = ::open("/dev/null", O_WRONLY);
+                if (null_fd >= 0) {
+                    ::dup2(null_fd, STDOUT_FILENO);
+                    ::close(null_fd);
+                }
+            } else {
+                ::dup2(out_pipe.at(1), STDOUT_FILENO);
+            }
             if (capture_err) {
                 ::dup2(err_pipe.at(1), STDERR_FILENO);
             } else if (m_stderr_mode == stderr_mode::to_stdout) {
-                ::dup2(out_pipe.at(1), STDERR_FILENO);
+                ::dup2(STDOUT_FILENO, STDERR_FILENO);
             } else if (m_stderr_mode == stderr_mode::discard) {
                 int null_fd = ::open("/dev/null", O_WRONLY);
                 if (null_fd >= 0) {
@@ -229,7 +245,9 @@ namespace dana::process {
                 }
             }
             ::close(in_pipe.at(1));
-            ::close(out_pipe.at(0));
+            if (!m_discard_stdout) {
+                ::close(out_pipe.at(0));
+            }
             if (capture_err) {
                 ::close(err_pipe.at(0));
             }
@@ -242,7 +260,9 @@ namespace dana::process {
         // away when there is none). EOF on that write end is what lets a child
         // that reads stdin exit while the parent is still draining stdout.
         ::close(in_pipe.at(0));
-        ::close(out_pipe.at(1));
+        if (!m_discard_stdout) {
+            ::close(out_pipe.at(1));
+        }
         if (capture_err) {
             ::close(err_pipe.at(1));
         }
@@ -269,8 +289,12 @@ namespace dana::process {
             });
         }
         std::vector<pump_entry> streams;
-        streams.push_back(
-          pump_entry{.fd = out_pipe.at(0), .open = true, .data = &result.stdout_data, .callback = &m_stdout_callback});
+        if (!m_discard_stdout) {
+            streams.push_back(pump_entry{.fd       = out_pipe.at(0),
+                                         .open     = true,
+                                         .data     = &result.stdout_data,
+                                         .callback = &m_stdout_callback});
+        }
         if (capture_err) {
             streams.push_back(pump_entry{.fd       = err_pipe.at(0),
                                          .open     = true,
@@ -278,7 +302,9 @@ namespace dana::process {
                                          .callback = &m_stderr_callback});
         }
         result.timed_out = pump_streams(streams, m_timeout);
-        ::close(out_pipe.at(0));
+        if (!m_discard_stdout) {
+            ::close(out_pipe.at(0));
+        }
         if (capture_err) {
             ::close(err_pipe.at(0));
         }
@@ -295,6 +321,31 @@ namespace dana::process {
         if (result.timed_out) {
             ::waitpid(pid, &status, 0);
             status = -1;
+        } else if (m_timeout.count() > 0) {
+            // A discarded stdout gives pump_streams nothing to read, so the
+            // deadline has to be enforced while reaping too.
+            auto const elapsed =
+              std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started);
+            auto const remaining = m_timeout > elapsed ? m_timeout - elapsed : std::chrono::milliseconds{0};
+            auto const deadline  = std::chrono::steady_clock::now() + remaining;
+            for (;;) {
+                pid_t const reaped = ::waitpid(pid, &status, WNOHANG);
+                if (reaped == pid) {
+                    break;
+                }
+                if (reaped < 0) {
+                    status = -1;
+                    break;
+                }
+                if (std::chrono::steady_clock::now() >= deadline) {
+                    result.timed_out = true;
+                    ::kill(pid, SIGKILL);
+                    ::waitpid(pid, &status, 0);
+                    status = -1;
+                    break;
+                }
+                std::this_thread::sleep_for(std::chrono::milliseconds(2));
+            }
         } else {
             if (::waitpid(pid, &status, 0) < 0) {
                 status = -1;

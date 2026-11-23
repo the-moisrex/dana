@@ -1,7 +1,6 @@
 #include "cli.hpp"
 
-#include "../core/fs.hpp"
-#include "../core/process.hpp"
+#include "../core/clipboard.hpp"
 #include "diagnostics.hpp"
 #include "files.hpp"
 #include "http.hpp"
@@ -104,22 +103,10 @@ namespace dana::ai {
         }
 
         bool copy_answer_text(std::string_view const text) {
-            auto const exe =
-              fs::bin_tool("clipboard", fs::self_path().value_or(std::filesystem::path{}), fs::find_git_root());
-
-            if (exe.empty()) [[unlikely]] {
-                warn("--copy: no clipboard tool found");
+            if (!clipboard::copy(text)) [[unlikely]] {
+                warn("--copy: " + clipboard::last_error());
                 return false;
             }
-
-            std::array<std::string, 2> const command_line{exe.string(), "copy"};
-            auto const result = process::run_command(command_line, text, {}, std::chrono::milliseconds(30'000));
-
-            if (result.exit_code != 0) [[unlikely]] {
-                warn("--copy failed");
-                return false;
-            }
-
             return true;
         }
 

@@ -58,6 +58,12 @@ namespace dana::process {
         command& inherit_stderr();              // stderr_mode::inherit (default)
         command& discard_stderr();              // stderr_mode::discard (`2>/dev/null`)
 
+        // Redirect the child's stdout to /dev/null and do not capture it. Needed
+        // for tools that daemonize and inherit their descriptors (clipboard
+        // owners such as wl-copy/xclip), where a captured pipe would stay open
+        // and make the parent wait for the daemon.
+        command& discard_stdout();
+
         // Tee callbacks: the matching stream is piped, each chunk is passed to the
         // callback as it arrives, and the complete text is still accumulated in
         // command_result. Used by sinks to stream to the terminal without losing
@@ -74,6 +80,7 @@ namespace dana::process {
         std::vector<std::string>  m_env;
         std::chrono::milliseconds m_timeout{0};
         stderr_mode               m_stderr_mode{stderr_mode::inherit};
+        bool                      m_discard_stdout{false};
         chunk_callback            m_stdout_callback;
         chunk_callback            m_stderr_callback;
     };
@@ -82,7 +89,7 @@ namespace dana::process {
     // as $0 $1 .... This is the escape hatch: prefer argv construction above unless
     // the command needs a real shell.
     command_result run_script(
-      std::string_view        script,
+      std::string_view          script,
       text::string_views        extras     = {},
       std::string_view          stdin_data = {},
       std::chrono::milliseconds timeout    = std::chrono::seconds(30));

@@ -1,5 +1,4 @@
 #include "../core/clipboard.hpp"
-#include "../core/fs.hpp"
 #include "../runtime/prompt_registry.hpp"
 
 #include <algorithm>
@@ -11,7 +10,6 @@
 #include <span>
 #include <string>
 #include <thread>
-#include <unistd.h>
 #include <vector>
 
 namespace dana {
@@ -239,24 +237,18 @@ namespace dana {
             }
         }
 
-        // CLIPBOARD existence check (mirrors the script's -x test); the actual I/O
-        // uses the C++ clipboard backend (same wl-clipboard family as bin/clipboard).
-        std::string clipboard_path;
-        if (char const* cmd = std::getenv("CLIPBOARD_CMD")) {
-            clipboard_path = cmd;
-        } else {
-            clipboard_path = dana::fs::bin_tool("clipboard", v.env.exe_path, v.env.git_root).string();
-        }
-        if (::access(clipboard_path.c_str(), X_OK) != 0) {
-            throw soft_error{"prompt ai-said: Clipboard helper not found: " + clipboard_path + "\n"};
+        // The C++ clipboard backend is the session's own utility; no helper
+        // script is needed. Apply --timeout to every backend call.
+        auto const timeout_ms = std::chrono::milliseconds(static_cast<long long>(to_seconds(clip_timeout) * 1000.0));
+        clipboard::init(timeout_ms);
+        if (!clipboard::available()) {
+            throw soft_error{"prompt ai-said: no clipboard backend found for this session\n"};
         }
 
         // Capture the paste like bash's $(...): trailing newlines are stripped.
-        auto paste = [] -> std::string {
-            return strip_trailing_nl(dana::clipboard::paste());
+        auto const paste = [] -> std::string {
+            return strip_trailing_nl(clipboard::paste());
         };
-
-        dana::clipboard::init();
 
         std::string              err;
         std::vector<std::string> entries;

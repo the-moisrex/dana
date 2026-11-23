@@ -217,6 +217,12 @@ namespace dana::git {
         ::git_libgit2_shutdown();
     }
 
+    void repository_deleter::operator()(git_repository* repo) const noexcept {
+        if (repo != nullptr) {
+            ::git_repository_free(repo);
+        }
+    }
+
     void runtime::ensure_initialized() {
         static runtime const instance;
         (void) instance;
@@ -1079,9 +1085,9 @@ namespace dana::git {
                         continue;
                     }
                     auto const slash = file.rfind('/');
-                    auto const base =
+                    auto const cur_base =
                       slash == std::string::npos ? std::string_view{file} : std::string_view{file}.substr(slash + 1);
-                    if (dana::glob::match(glob, file) || dana::glob::match(glob, base)) {
+                    if (glob::match(glob, file) || glob::match(glob, cur_base)) {
                         matched = true;
                         break;
                     }

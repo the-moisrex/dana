@@ -18,7 +18,7 @@ CompileFlags:
             -Wunused-label,
             -Wunused-lambda-capture,
         ]
-    CompilationDatabase: ./build-clang
+    CompilationDatabase: ./build-clang-debug
 Index:
     Background: Build
     StandardLibrary: Yes

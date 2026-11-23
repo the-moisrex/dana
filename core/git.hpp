@@ -3,14 +3,11 @@
 #include "strings.hpp"
 
 #include <cstddef>
-#include <cstdint>
 #include <git2.h>
-#include <initializer_list>
 #include <memory>
 #include <span>
 #include <string>
 #include <string_view>
-#include <system_error>
 #include <vector>
 
 namespace dana::git {
@@ -42,11 +39,7 @@ namespace dana::git {
 
     // RAII deleter for git_repository handles.
     struct repository_deleter final {
-        void operator()(git_repository* repo) const noexcept {
-            if (repo != nullptr) {
-                ::git_repository_free(repo);
-            }
-        }
+        void operator()(git_repository* repo) const noexcept;
     };
 
     using repository_ptr = std::unique_ptr<git_repository, repository_deleter>;
@@ -82,9 +75,9 @@ namespace dana::git {
 
     struct [[nodiscard]] diff_request {
         diff_target              target = diff_target::workdir;
-        std::string              revision;         // revision target: base revision
-        std::string              exclude_revision; // `--not`: diff exclude_revision..revision
-        std::vector<std::string> pathspec;         // cwd-relative or absolute paths
+        std::string              revision{};         // revision target: base revision
+        std::string              exclude_revision{}; // `--not`: diff exclude_revision..revision
+        std::vector<std::string> pathspec{};         // cwd-relative or absolute paths
         bool                     name_only              = false;
         bool                     name_status            = false;
         bool                     include_untracked      = false;
