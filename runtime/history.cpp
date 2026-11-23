@@ -481,7 +481,7 @@ namespace dana {
         if (text.empty()) {
             return std::nullopt;
         }
-        std::size_t        i     = 0;
+        std::size_t   i     = 0;
         std::uint64_t value = 0;
         while (i < text.size() && std::isdigit(static_cast<unsigned char>(text[i])) != 0) {
             value = (value * 10) + static_cast<std::uint64_t>(text[i] - '0');
@@ -626,8 +626,8 @@ namespace dana {
 
     recorder::recorder(info const& run_info) : info_(run_info) {
         // Qualified: the unqualified `enabled()` inside a member would resolve to
-        // the member function of the same name.
-        active_ = enabled();
+        // the member function of the same name (which just returns `active_`).
+        active_ = dana::enabled();
         if (active_ && run_info.inner && !record_inner()) {
             active_ = false;
         }
@@ -689,16 +689,16 @@ namespace dana {
             terminal_meta["key"] = info_.terminal.key;
         }
         json meta{
-          {  "format",                                                                      1},
-          {      "id",                                                                    id_},
+          {  "format",                                                                         1},
+          {      "id",                                                                       id_},
           {      "ts", static_cast<std::int64_t>(std::chrono::system_clock::to_time_t(started_))},
-          { "started",                                                      now_iso(started_)},
-          {    "argv",                                                             info_.argv},
-          {     "cwd",                                                     info_.cwd.string()},
-          {"git_root",                                                info_.git_root.string()},
-          {     "tty",                                                              info_.tty},
+          { "started",                                                         now_iso(started_)},
+          {    "argv",                                                                info_.argv},
+          {     "cwd",                                                        info_.cwd.string()},
+          {"git_root",                                                   info_.git_root.string()},
+          {     "tty",                                                                 info_.tty},
           {     "pid",                                     static_cast<std::int64_t>(::getpid())},
-          {"terminal",                                               std::move(terminal_meta)},
+          {"terminal",                                                  std::move(terminal_meta)},
         };
         if (!info_.parent.empty()) {
             meta["parent"] = info_.parent;
@@ -805,7 +805,7 @@ namespace dana {
         std::string const body     = join_emitted(recorded_, redacted);
         json              end{
           {    "finished",                                                                          now_iso(now)},
-          {          "ts",                     static_cast<std::int64_t>(std::chrono::system_clock::to_time_t(now))},
+          {          "ts",                  static_cast<std::int64_t>(std::chrono::system_clock::to_time_t(now))},
           {          "ms",                                                                               elapsed},
           {        "exit",                                                                             exit_code},
           {  "incomplete",                                                                            incomplete},
