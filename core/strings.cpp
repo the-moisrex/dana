@@ -205,7 +205,7 @@ namespace dana::text {
                        std::string_view           payload,
                        std::optional<std::size_t> head_lines,
                        std::string_view const     language) {
-        auto const trimmed = head_lines.has_value() ? trim_head(payload, *head_lines) : std::string_view(payload);
+        std::string const trimmed = head_lines.has_value() ? trim_head(payload, *head_lines) : std::string(payload);
 
         // out.reserve(out.size() + 3 + language.size() + 1 + trimmed.size() + 5);
         out.append("\n```");

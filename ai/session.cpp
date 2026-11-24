@@ -2,6 +2,7 @@
 
 #include "../core/fs.hpp"
 #include "../core/process.hpp"
+#include "../tools/browser.hpp"
 
 #include <chrono>
 #include <nlohmann/json.hpp>
@@ -45,56 +46,60 @@ namespace dana::ai::session {
     } // namespace
 
     std::optional<match> load(std::string_view target, options const& opts) {
-        auto const exe =
-          dana::fs::bin_tool("browser.session", dana::fs::self_path().value_or(fs::path{}), dana::fs::find_git_root());
-        if (exe.empty()) {
-            throw session_error("browser.session not found next to ai or on PATH");
-        }
+        tools::session_options session_options;
+        session_options.browser   = opts.browser;
+        session_options.profile   = opts.profile;
+        session_options.family    = opts.family;
+        session_options.open_only = opts.open_only;
+        session_options.exact     = opts.exact;
 
-        std::vector<std::string> argv{exe.string(), std::string(target), "--format", "json"};
-        for (auto const& browser : opts.browser) {
-            argv.emplace_back("--browser");
-            argv.push_back(browser);
-        }
-        if (!opts.profile.empty()) {
-            argv.emplace_back("--profile");
-            argv.push_back(opts.profile);
-        }
-        if (!opts.family.empty()) {
-            argv.emplace_back("--family");
-            argv.push_back(opts.family);
-        }
-        if (opts.open_only) {
-            argv.emplace_back("--open-only");
-        }
-        if (opts.exact) {
-            argv.emplace_back("--exact");
-        }
-
-        auto const result =
-          process::run_command(argv, {}, {}, std::chrono::milliseconds(std::max(1, opts.timeout_seconds) * 1000));
-        json data = json::parse(result.stdout_data, nullptr, false);
-        if (data.is_discarded()) {
-            throw session_error("browser.session returned no JSON");
-        }
-        if (!data.contains("matches") || !data["matches"].is_array() || data["matches"].empty()) {
-            return std::nullopt;
-        }
-        auto const& first = data["matches"][0];
-        if (!first.is_object()) {
+        auto const found = tools::find_session(target, session_options);
+        if (!found) {
             return std::nullopt;
         }
 
         match out;
-        out.user_agent    = first.value("user_agent", "");
-        out.cookie_header = first.value("cookie_header", "");
-        out.browser       = first.value("browser", "");
-        out.profile       = first.value("profile", "");
-        out.path          = first.value("path", "");
-        out.is_open       = first.value("is_open", false);
-        out.cookies       = first.contains("cookies") ? first["cookies"] : json::array();
-        out.storage       = first.contains("storage") ? first["storage"] : json::object();
-        out.raw           = first;
+        out.user_agent    = found->user_agent;
+        out.cookie_header = found->cookie_header;
+        out.browser       = found->browser;
+        out.profile       = found->profile;
+        out.path          = found->path;
+        out.is_open       = found->is_open;
+
+        out.cookies = json::array();
+        for (auto const& cookie : found->cookies) {
+            out.cookies.push_back({
+              {     "name",      cookie.name},
+              {    "value",     cookie.value},
+              {     "host",      cookie.host},
+              {     "path",      cookie.path},
+              {  "expires",   cookie.expires},
+              {   "secure",    cookie.secure},
+              {"http_only", cookie.http_only},
+              {"same_site", cookie.same_site}
+            });
+        }
+
+        out.storage = {
+          {  "localstorage", json::object()},
+          {"sessionstorage", json::object()}
+        };
+        for (auto const& entry : found->storage) {
+            out.storage[entry.kind][entry.key] = entry.value;
+        }
+
+        out.raw = {
+          {      "browser",       found->browser},
+          { "browser_name",  found->browser_name},
+          {       "family",        found->family},
+          {      "profile",       found->profile},
+          {         "path",          found->path},
+          {      "is_open",       found->is_open},
+          {   "user_agent",    found->user_agent},
+          {"cookie_header", found->cookie_header},
+          {      "cookies",          out.cookies},
+          {      "storage",          out.storage}
+        };
         return out;
     }
 

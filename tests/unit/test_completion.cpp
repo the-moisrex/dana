@@ -173,8 +173,8 @@ namespace {
 
     // End-to-end wiring: the prompts that know their own operands registered a
     // complete_fn, and their help text feeds the flag parser. `tse`/`tse.intraday`/
-    // `tse.codal` are only checked for registration — invoking them would shell out
-    // to `bin/tse.resolve`. `tse.analyze`/`tse.intraday.analysis` take no arguments,
+    // `tse.codal` are only checked for registration — invoking them would fetch
+    // live market data. `tse.analyze`/`tse.intraday.analysis` take no arguments,
     // so they register no complete_fn.
     void test_registry_wiring() {
         for (char const* name :

@@ -1,11 +1,14 @@
+#include "../tools/tse_intraday.hpp"
+
 #include "../core/fs.hpp"
-#include "../core/process.hpp"
 #include "../runtime/args.hpp"
 #include "../runtime/embed.hpp"
 #include "../runtime/prompt_registry.hpp"
 #include "tse_data.hpp"
 
 #include <algorithm>
+#include <format>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -18,12 +21,12 @@ namespace dana {
     namespace {
 
         struct tse_intraday_prompt_config {
-            std::optional<std::size_t> head_lines;
-            std::string                symbol;
-            std::vector<std::string>   tool_args; // forwarded verbatim to bin/tse.intraday
-            bool                       failed    = false;
-            int                        exit_code = 2;
-            std::string                error;
+            std::optional<std::size_t>   head_lines;
+            std::string                  symbol;
+            tools::tse::intraday_options options;
+            bool                         failed    = false;
+            int                          exit_code = 2;
+            std::string                  error;
         };
 
         tse_intraday_prompt_config parse_tse_intraday_args(view const& v) {
@@ -42,8 +45,6 @@ namespace dana {
                     config.error  = pfx + std::string(flag) + " requires a value\n";
                     return false;
                 }
-                config.tool_args.emplace_back(flag);
-                config.tool_args.emplace_back(v.args[i + 1]);
                 ++i;
                 return true;
             };
@@ -60,8 +61,7 @@ namespace dana {
                         config.error  = pfx + "--days requires a positive integer\n";
                         return config;
                     }
-                    config.tool_args.emplace_back(arg);
-                    config.tool_args.emplace_back(v.args[i + 1]);
+                    config.options.days = std::stoi(std::string(v.args[i + 1]));
                     ++i;
                     continue;
                 }
@@ -69,10 +69,30 @@ namespace dana {
                     if (!store_value(i, arg)) {
                         return config;
                     }
+                    std::string value(v.args[i]);
+                    if (arg == "--date") {
+                        config.options.date = value;
+                    } else if (arg == "--from") {
+                        config.options.from = value;
+                    } else if (arg == "--to") {
+                        config.options.to = value;
+                    } else if (value == "auto") {
+                        config.options.interval = std::nullopt;
+                    } else if (tse_data::is_positive_int(value)) {
+                        config.options.interval = std::stoi(value);
+                    } else {
+                        config.failed = true;
+                        config.error  = pfx + "--interval must be a positive integer or auto\n";
+                        return config;
+                    }
                     continue;
                 }
-                if (arg == "--depth" || arg == "--no-live") {
-                    config.tool_args.emplace_back(arg);
+                if (arg == "--depth") {
+                    config.options.depth = true;
+                    continue;
+                }
+                if (arg == "--no-live") {
+                    config.options.no_live = true;
                     continue;
                 }
                 if (arg == "--") {
@@ -113,10 +133,10 @@ namespace dana {
 
     } // namespace
 
-    // Raw per-minute dataset from `bin/tse.intraday`, without analysis instructions
-    // — so it can be piped or chained into any workflow (`prompt .tse.intraday
-    // فولاد .note "compare with فخوز"`). The verdict lens is a separate, data-free
-    // prompt: `prompt .tse.intraday فولاد .tse.intraday.analysis`.
+    // Raw per-minute dataset, without analysis instructions — so it can be piped
+    // or chained into any workflow (`prompt .tse.intraday فولاد .note "compare with
+    // فخوز"`). The verdict lens is a separate, data-free prompt:
+    // `prompt .tse.intraday فولاد .tse.intraday.analysis`.
     static void execute_tse_intraday(view const& v, result& r) {
         auto config = parse_tse_intraday_args(v);
         if (config.failed) {
@@ -124,22 +144,17 @@ namespace dana {
         }
 
         // The prompt and the tool share a name on purpose: `prompt tse.intraday`
-        // embeds exactly what `tse.intraday` prints. Its stderr is inherited (the
-        // tool already prefixes its errors) and a failure aborts the prompt.
-        std::vector<std::string> tool_argv = {
-          "python3",
-          dana::fs::bin_tool("tse.intraday", v.env.exe_path, std::nullopt).string(),
-        };
-        for (auto const& arg : config.tool_args) {
-            tool_argv.push_back(arg);
+        // embeds exactly what the native intraday renderer prints.
+        std::string output;
+        try {
+            output = tools::tse::intraday_markdown(config.symbol, config.options);
+        } catch (tools::tse::error const& exc) {
+            throw soft_error{std::format("prompt tse.intraday: {}\n", exc.what())};
         }
-        tool_argv.push_back(config.symbol);
-
-        auto fetch = tse_data::run_tool("tse.intraday", "bin/tse.intraday", tool_argv);
 
         r.published.set(keys::save_stem, tse_data::save_stem(config.symbol));
         tse_data::publish_identity(r, config.symbol);
-        r.out = trim_context(fetch.stdout_data, config.head_lines);
+        r.out = trim_context(output, config.head_lines);
     }
 
     static void render_help_tse_intraday(std::ostream& os) {
@@ -172,10 +187,6 @@ Options:
   --no-live        Skip the current (live) session
   --head N         Limit lines of collected context
   -h, --help   Show this help
-
-The data comes from `tse.intraday`; run that tool directly for the raw tape
-(--ticks), a price-level profile (--profile), the full depth ladder
-(--depth-ladder) or JSON output.
 )EOF";
     }
 

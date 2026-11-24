@@ -1,10 +1,12 @@
+#include "../tools/tse_codal.hpp"
+
 #include "../core/fs.hpp"
-#include "../core/process.hpp"
 #include "../runtime/args.hpp"
 #include "../runtime/embed.hpp"
 #include "../runtime/prompt_registry.hpp"
 #include "tse_data.hpp"
 
+#include <format>
 #include <optional>
 #include <ostream>
 #include <string>
@@ -111,9 +113,9 @@ namespace dana {
 
     } // namespace
 
-    // Raw Codal dataset from `bin/tse.codal`, without analysis instructions — so it
-    // can be piped or chained into any workflow. Codal is opt-in: `prompt tse` no
-    // longer fetches it. The analysis lens is the data-free `tse.analyze`.
+    // Raw Codal dataset, without analysis instructions — so it can be piped or
+    // chained into any workflow. Codal is opt-in: `prompt tse` no longer fetches
+    // it. The analysis lens is the data-free `tse.analyze`.
     static void execute_tse_codal(view const& v, result& r) {
         auto config = parse_tse_codal_args(v);
         if (config.failed) {
@@ -121,33 +123,23 @@ namespace dana {
         }
 
         // The prompt and the tool share a name on purpose: `prompt tse.codal`
-        // embeds exactly the Markdown `tse.codal snapshot --markdown` prints. Its
-        // stderr is inherited and a failure aborts the prompt.
-        std::vector<std::string> tool_argv = {
-          "python3",
-          dana::fs::bin_tool("tse.codal", v.env.exe_path, std::nullopt).string(),
-          "snapshot",
-          config.symbol,
-          "--markdown",
-        };
+        // embeds exactly the Markdown the snapshot renderer prints.
+        tools::tse::codal_options options;
+        options.fund    = config.fund;
+        options.refresh = config.refresh;
         if (!config.top.empty()) {
-            tool_argv.emplace_back("--top");
-            tool_argv.push_back(config.top);
+            options.top = std::stoi(config.top);
         }
-        if (config.fund) {
-            tool_argv.emplace_back("--fund");
+        std::string output;
+        try {
+            output = tools::tse::codal_snapshot(config.symbol, options);
+        } catch (tools::tse::error const& exc) {
+            throw soft_error{std::format("prompt tse.codal: {}\n", exc.what())};
         }
-        if (config.refresh) {
-            tool_argv.emplace_back("--refresh");
-        }
-
-        // Codal's own retry deadline is 60 s (`CODAL_DEADLINE`), so this cap must
-        // sit above it; the old 30 s prompt default cut a live fetch off silently.
-        auto fetch = tse_data::run_tool("tse.codal", "bin/tse.codal", tool_argv, std::chrono::seconds(120));
 
         r.published.set(keys::save_stem, tse_data::save_stem(config.symbol));
         tse_data::publish_identity(r, config.symbol);
-        r.out = trim_context(fetch.stdout_data, config.head_lines);
+        r.out = trim_context(output, config.head_lines);
     }
 
     static void render_help_tse_codal(std::ostream& os) {
@@ -172,9 +164,6 @@ Options:
   --refresh        Ignore the Codal cache and fetch live data
   --head N         Limit lines of collected context
   -h, --help       Show this help
-
-The data comes from `tse.codal snapshot`; run that tool directly for `search`,
-`statements`, the cache controls or JSON output.
 )EOF";
     }
 

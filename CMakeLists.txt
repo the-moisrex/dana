@@ -42,6 +42,8 @@ file(GLOB_RECURSE EXTRACT_SRCS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/ex
 file(GLOB_RECURSE COMPRESS_SRCS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/compress/*.cpp")
 # The native AI engine (`ai/`): transport, providers, state and the shared CLI.
 file(GLOB_RECURSE AI_SRCS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/ai/*.cpp")
+# Native ports of the old `~/cmd/bin` helpers used by prompts and the AI engine.
+file(GLOB_RECURSE TOOL_SRCS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/tools/*.cpp")
 
 # The `new` prompt embeds the runtime/SDK headers and an example prompt.
 set(PROMPT_ASSETS
@@ -120,6 +122,7 @@ add_library(dana_lib OBJECT
         ${EXTRACT_SRCS}
         ${COMPRESS_SRCS}
         ${AI_SRCS}
+        ${TOOL_SRCS}
         ${PROMPT_SRCS}
 )
 target_sources(dana_lib PRIVATE ${PROMPT_ASSET_HPP})
@@ -133,6 +136,18 @@ target_link_libraries(dana_lib PUBLIC
         nlohmann_json::nlohmann_json
         libgit2::libgit2package
 )
+
+# Browser session support: SQLite cookie/storage databases, AES decryption and
+# zlib-compressed LevelDB blocks.
+find_library(PROMPT_SQLITE3_LIBRARY NAMES sqlite3)
+find_package(OpenSSL REQUIRED COMPONENTS Crypto)
+find_package(ZLIB REQUIRED)
+if (PROMPT_SQLITE3_LIBRARY)
+    target_link_libraries(dana_lib PUBLIC ${PROMPT_SQLITE3_LIBRARY})
+else()
+    message(WARNING "sqlite3 not found: browser session extraction will not build")
+endif()
+target_link_libraries(dana_lib PUBLIC OpenSSL::Crypto ZLIB::ZLIB)
 
 # Curl integration for AI engine
 find_path(PROMPT_CURL_INCLUDE_DIR NAMES curl/curl.h)

@@ -24,7 +24,7 @@ namespace dana {
           R"EOF(You are an institutional analyst of the Tehran Stock Exchange (TSE). Analyze the instrument data in this prompt.
 
 ### 0. Data provenance and absent sections
-The dataset was produced by `prompt tse` — either a live TSETMC fetch, or one or more cached `.stock` snapshots written by `tse.snapshot`. When it came from snapshots, treat every value as-of its `fetched_at` timestamp and warn if that timestamp is stale (older than 24 hours).
+The dataset was produced by `prompt tse` — either a live TSETMC fetch, or one or more cached `.stock` snapshots saved by an earlier run. When it came from snapshots, treat every value as-of its `fetched_at` timestamp and warn if that timestamp is stale (older than 24 hours).
 
 The JSON sections are `instrument`, `quote`, `order_book`, `last_book`, `client_type`, `indexes`, `market_context`, `statistics`, `technicals`, `fundamentals`, `codal` and `history`, followed by `## Missing or failed sources / داده‌های ناموجود` whenever a source failed. A section can be absent because (a) its source failed — it is then listed under missing or failed sources, (b) `tse` was run with `--without book,statistics,breadth`, or (c) the data is opt-in: Codal filings appear only when `.tse.codal` was chained. In every case the value is unknown, not zero: never estimate it, and never substitute a different window without saying so.
 
@@ -107,7 +107,7 @@ Treat these as descriptive statistics and reconcile them with the table. A null 
 
 Print the institutional-analyst instructions for the TSETMC dataset collected by `tse`. This prompt carries no data and takes no arguments: chain it after `tse`, whose dataset precedes these instructions in the prompt.
 
-`tse` fetches live TSETMC market data by default and renders `.stock` snapshots (written by `tse.snapshot`) from cache instead; Codal filings are a separate opt-in prompt, `.tse.codal`. This prompt analyzes whatever precedes it and treats absent Codal data as missing, not zero. An Iranian IP is required for the public data sources. Prices are in rial.
+`tse` fetches live TSETMC market data by default and renders legacy `.stock` snapshots from cache instead; Codal filings are a separate opt-in prompt, `.tse.codal`. This prompt analyzes whatever precedes it and treats absent Codal data as missing, not zero. An Iranian IP is required for the public data sources. Prices are in rial.
 
 Examples:
   prompt .tse فولاد .tse.analyze

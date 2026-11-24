@@ -1,24 +1,22 @@
 #include "../core/fs.hpp"
-#include "../core/process.hpp"
 #include "../runtime/prompt_registry.hpp"
+#include "../tools/srt2text.hpp"
+#include "../tools/subtitle.hpp"
+#include "../tools/yt_links.hpp"
 
 #include <algorithm>
 #include <cctype>
-#include <chrono>
-#include <filesystem>
 #include <format>
-#include <span>
 #include <string>
 #include <string_view>
-#include <vector>
 
 namespace dana {
 
     namespace {
 
-        // Port of `trimmed="$(printf '%s' "$input" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"`:
-        // every line is stripped of leading/trailing whitespace (sed works line by
-        // line), then command substitution drops the result's trailing newlines.
+        // `trimmed="$(printf '%s' "$input" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"`:
+        // every line is stripped of leading/trailing whitespace, then command
+        // substitution drops the result's trailing newlines.
         std::string trim_lines(std::string_view input) {
             std::string out;
             std::size_t pos = 0;
@@ -54,7 +52,7 @@ namespace dana {
             return std::string(text);
         }
 
-        // Port of grep -Eq '^(https?|file)://[^[:space:]]+$' (yt.sh's URL test).
+        // `grep -Eq '^(https?|file)://[^[:space:]]+$'`.
         bool is_url(std::string_view trimmed) {
             if (trimmed.contains('\n')) {
                 return false; // multi-line input
@@ -75,66 +73,26 @@ namespace dana {
             });
         }
 
-        // yt.links and srt2text are local and quick; subtitle may download with
-        // yt-dlp, so it gets a longer budget.
-        constexpr auto kLinksTimeout    = std::chrono::seconds(30);
-        constexpr auto kSubtitleTimeout = std::chrono::minutes(5);
-        constexpr auto kSrt2TextTimeout = std::chrono::seconds(30);
-
-        struct command_output {
-            std::string stdout_data;
-            int         status    = 0;
-            bool        timed_out = false;
-        };
-
-        command_output run_tool(
-          std::filesystem::path const& tool,
-          text::string_views           args,
-          std::string_view             stdin_data,
-          std::chrono::milliseconds    timeout) {
-            std::vector<std::string> cmd = {tool.string()};
-            cmd.insert(cmd.end(), args.begin(), args.end());
-            auto result = dana::process::run_command(cmd, stdin_data, {}, timeout);
-            return {.stdout_data = std::move(result.stdout_data),
-                    .status      = result.exit_code,
-                    .timed_out   = result.timed_out};
-        }
-
         struct fetch_result {
             bool        ok = false;
             std::string text;    // srt2text output, trailing newlines dropped
             std::string failure; // why the pipeline failed, empty on success
         };
 
-        // `"$curdir/yt.links" "$url" | xargs "$curdir/subtitle" | "$curdir/srt2text"`
-        // (under `set -o pipefail`, so any failing stage fails the whole pipeline). The
-        // pipeline stops at its first failing stage and reports which one it was.
-        fetch_result transform_url(std::string_view url, text::string_views tools) {
-            auto const reason =
-              [](std::string_view const stage, std::chrono::milliseconds const timeout, command_output const& out) {
-                  if (out.timed_out) {
-                      return std::format("{} timed out after {}s", stage, timeout.count() / 1000);
-                  }
-                  return std::format("{} exited {}", stage, out.status);
-              };
-
-            auto const links = run_tool(tools[0], {std::string(url)}, {}, kLinksTimeout);
-            if (links.status != 0 || links.timed_out) {
-                return {.ok = false, .text = {}, .failure = reason("yt.links", kLinksTimeout, links)};
+        // `yt.links "$url" | xargs subtitle | srt2text`, stopping at the first
+        // failing stage and reporting which one it was.
+        fetch_result transform_url(std::string_view url) {
+            auto const link = tools::extract_link(url);
+            if (link.url.empty() || link.failed) {
+                return {.ok = false, .text = {}, .failure = "yt.links exited 1"};
             }
 
-            auto const xargs    = process::xargs_tokens(links.stdout_data);
-            auto       subtitle = run_tool(tools[1], xargs, {}, kSubtitleTimeout);
-            if (subtitle.status != 0 || subtitle.timed_out) {
-                return {.ok = false, .text = {}, .failure = reason("subtitle", kSubtitleTimeout, subtitle)};
+            auto const subtitle = tools::fetch_subtitles(link.url);
+            if (!subtitle) {
+                return {.ok = false, .text = {}, .failure = "subtitle exited 1"};
             }
 
-            auto text = run_tool(tools[2], {}, subtitle.stdout_data, kSrt2TextTimeout);
-            if (text.status != 0 || text.timed_out) {
-                return {.ok = false, .text = {}, .failure = reason("srt2text", kSrt2TextTimeout, text)};
-            }
-
-            return {.ok = true, .text = drop_trailing_newlines(text.stdout_data), .failure = {}};
+            return {.ok = true, .text = drop_trailing_newlines(tools::srt_to_text(*subtitle)), .failure = {}};
         }
 
     } // namespace
@@ -147,12 +105,6 @@ namespace dana {
             } else {
                 throw usage_error{std::format("prompt yt: unexpected argument '{}'\n", arg)};
             }
-        }
-
-        std::vector<std::string> tools;
-        tools.reserve(3);
-        for (char const* name : {"yt.links", "subtitle", "srt2text"}) {
-            tools.push_back(dana::fs::bin_tool(name, v.env.exe_path, v.env.git_root).string());
         }
 
         // bash checks `[ -t 0 ]`: a piped stdin wins over the clipboard.
@@ -169,16 +121,16 @@ namespace dana {
         std::string output;
         std::string trimmed = trim_lines(input);
         if (is_url(trimmed)) {
-            auto fetched = transform_url(trimmed, tools);
+            auto fetched = transform_url(trimmed);
             if (fetched.ok) {
-                // yt.sh asks yt.links a second time for the readable video URL.
-                std::string url = drop_trailing_newlines(run_tool(tools[0], {trimmed}, {}, kLinksTimeout).stdout_data);
-                if (url.empty()) {
+                // Ask yt.links a second time for the readable video URL.
+                auto const link = tools::extract_link(trimmed);
+                if (link.url.empty()) {
                     output +=
                       "Turn this into an article and remove the ads, repetition, meaningless stuff and add all "
                       "key takeaways and summary notes at the end as well: \n\n\n";
                 } else {
-                    output += "Turn this [youtube video](" + url +
+                    output += "Turn this [youtube video](" + link.url +
                               ") into an article and remove the ads, repetition, meaningless stuff and add all key "
                               "takeaways and summary notes at the end as well: \n\n\n";
                 }
@@ -221,9 +173,7 @@ Options:
     // (no central list — see sdk/prompt_registry.hpp).
     [[maybe_unused]] bool const registered = dana::register_prompt(
       "yt",
-      "Builds an article-writing prompt from stdin. If stdin is a single YouTube URL, it "
-      "fetches the subtitles/text first and fails when that fetch fails (--fallback keeps "
-      "the URL instead).",
+      "Builds an article-writing prompt from stdin, fetching YouTube subtitles when stdin is a URL.",
       &execute_yt,
       &render_help_yt);
 

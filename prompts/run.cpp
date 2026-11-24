@@ -1,11 +1,11 @@
 #include "../core/fs.hpp"
-#include "../core/process.hpp"
 #include "../core/sanitize.hpp"
 #include "../runtime/args.hpp"
 #include "../runtime/embed.hpp"
 #include "../runtime/facts.hpp"
 #include "../runtime/prompt_registry.hpp"
 #include "../runtime/signals.hpp"
+#include "../tools/run_tool.hpp"
 
 #include <array>
 #include <regex>
@@ -87,27 +87,13 @@ namespace dana {
         std::string description;
 
         if (!run_args.empty()) {
-            auto                     run_path = dana::fs::bin_tool("run", v.env.exe_path, v.env.git_root).string();
-            std::vector<std::string> cmd;
-            cmd.push_back(run_path);
-            for (auto const& arg : run_args) {
-                cmd.push_back(arg);
-            }
+            bool const had_stdin = v.in.available();
 
-            // run.sh redirects both streams into one file: >tmp 2>&1
-            std::vector<std::string> storage = {"bash", "-c", R"("$0" "$@" 2>&1)", run_path};
-            for (std::size_t i = 1; i < cmd.size(); ++i) {
-                storage.push_back(cmd[i]);
-            }
-
-            bool const        had_stdin = v.in.available();
-            std::string const piped(v.in.text());
-
-            auto result = dana::process::run_command(storage, piped);
+            auto result = tools::run_target(run_args);
             if (had_stdin) {
                 v.in.spend();
             }
-            run_output = dana::sanitize::strip_osc(result.stdout_data);
+            run_output = dana::sanitize::strip_osc(result.output);
             while (!run_output.empty() && run_output.back() == '\n') {
                 run_output.pop_back();
             }
@@ -204,20 +190,10 @@ Options:
            {.value = "help", .description = "Print bin/run help"},
            },
         };
-        auto const                       exe  = fs::self_path().value_or(std::filesystem::path{});
-        auto const                       tool = fs::bin_tool("run", exe, fs::find_git_root());
-        std::array<std::string, 2> const cmdline{tool.string(), "print-targets"};
-        auto const                       result = process::command{cmdline}.discard_stderr().run();
-        if (result.exit_code == 0) {
-            std::size_t start = 0;
-            while (start < result.stdout_data.size()) {
-                auto const             end  = result.stdout_data.find('\n', start);
-                auto const             stop = end == std::string::npos ? result.stdout_data.size() : end;
-                std::string_view const line(result.stdout_data.data() + start, stop - start);
-                start = end == std::string::npos ? result.stdout_data.size() : end + 1;
-                if (!line.empty() && completion::matches(req.prefix, line)) {
-                    completion::write_item(os, line, {});
-                }
+        auto const targets = tools::list_targets();
+        for (auto const& target : targets) {
+            if (!target.empty() && completion::matches(req.prefix, target)) {
+                completion::write_item(os, target, {});
             }
         }
         completion::write_items(os, req.prefix, kRunArgs);

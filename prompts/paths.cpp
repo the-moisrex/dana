@@ -1,11 +1,11 @@
 #include "../core/fs.hpp"
 #include "../core/git.hpp"
-#include "../core/process.hpp"
 #include "../core/strings.hpp"
 #include "../runtime/args.hpp"
 #include "../runtime/embed.hpp"
 #include "../runtime/file_filter.hpp"
 #include "../runtime/prompt_registry.hpp"
+#include "../tools/paths_extract.hpp"
 
 #include <algorithm>
 #include <optional>
@@ -25,26 +25,7 @@ namespace dana {
             return std::string(text);
         }
 
-        std::vector<std::string> split_lines(std::string_view text) {
-            std::vector<std::string> lines;
-            std::size_t              start = 0;
-            while (start <= text.size()) {
-                std::size_t end = text.find('\n', start);
-                if (end == std::string::npos) {
-                    if (start < text.size()) {
-                        lines.emplace_back(text.substr(start));
-                    }
-                    break;
-                }
-                if (end > start) {
-                    lines.emplace_back(text.substr(start, end - start));
-                }
-                start = end + 1;
-            }
-            return lines;
-        }
-
-        // Port of paths.sh's inline hit parser: split a "path:line:col" token into the
+        // Port of the inline hit parser: split a "path:line:col" token into the
         // path (up to the first colon, minus one trailing colon) and the line number.
         std::pair<std::string, std::string> parse_hit(std::string_view raw) {
             std::size_t colon = raw.find(':');
@@ -159,11 +140,10 @@ namespace dana {
         std::vector<std::pair<std::string, std::string>> hits; // (clean, line_num)
 
         if (!stdin_content.empty()) {
-            auto const                       tool = fs::bin_tool("paths", v.env.exe_path, git_root_opt);
-            std::vector<char const*>         argv = {tool.c_str(), nullptr};
-            std::array<std::string, 1> const cmdline{tool};
-            auto const                       result = process::run_command(cmdline, stdin_content);
-            for (auto const& line : split_lines(result.stdout_data)) {
+            tools::paths_options options;
+            options.base      = std::filesystem::current_path();
+            options.repo_root = git_root_opt;
+            for (auto const& line : tools::extract_paths(stdin_content, options)) {
                 auto [clean, line_num] = parse_hit(line);
                 bool seen              = false;
                 for (auto const& h : hits) {
@@ -290,11 +270,11 @@ namespace dana {
         os << R"EOF(Usage: prompt paths [--context N] [--full] [--head N] [FILE...]
        make 2>&1 | prompt paths [--context N] [--full] [--head N]
 
-Extracts file paths from stdin (via bin/paths) and/or arguments, resolves each, and embeds only Git-tracked files.
+Extracts file paths from stdin and/or arguments, resolves each, and embeds only Git-tracked files.
 
 Modes:
   (default)   Show N lines of context around each file:line:col hit
-  --full      Embed full file contents (delegates to files.sh)
+  --full      Embed full file contents (delegates to the files prompt)
 
 Options:
   --context N  Lines of context before/after each hit (default: 10)
@@ -307,8 +287,7 @@ Options:
     // (no central list — see sdk/prompt_registry.hpp).
     [[maybe_unused]] bool const registered = dana::register_prompt(
       "paths",
-      "Extracts file paths from stdin (via bin/paths) and/or arguments, resolves each, and "
-      "embeds only Git-tracked files.",
+      "Extracts file paths from stdin and/or arguments, resolves each, and embeds only Git-tracked files.",
       &execute_paths,
       &render_help_paths);
 

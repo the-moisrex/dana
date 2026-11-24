@@ -7,15 +7,16 @@
 // nothing.
 
 #include "../core/fs.hpp"
-#include "../core/process.hpp"
 #include "../runtime/args.hpp"
 #include "../runtime/completion.hpp"
 #include "../runtime/embed.hpp"
 #include "../runtime/prompt_registry.hpp"
+#include "../tools/tse_common.hpp"
+#include "../tools/tse_market.hpp"
+#include "../tools/tse_resolver.hpp"
 
 #include <algorithm>
 #include <cctype>
-#include <chrono>
 #include <cstddef>
 #include <filesystem>
 #include <format>
@@ -29,7 +30,7 @@
 
 namespace dana::tse_data {
 
-    // The four lines `tse snapshot` prints (fetched, stale, note, instrument).
+    // The four snapshot header lines (fetched, stale, note, instrument).
     struct snapshot_info {
         std::string fetched = "unknown";
         std::string stale;
@@ -362,7 +363,6 @@ namespace dana::tse_data {
         if (!file_inputs.empty()) {
             cfg.cache_mode = true;
             auto git_root  = dana::fs::find_git_root();
-            auto tse_tool  = fs::bin_tool("tse", v.env.exe_path, std::nullopt).string();
             for (auto const& input : file_inputs) {
                 std::filesystem::path resolved;
                 if (std::filesystem::is_regular_file(input)) {
@@ -383,32 +383,31 @@ namespace dana::tse_data {
                     cfg.error  = std::format("{}snapshot file not readable: {}\n", pfx, resolved.string());
                     return cfg;
                 }
-                std::array<std::string, 4> const cmdline{"python3", tse_tool, "snapshot", resolved.string()};
-                auto const                       probe = process::command{cmdline}.stderr_to_stdout().run();
-                if (probe.exit_code != 0) {
+                std::string header;
+                try {
+                    header = tools::tse::snapshot_header(resolved);
+                } catch (tools::tse::error const& exc) {
                     cfg.failed    = true;
                     cfg.exit_code = 2;
-                    cfg.error     = std::format("{}{}\n", pfx, rstrip_newlines(probe.stdout_data));
+                    cfg.error     = std::format("{}{}\n", pfx, exc.what());
                     return cfg;
                 }
                 cfg.snapshot_files.push_back(resolved);
-                cfg.snapshot_infos.push_back(parse_snapshot_info(probe.stdout_data));
+                cfg.snapshot_infos.push_back(parse_snapshot_info(header));
             }
         }
 
         return cfg;
     }
 
-    // Renders one cached snapshot: the `tse snapshot` header, then the Markdown
+    // Renders one cached snapshot: the snapshot header, then the Markdown
     // `tse markdown` produces (with the scripts' raw-JSON fallback on failure).
     inline std::string render_snapshot(
       std::filesystem::path const& path,
       snapshot_info const&         info,
       std::optional<std::size_t>   head_lines,
-      std::string_view             tse_tool,
       std::string_view             name,
       std::string&                 errors) {
-        using namespace std::string_literals;
         std::error_code ec;
         auto const      base = fs::find_git_root().value_or(std::filesystem::current_path(ec));
         auto            rel  = std::filesystem::relative(std::filesystem::weakly_canonical(path, ec), base, ec);
@@ -422,7 +421,7 @@ namespace dana::tse_data {
         if (info.stale == "yes") {
             output +=
               "Data is older than 24 hours — the latest session is probably missing; re-run "
-              "tse.snapshot to refresh.\n";
+              "`prompt tse` to refresh.\n";
         }
         if (!info.note.empty()) {
             output += "Snapshot note: " + info.note + "\n";
@@ -431,18 +430,16 @@ namespace dana::tse_data {
             output += info.instrument + "\n";
         }
 
-        std::array const cmdline{"python3"s, std::string(tse_tool), "markdown"s, path.string()};
-        auto const       render = process::command{cmdline}.stderr_to_stdout().run();
-        if (render.exit_code == 0) {
+        try {
             output += '\n';
-            output += trim_context_nl(render.stdout_data, head_lines);
+            output += trim_context_nl(tools::tse::snapshot_markdown(path), head_lines);
             output += '\n';
-        } else {
+        } catch (tools::tse::error const& exc) {
             errors += std::format(
               "prompt {}: {}: snapshot render failed ({}); embedding raw JSON instead\n",
               name,
               rel_path,
-              rstrip_newlines(render.stdout_data));
+              exc.what());
             output += std::format("\nFile: {}\n```json\n", rel_path);
             output += trim_context_nl(read_file(path), head_lines);
             output += "\n```\n";
@@ -452,104 +449,57 @@ namespace dana::tse_data {
 
     // A live fetch is a long sequence of HTTP requests (history, breadth, order
     // books, corrections), so it legitimately takes minutes on a slow link. The
-    // tools bound every individual request themselves; this cap is only a backstop
-    // against a wedged process. The old `run_command` default of 30 s killed full
-    // fetches mid-flight.
-    inline constexpr std::chrono::milliseconds kToolTimeout = std::chrono::minutes(10);
-
-    // Run a `bin/tse*` tool and turn every failure into a message the user can act
-    // on: the timeout that used to be silent, a non-zero exit (the tool's own
-    // `tse: <message>` is inherited and appears above), or a successful run that
-    // produced no dataset — which would otherwise reach `.save`/an AI sink as an
-    // empty context.
-    inline dana::process::command_result run_tool(
-      std::string_view          name,
-      std::string_view          tool_label,
-      text::string_views        argv,
-      std::chrono::milliseconds timeout = kToolTimeout) {
-        auto result = dana::process::command{argv}.timeout(timeout).run();
-        if (result.timed_out) {
-            throw soft_error{std::format(
-              "prompt {}: {} timed out after {}s (the fetch was killed; retry with a "
-              "narrower request)\n",
-              name,
-              tool_label,
-              std::chrono::duration_cast<std::chrono::seconds>(timeout).count())};
-        }
-        if (result.exit_code != 0) {
-            throw soft_error{std::format("prompt {}: {} exited with status {}\n", name, tool_label, result.exit_code)};
-        }
-        if (result.stdout_data.empty()) {
-            throw soft_error{std::format("prompt {}: {} returned no data\n", name, tool_label)};
-        }
-        return result;
-    }
-
-    // `python3 bin/tse all <symbol> ... --markdown`. The tool prints
-    // `tse: <message>` on stderr (inherited, exactly like bash's `$(...)`) and
-    // exits 1; the script runs under `set -e`, so the prompt aborts printing
-    // nothing. `run_tool` makes every failure loud.
-    inline std::string fetch_live(config const& cfg, std::string_view tse_tool) {
-        using namespace std::string_view_literals;
-        std::vector<std::string> fetch_args = {"all", cfg.symbol, "--markdown"};
-        if (cfg.days_set) {
-            fetch_args.emplace_back("--days");
-            fetch_args.push_back(std::to_string(cfg.days));
-        } else {
-            fetch_args.emplace_back("--full");
-        }
-        for (auto const& name : cfg.skip) {
-            fetch_args.emplace_back("--without");
-            fetch_args.push_back(name);
-        }
-        if (cfg.unadjusted) {
-            fetch_args.emplace_back("--unadjusted");
-        }
-        std::vector tool_argv = {"python3"sv, tse_tool};
-        for (auto const& a : fetch_args) {
-            tool_argv.emplace_back(a);
-        }
-        auto const fetch = run_tool(cfg.name, "bin/tse", tool_argv);
-        return fetch.stdout_data;
-    }
-
+    // native client bounds every individual request itself.
+    //
     // The collected data block: the live Markdown (capped by --head) or the
     // rendered snapshot files. Fetch failures throw, exactly as before.
+    inline std::string fetch_live(config const& cfg) {
+        tools::tse::market_options options;
+        options.days     = cfg.days_set ? cfg.days : 0;
+        options.adjusted = !cfg.unadjusted;
+        for (auto const& name : cfg.skip) {
+            options.skip.insert(name);
+        }
+        tools::tse::client http;
+        try {
+            return tools::tse::all_markdown(http, cfg.symbol, options);
+        } catch (tools::tse::error const& exc) {
+            throw soft_error{std::format("prompt {}: {}\n", cfg.name, exc.what())};
+        }
+    }
+
     inline std::string collect(view const& v, config const& cfg, std::string& errors) {
-        auto const tse_tool = fs::bin_tool("tse", v.env.exe_path, std::nullopt).string();
+        (void) v;
         if (cfg.cache_mode) {
             std::string out;
             for (std::size_t i = 0; i < cfg.snapshot_files.size(); ++i) {
-                out += render_snapshot(
-                  cfg.snapshot_files[i],
-                  cfg.snapshot_infos[i],
-                  cfg.head_lines,
-                  tse_tool,
-                  cfg.name,
-                  errors);
+                out += render_snapshot(cfg.snapshot_files[i], cfg.snapshot_infos[i], cfg.head_lines, cfg.name, errors);
             }
             return out;
         }
-        return trim_context(fetch_live(cfg, tse_tool), cfg.head_lines);
+        return trim_context(fetch_live(cfg), cfg.head_lines);
     }
 
-    // Shell completion for the identifier argument. The lookup is delegated to the
-    // shared resolver (`bin/tse.resolve --complete`), so `prompt tse|tse.intraday`
-    // suggest exactly what `tse quote` does, from the same cached index and without
-    // touching the network. Flags are added by the dispatcher from the prompt's
-    // help text, so only positional candidates are emitted here.
+    // Shell completion for the identifier argument. The lookup uses the shared
+    // native resolver, so `prompt tse|tse.intraday` suggest exactly what
+    // `tse quote` does, from the same cached index and without touching the
+    // network. Flags are added by the dispatcher from the prompt's help text, so
+    // only positional candidates are emitted here.
     inline void complete_instrument(completion_request const& req, std::ostream& os) {
-        using namespace std::string_literals;
         if (req.prefix.starts_with('-')) {
             return;
         }
-        auto const       exe  = fs::self_path().value_or(std::filesystem::path{});
-        auto const       tool = fs::bin_tool("tse.resolve", exe, fs::find_git_root());
-        std::array const cmdline{"python3"s, tool.string(), "--complete"s, std::string(req.prefix)};
-        auto const       result = process::command{cmdline}.discard_stderr().run();
-        if (result.exit_code == 0) {
-            os << result.stdout_data;
-        }
+        tools::tse::client          http;
+        tools::tse::resolve_options options;
+        options.offline = true;
+        try {
+            auto const loaded = tools::tse::get_index(http, options);
+            for (auto const& [token, description] :
+                 tools::tse::complete_query(std::string(req.prefix), loaded.instruments))
+            {
+                os << token << '\t' << description << '\n';
+            }
+        } catch (...) {}
     }
 
 } // namespace dana::tse_data

@@ -16,9 +16,10 @@ namespace dana {
     [[maybe_unused]] bool const registered = dana::register_prompt(
       "tse.find",
       "Turn a plain-language market request (\"what to buy tomorrow\", \"oversold stocks with heavy volume\", "
-      "\"undervalued banks\") into a `tse.find` screening command for the Tehran Stock Exchange, or review a "
-      "screen "
-      "that already ran: pass a saved `.tse` snapshot, `tse.find` flags to run now, or pipe `tse.find` output "
+      "\"undervalued banks\") into a `prompt .tse.find` screening command for the Tehran Stock Exchange, or review "
+      "a screen "
+      "that already ran: pass a saved `.tse` snapshot, `tse.find` flags to run now, or pipe saved `tse.find` "
+      "output "
       "(tse/json/jsonl/table) and the AI ranks the matches with the real numbers and suggests deep-dive prompts. "
       "Chat mode (default) makes the AI emit exactly one command it cannot run itself; agentic mode makes it "
       "execute the command and relax filters until the screen returns matches.",

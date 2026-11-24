@@ -1,8 +1,7 @@
 #pragma once
 
-// Load a site's signed-in session (cookies + web storage) via
-// bin/browser.session.  That tool stays external (like bin/tse): the native
-// engine only consumes its JSON bundle.
+// Load a site's signed-in session (cookies + web storage) from the local
+// browser profiles. The native engine only consumes the composed bundle.
 
 #include <nlohmann/json.hpp>
 #include <optional>

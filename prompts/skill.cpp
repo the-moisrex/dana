@@ -1,15 +1,19 @@
+#include "../ai/http.hpp"
 #include "../core/fs.hpp"
 #include "../core/process.hpp"
 #include "../core/strings.hpp"
 #include "../runtime/args.hpp"
 #include "../runtime/embed.hpp"
 #include "../runtime/prompt_registry.hpp"
+#include "../tools/find_skills.hpp"
 
 #include <algorithm>
 #include <array>
 #include <cctype>
 #include <cstdlib>
+#include <fstream>
 #include <nlohmann/json.hpp>
+#include <regex>
 #include <span>
 #include <sstream>
 #include <string>
@@ -86,26 +90,12 @@ namespace dana {
             return run_capture(text::string_views(cmd), stdin_data, exit_code, discard_stderr);
         }
 
-        std::string strip_trailing_nl(std::string s) {
-            while (!s.empty() && s.back() == '\n') {
-                s.pop_back();
-            }
-            return s;
-        }
-
-        // jq -r '<filter>' over $meta (bash feeds meta + a newline via <<<).
-        std::string jq_extract(std::string_view meta, std::string_view const filter) {
-            int                                   ec = 0;
-            std::array<std::string_view, 3> const cmdline{"jq", "-r", filter};
-            return strip_trailing_nl(run_capture(cmdline, std::string(meta) + "\n", ec));
-        }
-
         // Port of parse_frontmatter: collect lines between the first two "---" lines,
         // then parse them with the same Python one-liner the script uses.
-        std::string parse_frontmatter(std::filesystem::path const& file) {
+        nlohmann::ordered_json parse_frontmatter(std::filesystem::path const& file) {
             std::ifstream in(file, std::ios::binary);
             if (!in) {
-                return "{}";
+                return nlohmann::ordered_json::object();
             }
             std::string fm;
             bool        in_fm = false;
@@ -162,7 +152,7 @@ namespace dana {
                 }
                 data[key] = value;
             }
-            return data.dump();
+            return data;
         }
 
         std::string find_cached_skill(std::string_view name) {
@@ -202,12 +192,12 @@ namespace dana {
                     if (!std::filesystem::is_regular_file(skill_file, fec)) {
                         continue;
                     }
-                    std::string meta = parse_frontmatter(skill_file);
-                    std::string name = jq_extract(meta, ".name // empty");
+                    auto const  meta = parse_frontmatter(skill_file);
+                    std::string name = meta.value("name", std::string{});
                     if (name.empty()) {
                         name = skill_path.filename().string();
                     }
-                    std::string desc = jq_extract(meta, ".description // \"\"");
+                    std::string desc = meta.value("description", std::string{});
                     if (desc.size() > 80) {
                         desc = desc.substr(0, 77) + "...";
                     }
@@ -249,49 +239,91 @@ namespace dana {
             return names;
         }
 
-        std::string ai_find_skills_tool(std::filesystem::path const& exe_path, std::filesystem::path const& git_root) {
-            auto p = dana::fs::bin_tool("ai-find-skills", exe_path, git_root);
-            return p.string();
+        // Flatten the three registries into one indexed result list. The field
+        // shape mirrors what the download path consumes: skills.sh carries a repo
+        // and slug, clawhub has no repo, and GitHub has no slug or install count.
+        nlohmann::json search_skills(std::string_view query) {
+            auto const     data   = tools::find_skills(query, {.scan = 0});
+            nlohmann::json merged = nlohmann::json::array();
+
+            auto const add = [&](nlohmann::json const& list, bool has_repo, bool has_slug, bool has_installs) {
+                if (!list.is_array()) {
+                    return;
+                }
+                for (auto const& item : list) {
+                    nlohmann::json rec;
+                    rec["idx"]   = merged.size() + 1;
+                    rec["name"]  = item.value("name", std::string{});
+                    rec["board"] = item.value("board", std::string{});
+                    rec["repo"] =
+                      has_repo ? nlohmann::json(item.value("repo", std::string{})) : nlohmann::json(nullptr);
+                    rec["slug"] =
+                      has_slug ? nlohmann::json(item.value("slug", std::string{})) : nlohmann::json(nullptr);
+                    rec["url"] = item.value("url", std::string{});
+                    rec["installs"] =
+                      has_installs ? nlohmann::json(item.value("installs", 0LL)) : nlohmann::json(nullptr);
+                    rec["stars"]   = item.contains("stars") ? item["stars"] : nlohmann::json(nullptr);
+                    rec["match"]   = item.value("match", 0);
+                    rec["summary"] = item.contains("summary") ? item["summary"] : nlohmann::json(nullptr);
+                    merged.push_back(std::move(rec));
+                }
+            };
+
+            add(data["skills_sh"], true, true, true);
+            add(data["clawhub"], false, true, true);
+            add(data["github"], true, false, false);
+            return merged;
         }
 
-        // search_skills: run ai-find-skills --json --no-scan <query>. The download path
-        // calls it as `search_skills ... 2>/dev/null`, so callers can discard its
-        // stderr (which carries the tool's `# full JSON: <tmpfile>` note).
-        std::string search_skills(std::string_view query, std::string_view tool, bool discard_stderr = false) {
-            using namespace std::string_view_literals;
-            std::error_code ec;
-            if (!std::filesystem::is_regular_file(tool, ec) || ec) {
-                return {};
+        // Exact name first, then a case-insensitive regex match, like the jq
+        // `select(.name | test($n; "i"))` fallback.
+        nlohmann::json find_rec(nlohmann::json const& results, std::string_view name) {
+            if (!results.is_array()) {
+                return nullptr;
             }
-            int ec2 = 0;
-            return run_capture({tool, "--json"sv, "--no-scan"sv, query}, "", ec2, discard_stderr);
-        }
-
-        std::string merge_results(std::string_view json) {
-            using namespace std::string_view_literals;
-            std::string_view const filter =
-              "[\n"
-              "  (.skills_sh // [])[] | {name, board, repo, slug, url, installs, stars, match, summary},\n"
-              "  (.clawhub    // [])[] | {name, board, repo:null, slug, url, installs, stars, match, summary},\n"
-              "  (.github     // [])[] | {name, board, repo, slug:null, url, installs:null, stars, match, summary}\n"
-              "] | to_entries | map(.key + 1 as $idx | .value | {idx: $idx, name, board, repo, slug, url, installs, "
-              "stars, "
-              "match, summary})\n";
-            int ec = 0;
-            return run_capture({"jq"sv, "-c"sv, filter}, json, ec);
-        }
-
-        std::string find_rec(std::string_view results, std::string_view name) {
-            using namespace std::string_view_literals;
-            std::string_view const q1  = "[.[] | select(.name == $n)] | .[0] // empty";
-            int                    ec  = 0;
-            std::string            rec = run_capture({"jq"sv, "-c"sv, "--arg"sv, "n"sv, name, q1}, results, ec);
-            rec                        = strip_trailing_nl(rec);
-            if (rec.empty()) {
-                std::string_view const q2 = "[.[] | select(.name | test($n; \"i\"))] | .[0] // empty";
-                rec = strip_trailing_nl(run_capture({"jq"sv, "-c"sv, "--arg"sv, "n"sv, name, q2}, results, ec));
+            for (auto const& rec : results) {
+                if (rec.value("name", std::string{}) == name) {
+                    return rec;
+                }
             }
-            return rec;
+            try {
+                std::regex const pattern(std::string(name), std::regex::ECMAScript | std::regex::icase);
+                for (auto const& rec : results) {
+                    if (std::regex_search(rec.value("name", std::string{}), pattern)) {
+                        return rec;
+                    }
+                }
+            } catch (std::regex_error const&) {
+                // An invalid pattern simply matches nothing.
+            }
+            return nullptr;
+        }
+
+        // Fetch a registry record's SKILL.md into the skills directory. Returns
+        // false (leaving no partial directory behind) when the download fails.
+        bool download_skill(nlohmann::json const& rec, std::string& err) {
+            std::string const           skill_name = rec.value("name", std::string{});
+            std::error_code             ec;
+            std::filesystem::path const target = std::filesystem::path(skills_dir()) / skill_name;
+            std::filesystem::create_directories(target, ec);
+
+            ai::http_request request;
+            request.url             = rec.value("url", std::string{});
+            request.timeout_seconds = 15;
+            std::string body;
+            try {
+                body = ai::request_text(request);
+            } catch (...) {
+                body.clear();
+            }
+            if (body.empty()) {
+                std::filesystem::remove_all(target, ec);
+                return false;
+            }
+            std::ofstream out(target / "SKILL.md", std::ios::binary);
+            out << body;
+            err += "Installed '" + skill_name + "' to " + (target / "SKILL.md").string() + "\n";
+            return true;
         }
 
     } // namespace
@@ -299,15 +331,6 @@ namespace dana {
     static void execute_skill(view const& v, result& r) {
         using namespace std::string_literals;
         auto opts = file_options_or_throw(v);
-
-        // command -v jq is required before anything else.
-        {
-            int ec = 0;
-            (void) run_capture({"bash", "-c", "command -v jq >/dev/null 2>&1"}, "", ec);
-            if (ec != 0) {
-                throw soft_error{"error: jq is required\n"};
-            }
-        }
 
         std::string first = v.args.empty() ? std::string() : std::string(v.args[0]);
 
@@ -369,34 +392,19 @@ namespace dana {
             if (subcommand == "install") {
                 // install_skill uses the raw $1 ("install"); this hits the network.
                 std::string name = "install";
-                std::string tool = ai_find_skills_tool(v.env.exe_path, v.env.git_root);
                 std::string err;
-                err                 += std::format("Searching for '{}'...\n", name);
-                std::string results  = merge_results(search_skills(name, tool));
-                std::string rec      = find_rec(results, name);
-                if (rec.empty()) {
+                err            += std::format("Searching for '{}'...\n", name);
+                auto const rec  = find_rec(search_skills(name), name);
+                if (rec.is_null()) {
                     throw soft_error{err + "error: skill '" + name + "' not found in any registry\n"};
                 }
-                err += std::format("Found: {} on {}\n", jq_extract(rec, ".name"), jq_extract(rec, ".board"));
-                std::string     skill_name = jq_extract(rec, ".name");
-                std::error_code ec;
-                std::filesystem::create_directories(std::filesystem::path(skills_dir()) / skill_name, ec);
-                err     += std::format("Downloading {}...\n", skill_name);
-                // download_skill_md is network/curl/unzip/gh dependent.
-                int dec  = 0;
-                // todo: use curl functions directly instead of this
-                auto const body =
-                  run_capture({"curl"s, "-sS"s, "--max-time"s, "15"s, jq_extract(rec, ".url")}, "", dec);
-                if (body.empty()) {
-                    std::filesystem::remove_all(std::filesystem::path(skills_dir()) / skill_name, ec);
+                err +=
+                  std::format("Found: {} on {}\n", rec.value("name", std::string{}), rec.value("board", std::string{}));
+                std::string const skill_name  = rec.value("name", std::string{});
+                err                          += std::format("Downloading {}...\n", skill_name);
+                if (!download_skill(rec, err)) {
                     throw soft_error{err + "error: failed to download SKILL.md for '" + skill_name + "'\n"};
                 }
-                {
-                    std::ofstream of((std::filesystem::path(skills_dir()) / skill_name / "SKILL.md"), std::ios::binary);
-                    of << body;
-                }
-                err += "Installed '" + skill_name + "' to " +
-                       (std::filesystem::path(skills_dir()) / skill_name / "SKILL.md").string() + "\n";
                 std::string out;
                 out   += "\nInstalled skill content:\n\n";
                 out   += read_file(std::filesystem::path(skills_dir()) / skill_name / "SKILL.md");
@@ -420,23 +428,20 @@ namespace dana {
         std::string err;
         std::string skill_file = find_cached_skill(skill_name);
         if (skill_file.empty()) {
-            err                          += std::format("Skill '{}' not cached, downloading...\n", skill_name);
-            // download_by_name: search registries and download if a match exists.
-            std::string tool              = ai_find_skills_tool(v.env.exe_path, v.env.git_root);
-            std::string results           = merge_results(search_skills(skill_name, tool, /*discard_stderr=*/true));
-            std::string rec               = find_rec(results, skill_name);
-            std::string downloaded_skill  = rec.empty() ? std::string() : jq_extract(rec, ".name");
-            if (downloaded_skill.empty()) {
+            err            += std::format("Skill '{}' not cached, downloading...\n", skill_name);
+            auto const rec  = find_rec(search_skills(skill_name), skill_name);
+            if (rec.is_null()) {
                 err += std::format("error: skill '{}' not found in cache or registries\n", skill_name);
                 err += std::format("Use 'prompt skill list --remote {}' to search registries.\n", skill_name);
                 throw soft_error{std::move(err)};
             }
-            // A full faithful download-by-name would fetch the SKILL.md here; the
-            // registry match found is surfaced verbatim so callers can retry.
-            err        += "Downloaded to ";
-            err        += (std::filesystem::path(skills_dir()) / downloaded_skill / "SKILL.md").string();
-            err        += '\n';
-            skill_file  = (std::filesystem::path(skills_dir()) / downloaded_skill / "SKILL.md").string();
+            std::string const downloaded_skill  = rec.value("name", std::string{});
+            err                                += std::format("Downloading {}...\n", downloaded_skill);
+            if (!download_skill(rec, err)) {
+                err += std::format("error: failed to download SKILL.md for '{}'\n", downloaded_skill);
+                throw soft_error{std::move(err)};
+            }
+            skill_file = (std::filesystem::path(skills_dir()) / downloaded_skill / "SKILL.md").string();
         }
 
         std::string out = read_file(std::filesystem::path(skill_file));

@@ -1,14 +1,13 @@
 #include "../core/fs.hpp"
-#include "../core/process.hpp"
 #include "../runtime/prompt_registry.hpp"
+#include "../tools/srt2text.hpp"
+#include "../tools/subtitle.hpp"
+#include "../tools/yt_links.hpp"
 
 #include <algorithm>
 #include <cctype>
-#include <filesystem>
-#include <span>
 #include <string>
 #include <string_view>
-#include <vector>
 
 namespace dana {
 
@@ -73,54 +72,26 @@ namespace dana {
             });
         }
 
-        int run_tool_status(std::filesystem::path const& tool,
-                            text::string_views           args,
-                            std::string_view             stdin_data,
-                            std::string&                 stdout_data) {
-            std::vector<std::string> cmd = {tool.string()};
-            cmd.insert(cmd.end(), args.begin(), args.end());
-            std::vector<char const*> argv;
-            argv.reserve(cmd.size() + 1);
-            for (auto const& arg : cmd) {
-                argv.push_back(arg.c_str());
+        // `yt.links "$url" | xargs subtitle | srt2text`, stopping at the first
+        // failing stage.
+        std::string transform_url(std::string_view const url, bool& ok) {
+            auto const link = tools::extract_link(url);
+            if (link.url.empty() || link.failed) {
+                ok = false;
+                return {};
             }
-            argv.push_back(nullptr);
-            auto result = dana::process::run_command(cmd, stdin_data);
-            stdout_data = result.stdout_data;
-            return result.exit_code;
-        }
-
-
-        // `"$curdir/yt.links" "$url" | xargs "$curdir/subtitle" | "$curdir/srt2text"`
-        // (under `set -o pipefail`, so any failing stage fails the whole pipeline).
-        std::string transform_url(std::string_view const url, text::string_views tools, bool& ok) {
-            constexpr std::size_t links    = 0;
-            constexpr std::size_t subtitle = 1;
-            constexpr std::size_t srt2text = 2;
-
-            std::string links_out;
-            auto const  links_status = run_tool_status(tools.at(links), {std::string(url)}, {}, links_out);
-
-            std::string sub_out;
-            auto const  xargs      = process::xargs_tokens(links_out);
-            auto const  sub_status = run_tool_status(tools.at(subtitle), xargs, {}, sub_out);
-
-            std::string text_out;
-            auto const  text_status = run_tool_status(tools.at(srt2text), {}, sub_out, text_out);
-
-            ok = links_status == 0 && sub_status == 0 && text_status == 0;
-            return drop_trailing_newlines(text_out);
+            auto const subtitle = tools::fetch_subtitles(link.url);
+            if (!subtitle) {
+                ok = false;
+                return {};
+            }
+            ok = true;
+            return drop_trailing_newlines(tools::srt_to_text(*subtitle));
         }
 
     } // namespace
 
     static void execute_summarize(view const& v, result& r) {
-        std::vector<std::string> tools;
-        tools.reserve(3);
-        for (char const* name : {"yt.links", "subtitle", "srt2text"}) {
-            tools.push_back(dana::fs::bin_tool(name, v.env.exe_path, v.env.git_root).string());
-        }
-
         // bash checks `[ -t 0 ]`: a piped stdin wins over the clipboard.
         std::string input;
         if (v.in.piped()) {
@@ -138,7 +109,7 @@ namespace dana {
         std::string trimmed = trim_lines(input);
         if (is_url(trimmed)) {
             bool        ok     = false;
-            std::string result = transform_url(trimmed, tools, ok);
+            std::string result = transform_url(trimmed, ok);
             if (ok) {
                 output += result;
                 r.out   = std::move(output);

@@ -1,12 +1,9 @@
-#include "../../prompts/tse_data.hpp"
+#include "../../tools/tse_screen_review.hpp"
 
-#include <chrono>
 #include <cstdio>
 #include <string>
-#include <vector>
 
-using namespace dana;
-namespace tse_data = dana::tse_data;
+namespace tse = dana::tools::tse;
 
 namespace {
 
@@ -19,52 +16,40 @@ namespace {
         }
     }
 
-    std::string failure_of(text::string_views argv, std::chrono::milliseconds timeout) {
-        try {
-            std::ignore = tse_data::run_tool("tse", "bin/tse", argv, timeout);
-        } catch (soft_error const& e) {
-            return e.what();
-        }
-        return {};
+    void test_classify_document() {
+        check(tse::classify_screen_text(R"({"results":[],"meta":{}})") == "doc", "results array is a doc");
+        check(tse::classify_screen_text(R"({"symbol":"فولاد"})") == "jsonl", "single row is jsonl");
+        check(tse::classify_screen_text(R"([{"symbol":"فولاد"}])") == "array", "object array is array");
+        check(tse::classify_screen_text("") == "empty", "blank input is empty");
+        check(tse::classify_screen_text("Symbol  Price\nفولاد  100") == "table", "table header is table");
+        check(tse::classify_screen_text("what to buy tomorrow") == "nl", "prose is natural language");
     }
 
-    void test_timeout_is_reported() {
-        // Regression: a killed fetch used to throw an empty message, so `.tse`
-        // exited 1 without printing anything at all.
-        auto const message = failure_of({"sleep", "5"}, std::chrono::milliseconds(100));
-        check(message.contains("prompt tse: bin/tse timed out after"), "timeout message names the tool");
-        check(message.contains("retry with a narrower request"), "timeout message suggests a remedy");
+    void test_rows_to_csv() {
+        auto const csv = tse::screen_rows_to_csv(R"({"results":[{"symbol":"فولاد","chg":1.5},{"symbol":"خودرو"}]})");
+        check(csv == "symbol,chg\nفولاد,1.5\nخودرو,", "CSV header and missing cell");
+        check(tse::screen_rows_to_csv(R"({"results":[]})").empty(), "no columns yields empty CSV");
     }
 
-    void test_nonzero_exit_is_reported() {
-        auto const message = failure_of({"false"}, std::chrono::seconds(10));
-        check(message == "prompt tse: bin/tse exited with status 1\n", "non-zero exit message");
+    void test_snapshot_meta() {
+        auto const info = tse::screen_snapshot_meta(
+          R"({"results":[{"symbol":"a"},{"symbol":"b"}],"meta":{"screened_at":"1404/09/01","total_universe":700,"args":["--traded"]}})");
+        check(info.screened == "1404/09/01", "screened_at");
+        check(info.counts == "2 matched / 700 screened", "count line");
+        check(info.command == "--traded", "command from args");
     }
 
-    void test_empty_output_is_reported() {
-        // An empty dataset must fail here, not reach `.save` or an AI sink as an
-        // empty context.
-        auto const message = failure_of({"true"}, std::chrono::seconds(10));
-        check(message == "prompt tse: bin/tse returned no data\n", "empty output message");
-    }
-
-    void test_success_is_returned() {
-        try {
-            auto const result = tse_data::run_tool("tse", "bin/tse", {"printf", "data"}, std::chrono::seconds(10));
-            check(result.stdout_data == "data", "successful run returns stdout");
-        } catch (prompt_error const& e) {
-            std::fprintf(stderr, "unexpected failure: %s", e.what());
-            ++failures;
-        }
+    void test_row_count() {
+        check(tse::screen_row_count(R"([1,2,3])") == 3, "array row count");
     }
 
 } // namespace
 
 int main() {
-    test_timeout_is_reported();
-    test_nonzero_exit_is_reported();
-    test_empty_output_is_reported();
-    test_success_is_returned();
+    test_classify_document();
+    test_rows_to_csv();
+    test_snapshot_meta();
+    test_row_count();
     if (failures != 0) {
         std::fprintf(stderr, "test_tse_tool: %d failure(s)\n", failures);
         return 1;

@@ -1,9 +1,10 @@
-#include "../core/fs.hpp"
-#include "../core/process.hpp"
 #include "../runtime/args.hpp"
 #include "../runtime/embed.hpp"
 #include "../runtime/prompt_registry.hpp"
+#include "../tools/whatwg.hpp"
 
+#include <format>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -14,26 +15,19 @@ namespace dana {
 
         auto sections = positional_args(v);
 
-        std::filesystem::path tool = fs::bin_tool(
-          "whatwg-url-specs",
-          v.env.exe_path,
-          v.env.git_root.empty() ? std::nullopt : std::optional(v.env.git_root));
-
         std::string output = R"PROMPT(Review the following sections from the WHATWG URL specification.
 Ensure that any code, fixes, or analysis strictly adhere to these standard algorithms and definitions.
 
 )PROMPT";
 
         if (sections.empty()) {
-            // No queries: the tool's --help is streamed verbatim inside a code
-            // fence (no --head applied here), preceded by the stderr warning.
-            std::array<std::string, 2> const cmdline{tool.string(), "--help"};
-            auto const                       result  = process::run_command(cmdline);
-            output                                  += "```text\n";
-            output                                  += result.stdout_data;
-            output                                  += "```\n\n";
-            r.out                                    = std::move(output);
-            r.err = "Warning: No queries provided. Use 'list' to see sections or provide specific keywords.\n";
+            // No queries: the help is streamed verbatim inside a code fence (no
+            // --head applied here), preceded by the stderr warning.
+            output += "```text\n";
+            output += tools::whatwg_help();
+            output += "```\n\n";
+            r.out   = std::move(output);
+            r.err   = "Warning: No queries provided. Use 'list' to see sections or provide specific keywords.\n";
             return;
         }
 
@@ -47,14 +41,18 @@ Ensure that any code, fixes, or analysis strictly adhere to these standard algor
         output += std::format("Querying WHATWG URL specification for: {}\n\n", joined);
         output += "```markdown\n";
 
-        std::vector<std::string> storage;
-        storage.push_back(tool.string());
-        for (auto const& s : sections) {
-            storage.push_back(s);
+        std::vector<std::string> queries;
+        queries.reserve(sections.size());
+        for (auto const& section : sections) {
+            queries.emplace_back(section);
         }
-        auto result  = process::run_command(storage);
-        output      += trim_context_nl(result.stdout_data, head_lines);
-        output      += "```\n\n";
+
+        try {
+            output += trim_context_nl(tools::whatwg_query(queries), head_lines);
+        } catch (std::exception const& error) {
+            r.err = std::format("whatwg-url-specs: {}\n", error.what());
+        }
+        output += "```\n\n";
 
         r.out = std::move(output);
     }
@@ -63,7 +61,7 @@ Ensure that any code, fixes, or analysis strictly adhere to these standard algor
         os << R"EOF(Usage: prompt whatwg-url-specs [--head N] [SECTIONS...]
        some-command | prompt whatwg-url-specs [--head N] [SECTIONS...]
 
-Fetches relevant sections of the WHATWG URL specification using `whatwg-url-specs` and adds them to the prompt context.
+Fetches relevant sections of the WHATWG URL specification and adds them to the prompt context.
 
 Several sections can be requested in a single call:
        prompt whatwg-url-specs path-state authority-state host-state path-start-state
@@ -77,8 +75,7 @@ Options:
     // (no central list — see sdk/prompt_registry.hpp).
     [[maybe_unused]] bool const registered = dana::register_prompt(
       "whatwg-url-specs",
-      "Fetches relevant sections of the WHATWG URL specification using `whatwg-url-specs` and "
-      "adds them to the prompt context.",
+      "Fetches relevant sections of the WHATWG URL specification and adds them to the prompt context.",
       &execute_whatwg_url_specs,
       &render_help_whatwg_url_specs);
 

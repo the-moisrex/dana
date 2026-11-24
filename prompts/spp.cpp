@@ -1,23 +1,20 @@
-#include "../core/fs.hpp"
-#include "../core/process.hpp"
+#include "../tools/spp.hpp"
+
 #include "../runtime/args.hpp"
 #include "../runtime/embed.hpp"
 #include "../runtime/prompt_registry.hpp"
 
+#include <format>
 #include <string>
-#include <vector>
 
 namespace dana {
 
     static void execute_spp(view const& v, result& r) {
         auto head_lines = head_lines_or_throw(v);
 
-        // spp.sh tests the raw $# (so `prompt spp --head 5` is not an error).
         if (v.args.empty()) {
             throw usage_error{"Usage: prompt spp [--head N] <symbol> [symbol...]\n"};
         }
-
-        auto tool = dana::fs::bin_tool("spp", v.env.exe_path, v.env.git_root);
 
         std::string output;
         output += "Additional C++ symbol context:\n\n";
@@ -27,15 +24,8 @@ namespace dana {
             std::string symbol(arg);
             output += std::format("Symbol: {}\n\n", symbol);
             output += "```cpp\n";
-
-            std::string              spp_path  = tool.string();
-            std::vector<char const*> argv      = {spp_path.c_str(), symbol.c_str(), nullptr};
-            auto                     result    = dana::process::run_command(argv, v.in.text());
-            output                            += trim_context_nl(result.stdout_data, head_lines);
-            output                            += "\n```\n\n";
-            if (!result.stderr_data.empty()) {
-                error += result.stderr_data;
-            }
+            output += trim_context_nl(tools::expand_symbol(symbol), head_lines);
+            output += "\n```\n\n";
         }
 
         output += "Use the symbol context above when analyzing the issue.";
