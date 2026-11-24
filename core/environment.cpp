@@ -2,6 +2,7 @@
 
 #include "core/clipboard.hpp"
 #include "core/fs.hpp"
+#include "core/fuzzy.hpp"
 #include "core/git.hpp"
 #include "core/process.hpp"
 
@@ -12,7 +13,6 @@
 #include <string>
 #include <string_view>
 #include <system_error>
-#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -72,124 +72,6 @@ namespace dana {
             }
         }
 
-        // Deliberately ASCII-only: predictable and independent of the process locale.
-        // Replace with Unicode case folding if your application needs it.
-        inline std::string fold_ascii(std::string_view text) {
-            std::string result;
-            result.reserve(text.size());
-
-            for (unsigned char c : text) {
-                if (c >= 'A' && c <= 'Z') {
-                    c = static_cast<unsigned char>(c + ('a' - 'A'));
-                }
-                result.push_back(static_cast<char>(c));
-            }
-
-            return result;
-        }
-
-        struct Rank {
-            int         kind;
-            int         case_penalty;
-            std::size_t gaps;
-            std::size_t length;
-
-            [[nodiscard]] auto key() const noexcept {
-                return std::tuple{kind, case_penalty, gaps, length};
-            }
-        };
-
-        // Counts skipped characters between matched characters, not before or after.
-        // Linear time; no dynamic-programming matrix or external fuzzy finder.
-        inline std::optional<std::size_t> subsequence_gaps(std::string_view text, std::string_view query) {
-            std::size_t next     = 0;
-            std::size_t previous = 0;
-            std::size_t gaps     = 0;
-
-            for (std::size_t i = 0; i < query.size(); ++i) {
-                auto const found = text.find(query[i], next);
-                if (found == std::string_view::npos) {
-                    return std::nullopt;
-                }
-
-                if (i != 0) {
-                    gaps += found - previous - 1;
-                }
-
-                previous = found;
-                next     = found + 1;
-            }
-
-            return gaps;
-        }
-
-        inline std::optional<Rank>
-        rank_path(std::string_view relative, std::string_view query, std::string_view folded_query) {
-            std::string const folded = fold_ascii(relative);
-
-            auto const slash  = relative.find_last_of('/');
-            auto const offset = slash == std::string_view::npos ? 0 : slash + 1;
-
-            auto const filename        = relative.substr(offset);
-            auto const folded_filename = std::string_view(folded).substr(offset);
-
-            if (folded == folded_query) {
-                return Rank{
-                  .kind         = 0,
-                  .case_penalty = relative == query ? 0 : 1,
-                  .gaps         = 0,
-                  .length       = relative.size(),
-                };
-            }
-
-            if (folded_filename == folded_query) {
-                return Rank{
-                  .kind         = 1,
-                  .case_penalty = filename == query ? 0 : 1,
-                  .gaps         = 0,
-                  .length       = relative.size(),
-                };
-            }
-
-            if (folded_filename.contains(folded_query)) {
-                return Rank{
-                  .kind         = 2,
-                  .case_penalty = filename.contains(query) ? 0 : 1,
-                  .gaps         = 0,
-                  .length       = relative.size(),
-                };
-            }
-
-            if (folded.contains(folded_query)) {
-                return Rank{
-                  .kind         = 3,
-                  .case_penalty = relative.contains(query) ? 0 : 1,
-                  .gaps         = 0,
-                  .length       = relative.size(),
-                };
-            }
-
-            if (auto const gaps = subsequence_gaps(folded_filename, folded_query)) {
-                return Rank{
-                  .kind         = 4,
-                  .case_penalty = 0,
-                  .gaps         = *gaps,
-                  .length       = relative.size(),
-                };
-            }
-
-            if (auto const gaps = subsequence_gaps(folded, folded_query)) {
-                return Rank{
-                  .kind         = 5,
-                  .case_penalty = 0,
-                  .gaps         = *gaps,
-                  .length       = relative.size(),
-                };
-            }
-
-            return std::nullopt;
-        }
-
         // Git is an optional accelerator; no listing selects native traversal.
         [[nodiscard]] std::optional<std::vector<std::string>> try_git_listing(stdfs::path const& root) try {
             return dana::git::all_files(root.string());
@@ -246,25 +128,23 @@ namespace dana {
                 return std::nullopt;
             }
 
-            std::string const folded_query = fold_ascii(query);
-
             std::optional<stdfs::path> best_path;
-            std::optional<Rank>        best_rank;
+            std::optional<fuzzy::rank> best_rank;
             std::string                best_relative;
 
             auto consider = [&](stdfs::path const& relative) {
                 std::string const text = relative.generic_string();
-                auto const        rank = rank_path(text, query, folded_query);
+                auto const        rank = fuzzy::rank_path(text, query);
                 if (!rank) {
                     return;
                 }
 
                 // Stable tie-breaking, independent of Git/filesystem listing order.
                 if (best_rank) {
-                    if (rank->key() > best_rank->key()) {
+                    if (fuzzy::rank_key(*rank) > fuzzy::rank_key(*best_rank)) {
                         return;
                     }
-                    if (rank->key() == best_rank->key() && text >= best_relative) {
+                    if (fuzzy::rank_key(*rank) == fuzzy::rank_key(*best_rank) && text >= best_relative) {
                         return;
                     }
                 }

@@ -174,16 +174,16 @@ namespace dana {
 
     } // namespace
 
-    void complete_line(std::string_view                  current,
-                       text::string_views prior,
-                       std::filesystem::path const&      git_root,
-                       std::ostream&                     out) {
+    void complete_line(std::string_view             current,
+                       text::string_views           prior,
+                       std::filesystem::path const& git_root,
+                       std::ostream&                out) {
         // Complete against the tokens the chain will actually run: an inlined
         // `*.prompt` file may define functions and open `.each`/`.func` bodies.
         bool const no_files = std::ranges::find(prior, std::string_view{"--no-prompt-files"}) != prior.end();
         auto const expanded = expand_prompt_file_tokens(prior, git_root, !no_files);
-        std::vector<std::string_view>     effective_views;
-        text::string_views effective = prior;
+        std::vector<std::string_view> effective_views;
+        text::string_views            effective = prior;
         if (expanded.error.empty()) {
             effective_views.reserve(expanded.storage.size());
             for (auto const& token : expanded.storage) {
@@ -246,7 +246,7 @@ namespace dana {
         if (desc == nullptr) {
             return;
         }
-        write_prompt_candidates(*desc, current, here.args, out);
+        write_prompt_candidates(*desc, current, here.args, out, git_root);
         // A `*.prompt` argument can appear anywhere; only offer the files when the
         // token is deliberately a path or a `.prompt` name, so a bare word stays a
         // word (fish's own path completion covers the rest).

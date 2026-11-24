@@ -86,6 +86,7 @@ add_custom_command(
 add_library(dana_lib OBJECT
         core/clipboard.cpp
         core/fs.cpp
+        core/fuzzy.cpp
         core/git.cpp
         core/glob.cpp
         core/process.cpp

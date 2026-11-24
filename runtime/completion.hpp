@@ -15,6 +15,7 @@
 
 #include "../core/strings.hpp"
 
+#include <filesystem>
 #include <ostream>
 #include <span>
 #include <string>
@@ -147,14 +148,23 @@ namespace dana {
 
     // A prompt's candidates: the flags derived from its own help plus its optional
     // complete_fn. Shared by `prompt <name> --complete …` and the whole-line mode
-    // below, so both answer from exactly the same place.
+    // below, so both answer from exactly the same place. A file prompt
+    // (`emits_files`) also gets fuzzy file candidates at a positional argument.
     struct prompt_descriptor; // prompt_registry.hpp — forward-declared so the two
                               // headers never include each other
     void write_prompt_candidates(
-      prompt_descriptor const& desc,
-      std::string_view         prefix,
-      text::string_views       prior_args,
-      std::ostream&            out);
+      prompt_descriptor const&     desc,
+      std::string_view             prefix,
+      text::string_views           prior_args,
+      std::ostream&                out,
+      std::filesystem::path const& git_root = {});
+
+    // Fuzzy file and directory candidates for a positional FILE argument. The value
+    // is the full path relative to the current directory (so selecting it inserts
+    // the whole path), ranked so a basename match comes before a path match. An
+    // empty or flag-like prefix yields nothing: the shell's own path completion
+    // owns those positions.
+    void write_file_candidates(std::ostream& out, std::string_view prefix, std::filesystem::path const& git_root);
 
     // Every registered prompt plus the extra `candidates` (the functions visible at
     // this point in the chain), merged into the catalog's locale-aware order, each

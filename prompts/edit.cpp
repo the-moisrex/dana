@@ -837,9 +837,15 @@ namespace dana {
             auto const new_file = directory / "new";
             write_temp(old_file, before);
             write_temp(new_file, after);
+            // `run_script` hands the first extra to `bash -c` as `$0` (the script
+            // name), so the real arguments must start after a dummy. Without it the
+            // diff compared the new file against the live path and printed the
+            // change backwards.
+            std::array<std::string, 4> const diff_args{
+              "edit-diff", old_file.string(), new_file.string(), std::string{path}};
             auto result = dana::process::run_script(
               R"(diff -u --label "a/$3" --label "b/$3" -- "$1" "$2")",
-              {old_file.string(), new_file.string(), std::string{path}},
+              diff_args,
               {},
               std::chrono::seconds{10});
             return result.stdout_data;

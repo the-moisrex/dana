@@ -563,7 +563,12 @@ Notes:
             }
             if (auto const* desc = dana::find_prompt(complete_name); desc != nullptr) {
                 std::ostringstream out;
-                dana::write_prompt_candidates(*desc, prefix, prior, out);
+                dana::write_prompt_candidates(
+                  *desc,
+                  prefix,
+                  prior,
+                  out,
+                  dana::fs::find_git_root().value_or(std::filesystem::path{}));
                 std::print(std::cout, "{}", out.str());
             }
             return 0;

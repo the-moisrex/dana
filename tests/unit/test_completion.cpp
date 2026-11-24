@@ -5,6 +5,7 @@
 // exercise the helpers directly and check the end-to-end wiring through the
 // registry (which prompts registered a callback, and what their help yields).
 #include "../../ai/models.hpp"
+#include "../../core/fuzzy.hpp"
 #include "../../runtime/completion.hpp"
 #include "../../runtime/line_completion.hpp"
 #include "../../runtime/prompt_file.hpp"
@@ -332,6 +333,102 @@ namespace {
         check(no_project.contains("user.prompt\tprompt file (config)"), "files: the config source needs no git root");
     }
 
+    // The fuzzy path rank: exact path, exact basename, substring, then subsequence.
+    void test_fuzzy_rank() {
+        auto const exact = fuzzy::rank_path("src/main.cpp", "src/main.cpp");
+        check(exact.has_value() && exact->kind == fuzzy::match_kind::exact_path, "fuzzy: an exact path ranks first");
+
+        auto const basename = fuzzy::rank_path("src/main.cpp", "main.cpp");
+        check(basename.has_value() && basename->kind == fuzzy::match_kind::exact_name,
+              "fuzzy: an exact basename ranks next");
+
+        auto const substring = fuzzy::rank_path("src/main.cpp", "ain");
+        check(substring.has_value() && substring->kind == fuzzy::match_kind::name_substring,
+              "fuzzy: a basename substring matches");
+
+        auto const subsequence = fuzzy::rank_path("src/main.cpp", "hsty");
+        check(!subsequence.has_value(), "fuzzy: a query absent from the path does not match");
+        auto const loose = fuzzy::rank_path("runtime/history.cpp", "hsty");
+        check(loose.has_value() && loose->kind == fuzzy::match_kind::name_subsequence,
+              "fuzzy: a subsequence of the basename matches");
+        auto const whole = fuzzy::rank_path("runtime/history.cpp", "rtm");
+        check(whole.has_value() && whole->kind == fuzzy::match_kind::path_subsequence,
+              "fuzzy: a subsequence of the whole path matches");
+    }
+
+    // A file prompt's positional argument gets fuzzy file candidates, and the value
+    // is the full path relative to the current directory (what selecting inserts).
+    void test_file_candidates(temp_tree const& tree) {
+        auto const root = tree.root / "files";
+        write_file(root / "src" / "main.cpp", "int main() {}\n");
+        write_file(root / "src" / "module.hpp", "#pragma once\n");
+        write_file(root / "runtime" / "history.cpp", "// history\n");
+        write_file(root / "docs" / "readme.md", "# readme\n");
+        std::filesystem::create_directories(root / ".git");
+
+        auto const cwd = std::filesystem::current_path();
+        std::filesystem::current_path(root);
+
+        std::string main = render([&](std::ostream& os) {
+            write_file_candidates(os, "main", root);
+        });
+        check(has_candidate(main, "src/main.cpp"), "file completion inserts the full relative path");
+        check(main.contains("src/main.cpp\tfile"), "file completion describes the candidate");
+        check(!main.contains("readme.md"), "file completion drops unrelated files");
+
+        std::string fuzzy = render([&](std::ostream& os) {
+            write_file_candidates(os, "hsty", root);
+        });
+        check(has_candidate(fuzzy, "runtime/history.cpp"), "file completion matches a fuzzy query");
+
+        std::string dir = render([&](std::ostream& os) {
+            write_file_candidates(os, "sr", root);
+        });
+        check(has_candidate(dir, "src/"), "file completion offers a matching directory");
+
+        check(render([&](std::ostream& os) {
+                  write_file_candidates(os, "", root);
+              }).empty(),
+              "file completion needs a prefix");
+        check(render([&](std::ostream& os) {
+                  write_file_candidates(os, "--", root);
+              }).empty(),
+              "file completion leaves flags alone");
+
+        // Through the shared renderer: `.read`/`.files` are file prompts, `.cat`
+        // names FILE in its usage, and a flag value is not completed as a path.
+        for (char const* name : {"read", "files", "cat"}) {
+            auto const* desc = find_prompt(name);
+            check(desc != nullptr, "file completion: the prompt is registered");
+            if (desc == nullptr) {
+                continue;
+            }
+            std::vector<std::string_view> const none;
+            std::string                         via_prompt = render([&](std::ostream& os) {
+                write_prompt_candidates(*desc, "main", none, os, root);
+            });
+            check(has_candidate(via_prompt, "src/main.cpp"), "file completion: the prompt offers files");
+        }
+
+        if (auto const* grep = find_prompt("grep"); grep != nullptr) {
+            std::vector<std::string_view> const none;
+            std::string                         via_grep = render([&](std::ostream& os) {
+                write_prompt_candidates(*grep, "main", none, os, root);
+            });
+            check(!has_candidate(via_grep, "src/main.cpp"), "file completion: a PATTERN operand is not a file");
+        }
+
+        if (auto const* read = find_prompt("read"); read != nullptr) {
+            std::vector<std::string_view> const offset{"--offset"};
+            std::string                         after_flag = render([&](std::ostream& os) {
+                write_prompt_candidates(*read, "main", offset, os, root);
+            });
+            check(!has_candidate(after_flag, "src/main.cpp"), "file completion: a flag value is not a file");
+        }
+
+        std::filesystem::current_path(cwd);
+    }
+
     // The whole-line mode classifies the position: head, a `.`/`-` step boundary, an
     // argument of the open prompt, or a tail it leaves to the shell.
     void test_complete_line_positions() {
@@ -590,7 +687,9 @@ int main() {
     test_ai_model_catalog();
     test_ai_model_completion();
     temp_tree const tree{"prompt-completion-test"};
+    test_fuzzy_rank();
     test_prompt_file_candidates(tree);
+    test_file_candidates(tree);
     test_complete_line_positions();
     test_complete_line_functions(tree);
     if (failures == 0) {

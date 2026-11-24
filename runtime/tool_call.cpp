@@ -261,6 +261,26 @@ namespace dana::tool_call {
             return input;
         }
 
+        // Models often run the opening fence straight into the prose
+        // ("…then I will.```json"), but the Markdown parser is line-oriented and
+        // would miss it, so the loop would stop as if the answer had no call. Put
+        // every fence run on its own line before parsing. A fence already at the
+        // start of a line is untouched.
+        std::string break_inline_fences(std::string_view text) {
+            std::string out;
+            out.reserve(text.size() + 8);
+            for (std::size_t i = 0; i < text.size();) {
+                char const marker = text[i];
+                bool const fence  = (marker == '`' || marker == '~') && i + 2 < text.size() &&
+                               text[i + 1] == marker && text[i + 2] == marker;
+                if (fence && !out.empty() && out.back() != '\n') {
+                    out += '\n';
+                }
+                out += text[i++];
+            }
+            return out;
+        }
+
         // A top-level array may nest further arrays, so this recurses; the depth is the
         // JSON document's own, which nlohmann already bounded when it parsed.
         // NOLINTNEXTLINE(misc-no-recursion)
@@ -489,7 +509,8 @@ namespace dana::tool_call {
 
         // Otherwise every fenced block: `json`-tagged or untagged. A block that is
         // valid JSON without a `tool` key contributes nothing.
-        for (auto const& block : extract::parse_document(text, "")) {
+        std::string const lined = break_inline_fences(text);
+        for (auto const& block : extract::parse_document(lined, "")) {
             if (block.kind != "code") {
                 continue;
             }

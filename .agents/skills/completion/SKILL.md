@@ -1,6 +1,6 @@
 ---
 name: Shell Completion
-description: The dana binary-driven shell completion (--complete, --complete-line) — flag auto-completion, positional callbacks, line-mode chain replay, function/prompt-file candidates and tests.
+description: The dana binary-driven shell completion (--complete, --complete-line) — flag auto-completion, positional callbacks, fuzzy file candidates, line-mode chain replay, function/prompt-file candidates and tests.
 ---
 
 # Shell completion (`--complete`, `--complete-line`)
@@ -39,6 +39,15 @@ consumes the pipe or copies anything.
   `tse_data::complete_instrument` delegates the `tse`/`tse.intraday`
   identifier lookup to `bin/tse.resolve --complete`; `skill`, `run`, `diagram`,
   `metadata`, `opportunities` and `overengineering` have small callbacks.
+- **File candidates** come from `write_file_candidates` for a prompt registered
+  with `emits_files` (`.read`, `.files`, `.compress`, `.verify`, …): at a
+  positional argument it lists the repository's files (Git's listing, or a
+  native walk outside one) and the directories derived from them, ranked by
+  `core/fuzzy` (`rank_path`: exact path, exact basename, substring, then
+  subsequence). The value is the full path relative to the current directory, so
+  selecting a fuzzy match inserts the whole path rather than the fragment. An
+  empty or `-`-leading token, or a token right after a flag (a flag value), is
+  left to the shell's own path completion.
 - **The line mode** replays just enough of `parse_chain` to know what the
   current token is being completed against: a bare token opens a step only while
   none matched (the head), a `.name`/`-name` token naming a prompt **or a
@@ -62,9 +71,9 @@ consumes the pipe or copies anything.
   once; a token containing `/` lists that directory instead, offering its
   `*.prompt` files and its subdirectories so the user can descend. They are
   offered at the head, and at an argument position only for a deliberate
-  `.prompt`/path token (a plain word stays a word, which is what keeps
-  `.files src/ma<TAB>` on fish's path completion). `--no-prompt-files` anywhere
-  in the tokens suppresses them.
+  `.prompt`/path token (a plain word stays a word, so a file prompt's fuzzy
+  file candidates and fish's own path completion handle it). `--no-prompt-files`
+  anywhere in the tokens suppresses them.
 - `prompt_descriptor::complete_fn` stays `nullptr` when a prompt registers no
   callback (flags only). Tests: `tests/unit/test_completion.cpp` (flag and value
   completion, line-mode positions, prompt/prompt-file candidates).
