@@ -611,6 +611,36 @@ namespace {
         return cli;
     }
 
+    // Whether the catalog built for this loop includes a file-editing tool.
+    // `--read-only` removes them; `--tools` is a comma-separated allow-list.
+    bool loop_can_edit(loop_cli const& cli) {
+        if (cli.read_only) {
+            return false;
+        }
+        if (cli.tools.empty()) {
+            return true;
+        }
+        std::string_view list = cli.tools;
+        while (!list.empty()) {
+            auto const comma = list.find(',');
+            auto       name  = list.substr(0, comma);
+            while (!name.empty() && name.front() == ' ') {
+                name.remove_prefix(1);
+            }
+            while (!name.empty() && name.back() == ' ') {
+                name.remove_suffix(1);
+            }
+            if (name == "edit" || name == "write") {
+                return true;
+            }
+            if (comma == std::string_view::npos) {
+                break;
+            }
+            list.remove_prefix(comma + 1);
+        }
+        return false;
+    }
+
     std::string build_agent_message(view const& v, loop_cli const& cli, alias::table const& aliases) {
         std::string out;
         out += "# Agent\n\n";
@@ -668,9 +698,20 @@ namespace {
 
         out += "\n# Task\n\n";
         out += v.text;
-        out += "\n\nRemember: to act, reply with a fenced ```json tool call using ONLY the tools\n";
-        out += "listed above. Do not use a built-in interpreter or sandbox, and do not answer\n";
-        out += "with a report instead of making the requested change.\n";
+        out += "\n\n";
+        // Say what this session can actually do. A prompt such as `.clang-tidy`
+        // must not guess whether editing tools were granted; the sink knows the
+        // catalog it built above.
+        if (loop_can_edit(cli)) {
+            out += "This session HAS the edit, write and cli tools. Apply the requested\n";
+            out += "changes directly to the files named in the task; do not answer with only\n";
+            out += "an explanation, a patch, or a report.\n";
+        } else {
+            out += "This session has NO editing tools. Explain the issues and provide patches\n";
+            out += "instead of trying to edit files.\n";
+        }
+        out += "To act, reply with a fenced ```json tool call using ONLY the tools listed\n";
+        out += "above. Do not use a built-in interpreter or sandbox.\n";
         return aliases.hide(out);
     }
 
@@ -731,10 +772,34 @@ namespace {
           "```\n"
           "The available tools are the ones listed in the first message (by default:\n"
           "read, grep, glob, edit, write, cli). Do not use a built-in interpreter or\n"
-          "sandbox and do not answer with a report. If a result was truncated, call\n"
-          "`read` again with an offset. When the task is complete, answer with no tool\n"
-          "block.\n\n";
-        io.turn = [&](std::string_view prompt) {
+          "sandbox and do not answer with a report. Never claim that you cannot access\n"
+          "the workspace or the files: the harness has them and runs every call. If a\n"
+          "result was truncated, call `read` again with an offset. When the task is\n"
+          "complete, answer with no tool block.\n\n";
+        // Web models sometimes fall back to their site's own agent and refuse
+        // ("I couldn't inspect or edit f.cpp in the workspace") when the task
+        // arrives with embedded file content. One corrective turn usually gets
+        // them back to emitting a tool call.
+        loop.refusal_retries = 3;
+        loop.refusal_nudge =
+          "STOP. Do not use any built-in or site-side Python sandbox, `code-run`,\n"
+          "`canvas`, file upload, or other built-in tool. They run on a different\n"
+          "machine and cannot see this workspace; using them is the bug. You are the\n"
+          "planner of an external coding harness. The file content in the previous\n"
+          "message is only a reference snapshot; the real file is on disk and the\n"
+          "harness will run your call against it. Emit exactly one fenced ```json\n"
+          "tool call now, using the tools from the first message, for example\n"
+          "```json\n"
+          "{\"tool\": \"edit\", \"input\": {\"path\": \"path/to/file\", \"old\": \"exact text\", \"new\": "
+          "\"replacement\"}}\n"
+          "```\n"
+          "Do not explain, do not paste a patch, and do not reply DONE until a tool has\n"
+          "actually run. If the task is already complete, reply with exactly: DONE\n";
+        // A planner that answers with a patch instead of acting has not done
+        // the task. Only worth nudging when this session can actually edit.
+        loop.nudge_on_code_answer = loop_can_edit(cli);
+        loop.completion_marker    = "DONE";
+        io.turn                   = [&](std::string_view prompt) {
             ++turn_number;
             write_stderr(
               v,

@@ -1,6 +1,7 @@
 #include "../../core/sanitize.hpp"
 
 #include <cstdio>
+#include <cstdlib>
 #include <string>
 #include <string_view>
 
@@ -35,6 +36,18 @@ namespace {
         check(r.text == "mail EMAIL_ADDRESS now\n", "the email is replaced by EMAIL_ADDRESS");
     }
 
+    void test_project_path_is_shortened_without_redaction() {
+        auto r = sanitize("build dir: /home/testuser/Projects/dana/build\n");
+        check(!r.redacted, "a path under HOME/Projects is shortened, not marked redacted");
+        check(r.text == "build dir: dana/build\n", "the HOME/Projects prefix is dropped");
+    }
+
+    void test_home_is_redacted() {
+        auto r = sanitize("file /home/testuser/.config/x\n");
+        check(r.redacted, "a HOME path marks the text redacted");
+        check(r.text == "file HOME/.config/x\n", "HOME replaces the home directory");
+    }
+
     void test_legend_mentions_the_placeholders() {
         std::string_view legend = dana::sanitize::kRedactionLegend;
         check(legend.starts_with("[prompt] "), "the legend carries the harness-visible marker");
@@ -45,9 +58,16 @@ namespace {
 } // namespace
 
 int main() {
+    // The redaction table interpolates $HOME/$USER once per process, so pin them
+    // before the first sanitize() call to keep these checks host-independent.
+    setenv("HOME", "/home/testuser", 1);
+    setenv("USER", "testuser", 1);
+
     test_no_redaction();
     test_ip_is_redacted();
     test_email_is_redacted();
+    test_project_path_is_shortened_without_redaction();
+    test_home_is_redacted();
     test_legend_mentions_the_placeholders();
 
     if (failures != 0) {

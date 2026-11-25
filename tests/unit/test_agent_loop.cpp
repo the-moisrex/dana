@@ -176,6 +176,152 @@ namespace {
         check_equal(dana::ai::truncate_tool_result(many, 0, 0), many, "no limits means no change");
     }
 
+    void test_refusal_retry() {
+        std::vector<std::string>     prompts;
+        dana::ai::agent_loop_options options;
+        options.refusal_retries = 1;
+        options.refusal_nudge   = "nudge";
+        dana::ai::agent_loop_io io;
+        io.turn = [&](std::string_view prompt) {
+            prompts.emplace_back(prompt);
+            if (prompts.size() == 1) {
+                return answered("I can't access the workspace or the files.");
+            }
+            return answered(prompts.size() == 2 ? "calling" : "finished");
+        };
+        io.run_tools = [](std::string_view answer) -> std::optional<std::string> {
+            if (answer == "calling") {
+                return "### Tool: read\nbody";
+            }
+            return std::nullopt;
+        };
+
+        auto const result = dana::ai::run_agent_loop("task", options, io);
+        check_equal(result.turns, std::size_t{3}, "the refusal is retried once");
+        check_equal(result.answer, "finished", "the retry can recover");
+        check_equal(prompts.size(), std::size_t{3}, "three prompts");
+        check_equal(prompts[1], "nudge", "the retry sends the nudge");
+    }
+
+    void test_refusal_retry_gives_up() {
+        int                          turns = 0;
+        dana::ai::agent_loop_options options;
+        options.refusal_retries = 1;
+        options.refusal_nudge   = "nudge";
+        dana::ai::agent_loop_io io;
+        io.turn = [&](std::string_view) {
+            ++turns;
+            return answered("I cannot access the workspace.");
+        };
+        io.run_tools = [](std::string_view) {
+            return std::optional<std::string>{};
+        };
+
+        auto const result = dana::ai::run_agent_loop("task", options, io);
+        check_equal(turns, 2, "one retry then stop");
+        check_equal(result.answer, "I cannot access the workspace.", "the refusal is the final answer");
+    }
+
+    void test_code_answer_is_nudged() {
+        std::vector<std::string>     prompts;
+        dana::ai::agent_loop_options options;
+        options.refusal_retries      = 1;
+        options.refusal_nudge        = "nudge";
+        options.nudge_on_code_answer = true;
+        dana::ai::agent_loop_io io;
+        io.turn = [&](std::string_view prompt) {
+            prompts.emplace_back(prompt);
+            if (prompts.size() == 1) {
+                return answered("```cpp\nint value = 1;\n```");
+            }
+            return answered(prompts.size() == 2 ? "calling" : "finished");
+        };
+        io.run_tools = [](std::string_view answer) -> std::optional<std::string> {
+            if (answer == "calling") {
+                return "### Tool: edit\nbody";
+            }
+            return std::nullopt;
+        };
+
+        auto const result = dana::ai::run_agent_loop("task", options, io);
+        check_equal(result.turns, std::size_t{3}, "a patch answer is retried");
+        check_equal(result.answer, "finished", "the retry can recover");
+        check_equal(prompts[1], "nudge", "the retry sends the nudge");
+    }
+
+    void test_completion_marker_keeps_previous_answer() {
+        dana::ai::agent_loop_options options;
+        options.refusal_retries      = 1;
+        options.refusal_nudge        = "nudge";
+        options.nudge_on_code_answer = true;
+        options.completion_marker    = "DONE";
+        dana::ai::agent_loop_io io;
+        int                     turns = 0;
+        io.turn                       = [&](std::string_view) {
+            ++turns;
+            if (turns == 1) {
+                return answered("```cpp\npatch\n```");
+            }
+            return answered("DONE\n");
+        };
+        io.run_tools = [](std::string_view) {
+            return std::optional<std::string>{};
+        };
+
+        auto const result = dana::ai::run_agent_loop("task", options, io);
+        check_equal(result.turns, std::size_t{2}, "the marker ends the loop");
+        check_equal(result.answer, "```cpp\npatch\n```", "the previous answer is kept, not the marker");
+    }
+
+    void test_site_tools_are_nudged() {
+        std::vector<std::string>     prompts;
+        dana::ai::agent_loop_options options;
+        options.refusal_retries = 1;
+        options.refusal_nudge   = "nudge";
+        dana::ai::agent_loop_io io;
+        io.turn = [&](std::string_view prompt) {
+            prompts.emplace_back(prompt);
+            dana::ai::turn_result result;
+            if (prompts.size() == 1) {
+                result.used_site_tools = true;
+                result.answer          = "DONE";
+                return result;
+            }
+            result.answer = prompts.size() == 2 ? "calling" : "finished";
+            return result;
+        };
+        io.run_tools = [](std::string_view answer) -> std::optional<std::string> {
+            if (answer == "calling") {
+                return "### Tool: edit\nbody";
+            }
+            return std::nullopt;
+        };
+
+        auto const result = dana::ai::run_agent_loop("task", options, io);
+        check_equal(result.turns, std::size_t{3}, "site tools trigger a retry");
+        check_equal(result.answer, "finished", "the retry can recover");
+        check_equal(prompts[1], "nudge", "the retry sends the nudge");
+    }
+
+    void test_plain_answer_is_not_retried() {
+        int                          turns = 0;
+        dana::ai::agent_loop_options options;
+        options.refusal_retries = 3;
+        options.refusal_nudge   = "nudge";
+        dana::ai::agent_loop_io io;
+        io.turn = [&](std::string_view) {
+            ++turns;
+            return answered("done");
+        };
+        io.run_tools = [](std::string_view) {
+            return std::optional<std::string>{};
+        };
+
+        auto const result = dana::ai::run_agent_loop("task", options, io);
+        check_equal(turns, 1, "a normal answer ends the loop");
+        check_equal(result.answer, "done", "the answer is kept");
+    }
+
 } // namespace
 
 int main() {
@@ -184,6 +330,12 @@ int main() {
     test_exhaustion();
     test_failed_turn();
     test_status_callback();
+    test_refusal_retry();
+    test_refusal_retry_gives_up();
+    test_code_answer_is_nudged();
+    test_completion_marker_keeps_previous_answer();
+    test_site_tools_are_nudged();
+    test_plain_answer_is_not_retried();
     test_truncate();
 
     if (failures != 0) {

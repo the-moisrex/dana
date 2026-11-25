@@ -86,12 +86,16 @@ namespace dana::ai {
     struct [[nodiscard]] turn_result {
         int         status = 0;
         std::string answer;
+        // The provider surfaced a tool its own site ran (GapGPT's Python
+        // `code-run`, a canvas report, …). The agent loop uses this to nudge a
+        // model that fell back to the site agent instead of emitting a call.
+        bool used_site_tools = false;
     };
 
     turn_result run_turn(
       conversation&           chat,
       provider const&         instance,
-      std::string_view      prompt,
+      std::string_view        prompt,
       turn_options const&     options,
       renderer::writer        out,
       renderer::writer const& err);

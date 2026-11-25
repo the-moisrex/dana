@@ -592,12 +592,17 @@ namespace dana::ai {
 
         renderer view = make_renderer(render_options, out, err);
 
-        bool        terminal = false;
-        bool        failed   = false;
+        bool        terminal        = false;
+        bool        failed          = false;
+        bool        used_site_tools = false;
         std::string answer;
 
         auto const handle = [&](stream_event const& event) {
             stream_event current = event;
+
+            if (current.kind == event_kind::tool_call && current.name != "upload") {
+                used_site_tools = true;
+            }
 
             if (current.kind == event_kind::error) {
                 bool const used_file            = attach;
@@ -673,8 +678,9 @@ namespace dana::ai {
             failed = true;
         }
 
-        result.status = failed ? 1 : 0;
-        result.answer = std::move(answer);
+        result.status          = failed ? 1 : 0;
+        result.answer          = std::move(answer);
+        result.used_site_tools = used_site_tools;
         return result;
     }
 

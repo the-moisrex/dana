@@ -160,18 +160,17 @@ namespace dana {
         auto result = dana::process::run_command(storage);
 
         std::string output;
-        output += '\n';
-        output += "Review the following `" + command_str +
-                  "` output. Identify the issues, explain why they were flagged, and provide the most robust "
-                  "and idiomatic fixes. Suggest small git patches or refactored code blocks where "
-                  "appropriate.\n";
-        output += "\n\n```text\n";
+        output                 += '\n';
+        output                 += "Review the following `" + command_str +
+                                  "` output and fix the issues it reports. Warnings in included headers are "
+                                  "context; only the files named in the command are targets.\n";
+        output                 += "\n\n```text\n";
         // clang-tidy.sh: run_output=$(clang-tidy ...); if --head then
         // run_output="$(printf "%s" "$run_output" | head -n N)"; then
         // printf '```text\n%s\n```\n' "$run_output". `head -n 0` prints nothing
         // (unlike trim_context's sed), and the inner $(...) re-strips trailing
         // newlines, so a trailing blank line is dropped.
-        std::string run_output = strip_trailing_newlines(result.stdout_data);
+        std::string run_output  = strip_trailing_newlines(result.stdout_data);
         if (head_lines) {
             run_output = head_output(run_output, *head_lines);
         }

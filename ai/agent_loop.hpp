@@ -36,6 +36,21 @@ namespace dana::ai {
         // is still running and that the tools are the ones from the first
         // message keeps the model from declaring them unavailable.
         std::string tool_result_prefix;
+        // How many times a turn that did not call a tool may be answered with
+        // `refusal_nudge` instead of ending the loop. Web models sometimes fall
+        // back to their site's own agent and refuse ("I can't access the
+        // workspace") or answer with a patch instead of acting; one nudge
+        // usually gets them to emit the tool call.
+        int         refusal_retries = 0;
+        std::string refusal_nudge;
+        // Also nudge when the answer contains a fenced code block. A planner
+        // that replies with a patch or a report instead of a tool call has not
+        // done the task; this catches refusals in any language.
+        bool nudge_on_code_answer = false;
+        // If a nudged turn answers with exactly this word, the previous answer
+        // was already a finished result: keep it and stop instead of replacing
+        // it with the marker.
+        std::string completion_marker;
     };
 
     struct [[nodiscard]] agent_loop_io {

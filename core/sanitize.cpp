@@ -30,6 +30,11 @@ namespace dana::sanitize {
         struct redaction_rule {
             std::regex  pattern;
             std::string replacement;
+            // Some rules only shorten machine-specific paths (the project root
+            // under $HOME, $TMPDIR) without introducing a placeholder. They must
+            // not raise the redaction legend: the output no longer contains any
+            // personal data, so there is nothing for the note to explain.
+            bool privacy = true;
         };
 
         // Compiled once per process: the environment the rules interpolate ($HOME,
@@ -39,14 +44,15 @@ namespace dana::sanitize {
         std::vector<redaction_rule> const& redaction_rules() {
             static std::vector<redaction_rule> const rules = [] {
                 std::vector<redaction_rule> built;
-                auto const                  add = [&built](std::string_view pattern, std::string replacement) {
+                auto const add = [&built](std::string_view pattern, std::string replacement, bool privacy = true) {
                     // $HOME/$USER/$TMPDIR are interpolated into regular expressions:
                     // any regex metacharacter they contain would throw std::regex_error.
                     // Escaping keeps a hostile environment from aborting the
                     // dispatcher, and a pattern that still cannot compile is skipped.
                     try {
-                        built.push_back(
-                          {.pattern = std::regex(std::string(pattern)), .replacement = std::move(replacement)});
+                        built.push_back({.pattern     = std::regex(std::string(pattern)),
+                                         .replacement = std::move(replacement),
+                                         .privacy     = privacy});
                     } catch (...) { // NOLINT(bugprone-empty-catch) — uncompilable pattern: ignored.
                     }
                 };
@@ -64,11 +70,11 @@ namespace dana::sanitize {
                 gethostname(hostname.data(), hostname.size());
 
                 if (std::string(tmpdir) != "/tmp") {
-                    add(quote(tmpdir) + "/", "/tmp/");
-                    add(quote(tmpdir), "/tmp");
+                    add(quote(tmpdir) + "/", "/tmp/", false);
+                    add(quote(tmpdir), "/tmp", false);
                 }
                 if (home != nullptr) {
-                    add(quote(home) + "/Projects/", "");
+                    add(quote(home) + "/Projects/", "", false);
                     add(quote(home), "HOME");
                 }
                 if (user != nullptr) {
@@ -93,12 +99,20 @@ namespace dana::sanitize {
 
     static std::string clean_privacy_impl(std::string_view const input, bool* redacted) {
         std::string output(input);
+        bool        privacy_hit = false;
         for (auto const& rule : redaction_rules()) {
-            output = std::regex_replace(output, rule.pattern, rule.replacement);
+            std::string replaced = std::regex_replace(output, rule.pattern, rule.replacement);
+            if (replaced == output) {
+                continue;
+            }
+            output = std::move(replaced);
+            if (rule.privacy) {
+                privacy_hit = true;
+            }
         }
 
         if (redacted != nullptr) {
-            *redacted = (output != input);
+            *redacted = privacy_hit;
         }
         return output;
     }
