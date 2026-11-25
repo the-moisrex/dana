@@ -395,6 +395,31 @@ namespace {
               }).empty(),
               "file completion leaves flags alone");
 
+        std::vector<std::string_view> const typed_path{"src/main.cpp"};
+        std::string                         repeat = render([&](std::ostream& os) {
+            write_file_candidates(os, "main", root, typed_path);
+        });
+        check(!has_candidate(repeat, "src/main.cpp"), "file completion drops a file already named by path");
+
+        std::vector<std::string_view> const typed_name{"main.cpp"};
+        std::string                         repeat_name = render([&](std::ostream& os) {
+            write_file_candidates(os, "main", root, typed_name);
+        });
+        check(!has_candidate(repeat_name, "src/main.cpp"), "file completion drops a file already named by basename");
+
+        std::vector<std::string_view> const typed_dir{"src"};
+        std::string                         repeat_dir = render([&](std::ostream& os) {
+            write_file_candidates(os, "main", root, typed_dir);
+        });
+        check(!has_candidate(repeat_dir, "src/main.cpp"),
+              "file completion drops files under a directory already named");
+
+        std::vector<std::string_view> const flag_value{"--head", "5"};
+        std::string                         after_number = render([&](std::ostream& os) {
+            write_file_candidates(os, "main", root, flag_value);
+        });
+        check(has_candidate(after_number, "src/main.cpp"), "a flag value does not hide a file");
+
         // Through the shared renderer: `.read`/`.files` are file prompts, `.cat`
         // names FILE in its usage, and a flag value is not completed as a path.
         for (char const* name : {"read", "files", "cat"}) {
@@ -416,6 +441,14 @@ namespace {
                 write_prompt_candidates(*grep, "main", none, os, root);
             });
             check(!has_candidate(via_grep, "src/main.cpp"), "file completion: a PATTERN operand is not a file");
+        }
+
+        if (auto const* files = find_prompt("files"); files != nullptr) {
+            std::vector<std::string_view> const prior{"main.cpp"};
+            std::string                         via_files = render([&](std::ostream& os) {
+                write_prompt_candidates(*files, "main", prior, os, root);
+            });
+            check(!has_candidate(via_files, "src/main.cpp"), "file completion: an already-typed file is not offered");
         }
 
         if (auto const* read = find_prompt("read"); read != nullptr) {

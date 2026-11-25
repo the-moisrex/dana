@@ -30,6 +30,12 @@ namespace dana {
         void                      mark(std::filesystem::path const& path);
         [[nodiscard]] std::string fact() const;
 
+        // The ordered canonical keys the scope holds: the chain's already-emitted
+        // files plus anything this prompt marked. A prompt that operates on the
+        // chain's files without embedding them (`.clang-tidy`) reads this instead
+        // of asking for the same FILE arguments again.
+        [[nodiscard]] std::vector<std::string> const& files() const;
+
       private:
         std::vector<std::string>        order_;
         std::unordered_set<std::string> set_;

@@ -369,6 +369,16 @@ namespace dana::ai {
         if (!options_.show_thinking || chunk.empty()) {
             return;
         }
+        // Some sites interleave reasoning with the answer. If the answer has
+        // already started, flush its pending line and put the reasoning on its
+        // own line so the two streams do not run together in the terminal.
+        if (started_answer_ && !thinking_line_open_) {
+            if (!line_buffer_.empty()) {
+                write_out(style_line(line_buffer_));
+                line_buffer_.clear();
+            }
+            write_err("\n");
+        }
         bool const styled = options_.color && err_tty_;
         if (styled && !thinking_dim_open_) {
             write_err(kDim);
@@ -403,6 +413,39 @@ namespace dana::ai {
             write_err(std::string(kDim) + note + kReset + "\n");
         } else {
             write_err(note + "\n");
+        }
+
+        // A site-side tool (GapGPT's Python sandbox, a provider's own search) has
+        // no `### Tool:` result of ours to show, so print a bounded preview of its
+        // input/output here. Streaming deltas are skipped; only a whole block is
+        // useful and printing each fragment would flood the terminal.
+        if (!event.args.empty() && event.status != "delta") {
+            constexpr std::size_t max_lines = 8;
+            std::size_t           line      = 0;
+            std::size_t           pos       = 0;
+            while (pos <= event.args.size() && line < max_lines) {
+                auto const end   = event.args.find('\n', pos);
+                auto const piece = event.args.substr(pos, (end == std::string::npos ? event.args.size() : end) - pos);
+                std::string const shown = "  " + piece;
+                if (options_.color && err_tty_) {
+                    write_err(std::string(kDim) + shown + kReset + "\n");
+                } else {
+                    write_err(shown + "\n");
+                }
+                ++line;
+                if (end == std::string::npos) {
+                    break;
+                }
+                pos = end + 1;
+            }
+            if (line == max_lines && pos < event.args.size()) {
+                std::string const more = "  …";
+                if (options_.color && err_tty_) {
+                    write_err(std::string(kDim) + more + kReset + "\n");
+                } else {
+                    write_err(more + "\n");
+                }
+            }
         }
     }
 

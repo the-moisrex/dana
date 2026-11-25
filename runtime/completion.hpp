@@ -163,8 +163,13 @@ namespace dana {
     // is the full path relative to the current directory (so selecting it inserts
     // the whole path), ranked so a basename match comes before a path match. An
     // empty or flag-like prefix yields nothing: the shell's own path completion
-    // owns those positions.
-    void write_file_candidates(std::ostream& out, std::string_view prefix, std::filesystem::path const& git_root);
+    // owns those positions. A file or directory named earlier in `prior_args` is
+    // omitted, so `.files a.cpp b<TAB>` does not offer `a.cpp` again.
+    void write_file_candidates(
+      std::ostream&                out,
+      std::string_view             prefix,
+      std::filesystem::path const& git_root,
+      text::string_views           prior_args = {});
 
     // Every registered prompt plus the extra `candidates` (the functions visible at
     // this point in the chain), merged into the catalog's locale-aware order, each

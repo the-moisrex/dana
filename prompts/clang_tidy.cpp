@@ -4,6 +4,7 @@
 #include "../runtime/args.hpp"
 #include "../runtime/embed.hpp"
 #include "../runtime/file_filter.hpp"
+#include "../runtime/file_scope.hpp"
 #include "../runtime/prompt_registry.hpp"
 
 #include <array>
@@ -47,22 +48,33 @@ namespace dana {
         file_filter const        filter = file_filter::from(v.prior, v.env);
         std::vector<std::string> run_args;     // ARGS
         std::vector<std::string> display_args; // $*
-        if (v.args.empty()) {
-            auto selected = filter.empty() ? select_files(v.env) : select_files(v.env, filter);
-            if (selected.empty()) {
-                r.out.clear();
-                r.err = "No files specified or selected.\n";
-                return;
-            }
-            for (auto const& s : selected) {
-                display_args.emplace_back(s.string());
-            }
-            // Files from fzf only populate $@ (via `set --`), never ARGS.
-        } else {
+        if (!file_args.empty()) {
             for (std::string_view arg : v.args) {
                 display_args.emplace_back(arg);
             }
             run_args = file_args;
+        } else {
+            // No FILE arguments: reuse the files the chain already mentioned
+            // (`.read a.cpp b.hpp .clang-tidy`), so they need not be repeated.
+            file_scope const scope(v.prior);
+            auto const&      chain_files = scope.files();
+            if (!chain_files.empty()) {
+                for (auto const& path : chain_files) {
+                    run_args.push_back(path);
+                    display_args.push_back(display_path(v.env, path));
+                }
+            } else {
+                auto selected = filter.empty() ? select_files(v.env) : select_files(v.env, filter);
+                if (selected.empty()) {
+                    r.out.clear();
+                    r.err = "No files specified or selected.\n";
+                    return;
+                }
+                for (auto const& s : selected) {
+                    run_args.push_back(s.string());
+                    display_args.emplace_back(s.string());
+                }
+            }
         }
 
         // The chain-wide exclusions drop a file from both the run and the display.
@@ -174,7 +186,8 @@ namespace dana {
        some-command | prompt clang-tidy [--head N] [FILE...]
 
 Runs `clang-tidy` on the provided files and outputs a prompt to fix the identified issues.
-If no files are provided, `fzf -m` is used to choose them interactively.
+If no files are provided, the files already mentioned earlier in the chain (for example by
+`.read`) are used; otherwise `fzf -m` is used to choose them interactively.
 
 Options:
   --head N   Keep only the first N lines of the output
@@ -187,7 +200,9 @@ Options:
     [[maybe_unused]] bool const registered = dana::register_prompt(
       "clang-tidy",
       "Runs `clang-tidy` on the provided files and outputs a prompt to fix the identified "
-      "issues. If no files are provided, `fzf -m` is used to choose them interactively.",
+      "issues. If no files are provided, the files already mentioned earlier in the chain "
+      "(for example by `.read`) are used; otherwise `fzf -m` is used to choose them "
+      "interactively.",
       &execute_clang_tidy,
       &render_help_clang_tidy);
 

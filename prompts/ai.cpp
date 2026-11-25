@@ -430,11 +430,11 @@ namespace {
     // write_stdout/write_stderr, and the plain answer replaces r.out afterwards, so
     // the chain and clipboard never see frames.
     void execute_ai_native(
-      view const&                       v,
-      result&                           r,
-      std::string_view                  provider,
+      view const&        v,
+      result&            r,
+      std::string_view   provider,
       text::string_views args,
-      std::string_view                  context) {
+      std::string_view   context) {
         auto setup = ai::prepare_sink(provider, args);
         if (setup.options.print_prompt) {
             r.out = std::string(context);
@@ -614,8 +614,14 @@ namespace {
     std::string build_agent_message(view const& v, loop_cli const& cli, alias::table const& aliases) {
         std::string out;
         out += "# Agent\n\n";
-        out += "You are an autonomous coding agent working in a terminal. You have tools; use them.\n";
-        out += "Work until the task is complete, then answer in plain prose with NO tool block.\n\n";
+        out += "You are the planner of a coding agent. You do NOT run anything yourself and\n";
+        out += "you have no terminal of your own. Instead you emit a JSON tool call; an\n";
+        out += "external harness runs it in the user's workspace and sends you the output as a\n";
+        out += "`### Tool: <name>` message. So never say a tool is unavailable or that you\n";
+        out += "cannot access the workspace: just emit the call and the harness will run it.\n";
+        out += "Work until the task is complete, then answer in plain prose with NO tool block.\n";
+        out += "Your first response must be a tool call (not prose, not a refusal, not a\n";
+        out += "report) unless the task is purely conversational.\n\n";
 
         out += alias::workspace_header(v.env.working_dir, v.env.git_root, aliases);
         out += "\nRules:\n";
@@ -624,6 +630,25 @@ namespace {
         out += "- Use `cli` to run commands (build, tests, git).\n";
         out += "- Batch independent calls into one answer; split them only when one depends on another.\n";
         out += "- Never guess a file's contents.\n";
+        if (!aliases.empty()) {
+            out += "- The working directory is shown as a placeholder path (for example\n";
+            out += "  `/prompt-ws-…`). It is not a real directory: the tools below translate it to\n";
+            out += "  the real workspace. Pass paths exactly as shown to `read`/`grep`/`glob`/`edit`.\n";
+        }
+        out += "- Use ONLY the tools below. Do not use any built-in code interpreter, Python\n";
+        out += "  sandbox, browser, or file tool: they run elsewhere and cannot see this\n";
+        out += "  workspace, so they will always report that the files do not exist. If a tool\n";
+        out += "  result surprises you, call `glob` or `read` instead of giving up.\n";
+        out += "- Do not produce a report, PDF, Word document, canvas, or summary instead of\n";
+        out += "  doing the work. When the task says to edit, make the edit with `edit` (or\n";
+        out += "  `write`) and then say what changed.\n";
+        out += "- To run a build, test, or git command, use the `cli` tool; it runs in this\n";
+        out += "  workspace. Never claim a tool is unavailable before trying it. For example:\n";
+        out += "  ```json\n";
+        out += "  {\"tool\": \"cli\", \"input\": {\"command\": [\"git\", \"status\"]}}\n";
+        out += "  ```\n";
+        out += "- The files quoted in the task are a snapshot for reference. The authoritative\n";
+        out += "  files are on disk: always `read` a file before you `edit` it.\n";
 
         std::vector<std::string> catalog_args{"--for", "chat"};
         if (!cli.tools.empty()) {
@@ -643,6 +668,9 @@ namespace {
 
         out += "\n# Task\n\n";
         out += v.text;
+        out += "\n\nRemember: to act, reply with a fenced ```json tool call using ONLY the tools\n";
+        out += "listed above. Do not use a built-in interpreter or sandbox, and do not answer\n";
+        out += "with a report instead of making the requested change.\n";
         return aliases.hide(out);
     }
 
@@ -687,8 +715,25 @@ namespace {
         }
         auto session = ai::open_sink_session(std::move(setup));
 
-        int               turn_number = 0;
-        ai::agent_loop_io io;
+        int                    turn_number = 0;
+        ai::agent_loop_io      io;
+        ai::agent_loop_options loop = cli.loop;
+        loop.tool_result_prefix =
+          "The task is still in progress. Below are the results of the tool calls you\n"
+          "requested. You are the planner: the external harness runs every call for you,\n"
+          "so emit the next call as a fenced ```json block, for example\n"
+          "```json\n"
+          "{\"tool\": \"read\", \"input\": {\"file\": [\"path/to/file\"]}}\n"
+          "```\n"
+          "or\n"
+          "```json\n"
+          "{\"tool\": \"cli\", \"input\": {\"command\": [\"git\", \"status\"]}}\n"
+          "```\n"
+          "The available tools are the ones listed in the first message (by default:\n"
+          "read, grep, glob, edit, write, cli). Do not use a built-in interpreter or\n"
+          "sandbox and do not answer with a report. If a result was truncated, call\n"
+          "`read` again with an offset. When the task is complete, answer with no tool\n"
+          "block.\n\n";
         io.turn = [&](std::string_view prompt) {
             ++turn_number;
             write_stderr(
@@ -718,7 +763,7 @@ namespace {
             write_stderr(v, r, text);
         };
 
-        auto const result = ai::run_agent_loop(initial, cli.loop, io);
+        auto const result = ai::run_agent_loop(initial, loop, io);
 
         if (result.status != 0) {
             throw prompt_error{result.status, "ai.loop: " + result.error + "\n", r.out, r.no_clipboard, v.in.piped()};
@@ -823,11 +868,11 @@ namespace {
     }
 
     void execute_ai_argv(
-      view const&                       v,
-      result&                           r,
-      std::string_view                  provider,
+      view const&        v,
+      result&            r,
+      std::string_view   provider,
       text::string_views args,
-      std::string_view                  context) {
+      std::string_view   context) {
         // A `.paths.hide` earlier in the chain published the mapping: hide what the
         // model reads, reveal what the user gets back. `--print-prompt` must show
         // exactly what would be sent, so it keeps the hidden form.

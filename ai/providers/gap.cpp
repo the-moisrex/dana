@@ -453,10 +453,19 @@ namespace dana::ai {
                     std::string const pointer =
                       "The complete request is in the attached file `prompt.txt` (" +
                       std::to_string(synth_body.size()) +
-                      " bytes). Read it and respond to its contents exactly as if it were this message; this message "
-                      "is "
-                      "only a pointer to it.";
-                    auto result = attempt(pointer, file_tokens, sink);
+                      " bytes). Read that file before doing anything else and respond to its contents exactly as if "
+                      "it were this message; this message is only a pointer to it.";
+                    // Keep the head of the request inline. It holds the agent
+                    // preamble and the tool protocol, which the model must see as
+                    // instructions; when the whole thing is only a file it tends to
+                    // treat the protocol as data and answer without calling a tool.
+                    std::string const inline_head = head_codepoints(base_text, 8000);
+                    std::string const first_text  = inline_head.empty() ? pointer : inline_head + "\n\n" + pointer;
+                    auto              result      = attempt(first_text, file_tokens, sink);
+                    if (!result.ok && result.answer.empty() && result.reason == "token_limit" && !inline_head.empty()) {
+                        attempts.push_back("upload+head: token_limit");
+                        result = attempt(pointer, file_tokens, sink);
+                    }
                     if (result.ok) {
                         finish_turn(prompt, result.answer);
                         sink(done());
@@ -843,10 +852,90 @@ namespace dana::ai {
                         continue;
                     }
                     std::string const kind = text_of(block, "type");
-                    if (!block.contains("content") || block["content"].is_null()) {
+                    if (contains(kSkipTypes, kind)) {
                         continue;
                     }
-                    if (contains(kSkipTypes, kind)) {
+
+                    // GapGPT runs its own agent loop on the site: `code-run` blocks are
+                    // its Python sandbox and `status` blocks are its progress notes.
+                    // They used to be dropped silently (no `content`), which made it
+                    // look like the model did nothing. Surface them as tool events.
+                    if (kind == "code-run") {
+                        std::string const id       = text_of(block, "block_id");
+                        std::string const key      = id.empty() ? std::string("code-run") : id;
+                        bool const        finished = block.contains("succeeded") && !block["succeeded"].is_null();
+                        std::size_t const state    = finished ? 2 : 1;
+                        if (blocks_[key] >= state) {
+                            continue;
+                        }
+                        blocks_[key]             = state;
+                        std::string       args   = text_of(block, "code");
+                        std::string const output = text_of(block, "output");
+                        if (!output.empty()) {
+                            if (!args.empty()) {
+                                args += "\n\n";
+                            }
+                            args += output;
+                        }
+                        if (block.contains("download_urls") && block["download_urls"].is_object() &&
+                            !block["download_urls"].empty())
+                        {
+                            if (!args.empty()) {
+                                args += "\n\n";
+                            }
+                            args += block["download_urls"].dump();
+                        }
+                        sink(tool_call("code-run", finished ? "done" : "running", head_codepoints(args, 4000)));
+                        progressed = true;
+                        continue;
+                    }
+                    if (kind == "status") {
+                        std::string const id  = text_of(block, "block_id");
+                        std::string const key = id.empty() ? std::string("status") : id;
+                        if (blocks_[key] != 0) {
+                            continue;
+                        }
+                        blocks_[key] = 1;
+                        sink(
+                          tool_call("status", text_of(block, "status"), head_codepoints(text_of(block, "label"), 400)));
+                        progressed = true;
+                        continue;
+                    }
+
+                    // A canvas is a site-side report/document. Its body never reaches
+                    // the answer, only the download links the model may or may not
+                    // mention, so surface the title, the links and a body preview.
+                    if (kind == "canvas") {
+                        std::string const id  = text_of(block, "block_id");
+                        std::string const key = id.empty() ? std::string("canvas") : id;
+                        if (blocks_[key] != 0) {
+                            continue;
+                        }
+                        blocks_[key]            = 1;
+                        std::string       args  = text_of(block, "title");
+                        std::string const token = text_of(block, "token");
+                        if (!token.empty()) {
+                            if (!args.empty()) {
+                                args += "\n";
+                            }
+                            std::string const origin{owner_.origin()};
+                            args += origin + "/api/v1/canvas_pdf/" + token + ".pdf";
+                            args += "\n";
+                            args += origin + "/api/v1/canvas_docx/" + token + ".docx";
+                        }
+                        std::string const body = text_of(block, "body");
+                        if (!body.empty()) {
+                            if (!args.empty()) {
+                                args += "\n\n";
+                            }
+                            args += head_codepoints(body, 1200);
+                        }
+                        sink(tool_call("canvas", "done", args));
+                        progressed = true;
+                        continue;
+                    }
+
+                    if (!block.contains("content") || block["content"].is_null()) {
                         continue;
                     }
                     auto const& content = block["content"];
@@ -867,6 +956,13 @@ namespace dana::ai {
                     blocks_[identifier]      = length;
                     std::string const sliced = drop_codepoints(body, seen);
                     if (kind == "text") {
+                        // A new text block is a new message segment, not a
+                        // continuation of the previous one. Separate them so two
+                        // blocks do not run together as "…workspaceThe next…".
+                        if (seen == 0 && !answer.empty() && answer.back() != '\n') {
+                            answer += '\n';
+                            sink(text("\n"));
+                        }
                         answer += sliced;
                         sink(text(sliced));
                     } else if (contains(kThinkingTypes, kind)) {

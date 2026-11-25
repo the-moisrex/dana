@@ -75,7 +75,8 @@ namespace dana::ai {
             }
 
             text::append_block(result.transcript, *blocks);
-            prompt = truncate_tool_result(*blocks, options.tool_head_lines, options.tool_max_bytes);
+            prompt = options.tool_result_prefix +
+                     truncate_tool_result(*blocks, options.tool_head_lines, options.tool_max_bytes);
         }
 
         result.exhausted = true;

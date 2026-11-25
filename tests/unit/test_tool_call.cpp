@@ -216,6 +216,12 @@ namespace {
         // A string-encoded input object.
         auto const encoded = tool_call::extract(R"({"tool": "read", "input": "{\"file\": \"a.cpp\"}"})");
         check(encoded.size() == 1 && encoded[0].input["file"] == "a.cpp", "extract decodes a string input");
+
+        // Code inside a JSON string is often escaped as C/C++ (`\v` is not a
+        // JSON escape). The call must still be found, with the backslash kept.
+        auto const escaped = tool_call::extract(R"({"tool": "edit", "input": {"path": "a.cpp", "new": "U'\v'"}})");
+        check(escaped.size() == 1, "extract repairs invalid JSON escapes");
+        check(escaped[0].input["new"] == "U'\\v'", "extract keeps the backslash of an invalid escape");
     }
 
     void test_dsml() {

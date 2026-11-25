@@ -3,8 +3,10 @@
 #include "../runtime/embed.hpp"
 #include "../runtime/prompt_registry.hpp"
 
+#include <array>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace dana {
@@ -31,8 +33,11 @@ namespace dana {
             command += cmd_args[i];
         }
 
-        std::vector<char const*> argv   = {"bash", "-c", "eval \"$0\" 2>&1", command.c_str(), nullptr};
-        auto                     result = process::run_command(argv, v.in.text());
+        // `run_command` takes string views, so the argv must not be a
+        // null-terminated `char const*` vector: the trailing nullptr would be
+        // turned into a `string_view` (and crash in strlen).
+        std::array<std::string_view, 4> const argv{"bash", "-c", "eval \"$0\" 2>&1", command};
+        auto                                  result = process::run_command(argv, v.in.text());
 
         std::string output;
         output += std::format("Output of command `{}`:\n\n", command);

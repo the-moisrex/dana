@@ -31,6 +31,11 @@ namespace dana::ai {
         bool transcript                = false;
         // Print each tool result on stderr as well as feeding it to the model.
         bool show_tools                = false;
+        // Prepended to every tool-result turn. Web providers keep their own
+        // agent prompt in the conversation, so a short reminder that the task
+        // is still running and that the tools are the ones from the first
+        // message keeps the model from declaring them unavailable.
+        std::string tool_result_prefix;
     };
 
     struct [[nodiscard]] agent_loop_io {

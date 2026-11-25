@@ -70,11 +70,14 @@ namespace {
         file_scope scope{facts{}};
         check(!scope.seen(s.root / "a.txt"), "an empty scope has seen nothing");
         check_eq(scope.fact(), "", "an empty scope publishes an empty fact");
+        check(scope.files().empty(), "an empty scope lists no files");
 
         scope.mark(s.root / "a.txt");
         check(scope.seen(s.root / "a.txt"), "a marked file is seen");
         check(scope.fact().ends_with('\n'), "the fact is newline-terminated");
         check_eq(scope.fact(), file_key(s.root / "a.txt") + "\n", "the fact is the canonical key");
+        check(scope.files().size() == 1 && scope.files().front() == file_key(s.root / "a.txt"),
+              "the file list exposes the marked key");
     }
 
     void test_prior_parsing(scratch const& s) {
@@ -88,6 +91,8 @@ namespace {
         check(scope.seen(s.root / "a.txt"), "a prior key is seen");
         check(scope.seen(s.root / "b.txt"), "every prior key is seen");
         check(!scope.seen(s.root / "c.txt"), "an unlisted file is not seen");
+        check(scope.files().size() == 2 && scope.files()[0] == a && scope.files()[1] == b,
+              "the file list preserves the prior order");
 
         // Marking one already in the prior must not duplicate it, and the union is
         // still published in order.

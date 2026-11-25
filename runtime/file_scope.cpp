@@ -52,6 +52,10 @@ namespace dana {
         }
     }
 
+    std::vector<std::string> const& file_scope::files() const {
+        return order_;
+    }
+
     std::string file_scope::fact() const {
         std::string out;
         for (auto const& key : order_) {

@@ -271,12 +271,65 @@ namespace dana::tool_call {
             out.reserve(text.size() + 8);
             for (std::size_t i = 0; i < text.size();) {
                 char const marker = text[i];
-                bool const fence  = (marker == '`' || marker == '~') && i + 2 < text.size() &&
-                               text[i + 1] == marker && text[i + 2] == marker;
+                bool const fence  = (marker == '`' || marker == '~') && i + 2 < text.size() && text[i + 1] == marker &&
+                                    text[i + 2] == marker;
                 if (fence && !out.empty() && out.back() != '\n') {
                     out += '\n';
                 }
                 out += text[i++];
+            }
+            return out;
+        }
+
+        // Models routinely put source code inside a JSON string and escape it as
+        // if it were C/C++ (`\v`, `\0`, `\x41`, ...), which JSON rejects. One bad
+        // escape used to discard the whole call, so the loop silently stopped.
+        // Double the backslash of any escape JSON does not define, leaving valid
+        // ones (`\" \\ \/ \b \f \n \r \t \uXXXX`) untouched.
+        std::string repair_json_escapes(std::string_view text) {
+            std::string out;
+            out.reserve(text.size() + 8);
+            for (std::size_t i = 0; i < text.size(); ++i) {
+                char const c = text[i];
+                if (c != '\\') {
+                    out += c;
+                    continue;
+                }
+                if (i + 1 >= text.size()) {
+                    out += "\\\\";
+                    continue;
+                }
+                char const next = text[i + 1];
+                switch (next) {
+                    case '"':
+                    case '\\':
+                    case '/':
+                    case 'b':
+                    case 'f':
+                    case 'n':
+                    case 'r':
+                    case 't':
+                        out += c;
+                        out += next;
+                        ++i;
+                        break;
+                    case 'u': {
+                        bool const hex =
+                          i + 5 < text.size() && std::isxdigit(static_cast<unsigned char>(text[i + 2])) != 0 &&
+                          std::isxdigit(static_cast<unsigned char>(text[i + 3])) != 0 &&
+                          std::isxdigit(static_cast<unsigned char>(text[i + 4])) != 0 &&
+                          std::isxdigit(static_cast<unsigned char>(text[i + 5])) != 0;
+                        if (hex) {
+                            out += c;
+                            out += next;
+                            ++i;
+                        } else {
+                            out += "\\\\";
+                        }
+                        break;
+                    }
+                    default: out += "\\\\"; break;
+                }
             }
             return out;
         }
@@ -495,7 +548,7 @@ namespace dana::tool_call {
         std::vector<call> calls;
 
         // A bare JSON document (the whole answer is one call or an array of them).
-        if (auto parsed = nlohmann::json::parse(text, nullptr, false); !parsed.is_discarded()) {
+        if (auto parsed = nlohmann::json::parse(repair_json_escapes(text), nullptr, false); !parsed.is_discarded()) {
             append_call(calls, parsed, text);
             if (!calls.empty()) {
                 return calls;
@@ -517,7 +570,7 @@ namespace dana::tool_call {
             if (!block.lang.empty() && block.lang != "json") {
                 continue;
             }
-            auto parsed = nlohmann::json::parse(block.body, nullptr, false);
+            auto parsed = nlohmann::json::parse(repair_json_escapes(block.body), nullptr, false);
             if (parsed.is_discarded()) {
                 continue;
             }

@@ -47,7 +47,10 @@ consumes the pipe or copies anything.
   subsequence). The value is the full path relative to the current directory, so
   selecting a fuzzy match inserts the whole path rather than the fragment. An
   empty or `-`-leading token, or a token right after a flag (a flag value), is
-  left to the shell's own path completion.
+  left to the shell's own path completion. A file or directory already named
+  earlier in the same step is omitted (matched exactly, or by a confident fuzzy
+  match such as `tse_similarity.cpp` → `tools/tse_similarity.cpp`), so
+  `.files a.cpp b<TAB>` does not offer `a.cpp` again.
 - **The line mode** replays just enough of `parse_chain` to know what the
   current token is being completed against: a bare token opens a step only while
   none matched (the head), a `.name`/`-name` token naming a prompt **or a
