@@ -405,7 +405,8 @@ namespace dana::compress::cpp {
         };
 
         scan_result              result;
-        std::vector<std::size_t> container_depth; // depth of each open container
+        std::vector<std::size_t> container_depth;  // depth of each open container
+        std::vector<std::size_t> container_symbol; // index of each open container's symbol
         std::size_t              paren      = 0;
         std::size_t              bracket    = 0;
         bool                     in_stmt    = false;
@@ -434,6 +435,7 @@ namespace dana::compress::cpp {
             symbol sym;
             sym.signature = std::move(signature);
             sym.line      = line;
+            sym.end_line  = line;
             sym.depth     = depth;
             return sym;
         };
@@ -472,11 +474,17 @@ namespace dana::compress::cpp {
                 }
                 if (c == '}') {
                     if (!container_depth.empty()) {
-                        symbol sym;
-                        sym.close = true;
-                        sym.depth = container_depth.size() - 1;
-                        sym.line  = line_of(i);
+                        std::size_t const close_line = line_of(i);
+                        symbol            sym;
+                        sym.close    = true;
+                        sym.depth    = container_depth.size() - 1;
+                        sym.line     = close_line;
+                        sym.end_line = close_line;
                         result.symbols.push_back(std::move(sym));
+                        if (!container_symbol.empty()) {
+                            result.symbols[container_symbol.back()].end_line = close_line;
+                            container_symbol.pop_back();
+                        }
                         container_depth.pop_back();
                     }
                     ++i;
@@ -544,6 +552,7 @@ namespace dana::compress::cpp {
                         ++end;
                     }
                     sym.signature = normalize(text.substr(stmt_start, end - stmt_start));
+                    sym.end_line  = line_of(end == 0 ? 0 : end - 1);
                     attach_doc(sym);
                     result.symbols.push_back(std::move(sym));
                     i       = end;
@@ -555,9 +564,11 @@ namespace dana::compress::cpp {
                 result.symbols.push_back(std::move(sym));
                 if (container) {
                     container_depth.push_back(container_depth.size());
+                    container_symbol.push_back(result.symbols.size() - 1);
                     ++i;
                 } else {
-                    i = skip_brace(code, i);
+                    i                              = skip_brace(code, i);
+                    result.symbols.back().end_line = line_of(i == 0 ? 0 : i - 1);
                 }
                 in_stmt = false;
                 continue;
@@ -566,7 +577,8 @@ namespace dana::compress::cpp {
             if (c == ';' && top) {
                 std::string const signature = normalize(text.substr(stmt_start, i - stmt_start));
                 if (!signature.empty()) {
-                    symbol sym = emit(signature, line_of(stmt_start), container_depth.size());
+                    symbol sym   = emit(signature, line_of(stmt_start), container_depth.size());
+                    sym.end_line = line_of(i);
                     classify(sym, false);
                     attach_doc(sym);
                     result.symbols.push_back(std::move(sym));

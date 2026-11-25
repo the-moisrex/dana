@@ -1,13 +1,17 @@
 #include "spp.hpp"
 
+#include "../compress/cpp_scan.hpp"
 #include "../core/fs.hpp"
 #include "../core/process.hpp"
+#include "symbol_index.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <cctype>
 #include <filesystem>
 #include <format>
 #include <fstream>
+#include <iterator>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -252,18 +256,77 @@ namespace dana::tools {
             }
         };
 
+        [[nodiscard]] std::string read_text_file(std::filesystem::path const& path) {
+            std::ifstream file(path, std::ios::binary);
+            if (!file) {
+                return {};
+            }
+            return {std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
+        }
+
+        [[nodiscard]] bool is_word_char(char c) noexcept {
+            return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_';
+        }
+
+        // The 1-based line of `function`'s declaration in `file`. The scanner is the
+        // primary source; a plain word search covers macros and anything the
+        // heuristic scanner does not classify.
+        [[nodiscard]] std::size_t declaration_line(std::string_view function, std::string const& file) {
+            std::string const content = read_text_file(file);
+            if (content.empty()) {
+                return 0;
+            }
+
+            auto const scanned = compress::cpp::scan(content);
+            for (auto const& sym : scanned.symbols) {
+                if (!sym.close && !sym.name.empty() && sym.name == function) {
+                    return sym.line;
+                }
+            }
+
+            std::size_t line_no = 0;
+            std::size_t start   = 0;
+            while (start <= content.size()) {
+                auto const       nl = content.find('\n', start);
+                std::string_view line =
+                  std::string_view(content).substr(start, nl == std::string::npos ? nl : nl - start);
+                ++line_no;
+                for (std::size_t pos = line.find(function); pos != std::string_view::npos;
+                     pos             = line.find(function, pos + 1))
+                {
+                    bool const left = pos == 0 || !is_word_char(line[pos - 1]);
+                    bool const right =
+                      pos + function.size() >= line.size() || !is_word_char(line[pos + function.size()]);
+                    if (left && right) {
+                        return line_no;
+                    }
+                }
+                if (nl == std::string::npos) {
+                    break;
+                }
+                start = nl + 1;
+            }
+            return 0;
+        }
+
+        struct extracted_file {
+            std::string text;
+            std::size_t line = 0;
+        };
+
         [[nodiscard]] std::filesystem::path make_temp_tu(std::filesystem::path const& header,
                                                          std::string_view             language) {
-            static unsigned counter = 0;
-            auto const      suffix  = language == "c++" ? ".cpp" : ".c";
-            auto const      path = std::filesystem::temp_directory_path() /
-                                   std::format("prompt-spp-{}-{}{}", static_cast<long>(::getpid()), ++counter, suffix);
-            std::ofstream   out(path, std::ios::binary);
+            static std::atomic<unsigned> counter{0};
+            auto const                   suffix = language == "c++" ? ".cpp" : ".c";
+            auto const                   path =
+              std::filesystem::temp_directory_path() /
+              std::format("prompt-spp-{}-{}{}", static_cast<long>(::getpid()), counter.fetch_add(1), suffix);
+            std::ofstream out(path, std::ios::binary);
             out << "#include \"" << std::filesystem::absolute(header).string() << "\"\n";
             return path;
         }
 
-        [[nodiscard]] std::string extract_file(
+        [[nodiscard]] std::optional<extracted_file> extract_file(
           std::string_view                function,
           std::string const&              file,
           spp_options const&              options,
@@ -334,7 +397,7 @@ namespace dana::tools {
                 }
                 start = nl + 1;
             }
-            return output;
+            return extracted_file{.text = std::move(output), .line = declaration_line(function, file)};
         }
 
         void add_blocks(std::string_view                 text,
@@ -360,32 +423,62 @@ namespace dana::tools {
 
     } // namespace
 
-    std::string expand_symbol(std::string_view function, spp_options const& options) {
+    expansion expand_symbol(std::string_view function, spp_options const& options) {
         std::vector<std::string> files = options.files;
         if (files.empty()) {
-            files = grep_files(function, options.language.value_or(""), options.c_as_cxx, options.cxx_as_c);
+            // Prefer the indexed declaration files: grepping every mention also
+            // returns call sites, and clang then prints the declaration from an
+            // included header while the caller labels it with the call site.
+            auto const root = fs::find_git_root();
+            if (root) {
+                for (auto const& entry : find_symbols(function, *root)) {
+                    if (std::ranges::find(files, entry.path) == files.end()) {
+                        files.push_back(entry.path);
+                    }
+                }
+            }
+            if (files.empty()) {
+                files = grep_files(function, options.language.value_or(""), options.c_as_cxx, options.cxx_as_c);
+            }
         }
 
         auto const flags = read_clang_flags();
 
-        std::vector<std::string>        blocks;
+        std::vector<expansion_part>     parts;
         std::unordered_set<std::string> seen;
         for (auto const& file : files) {
-            add_blocks(extract_file(function, file, options, flags), blocks, seen);
+            auto const extracted = extract_file(function, file, options, flags);
+            if (!extracted) {
+                continue;
+            }
+
+            // Keep one part per file: the block belongs to this file's declaration
+            // line, so numbering must restart for the next file. `seen` still drops
+            // a block the header and the source both produced.
+            std::vector<std::string> blocks;
+            add_blocks(extracted->text, blocks, seen);
+            if (blocks.empty()) {
+                continue;
+            }
+
+            std::string text;
+            for (std::size_t i = 0; i < blocks.size(); ++i) {
+                if (i != 0) {
+                    text += "\n\n";
+                }
+                text += blocks[i];
+            }
+            text.push_back('\n');
+            parts.push_back(expansion_part{
+              .location = {.path = file, .line = extracted->line},
+              .text     = std::move(text)
+            });
         }
 
-        if (blocks.empty()) {
+        if (parts.empty()) {
             return {};
         }
-        std::string out;
-        for (std::size_t i = 0; i < blocks.size(); ++i) {
-            if (i != 0) {
-                out += "\n\n";
-            }
-            out += blocks[i];
-        }
-        out.push_back('\n');
-        return out;
+        return expansion{.parts = std::move(parts)};
     }
 
 } // namespace dana::tools

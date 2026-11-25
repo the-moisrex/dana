@@ -28,6 +28,9 @@ namespace dana {
         std::string_view prefix;
         // The prompt's arguments typed before the current token, in order.
         text::string_views prior_args;
+        // The repository root the completion runs in (empty outside a repository).
+        // A callback that needs project files uses this instead of rediscovering it.
+        std::filesystem::path git_root;
     };
 
     using completion_fn = void (*)(completion_request const&, std::ostream&);
@@ -82,10 +85,13 @@ namespace dana {
         }
 
         // Flag completion derived from the prompt's own `render_help_fn` output: the
-        // dash-leading options in the `Options:` block. This covers every prompt
-        // without per-file code; a `complete_fn` adds the positional/value candidates.
+        // dash- or plus-leading options in the `Options:` block. This covers every
+        // prompt without per-file code; a `complete_fn` adds the positional/value
+        // candidates.
         inline void write_help_flags(std::ostream& os, std::string_view prefix, std::string_view help) {
-            if (prefix.empty() || prefix.front() != '-') {
+            // An empty prefix is the "what can I type here?" position, so it lists
+            // every flag; any other non-flag prefix is a positional operand.
+            if (!prefix.empty() && prefix.front() != '-' && prefix.front() != '+') {
                 return;
             }
             auto options = help.find("Options:");
@@ -105,7 +111,7 @@ namespace dana {
                     ++i;
                 }
                 line.remove_prefix(i);
-                if (line.empty() || line.front() != '-') {
+                if (line.empty() || (line.front() != '-' && line.front() != '+')) {
                     continue;
                 }
 
@@ -127,7 +133,7 @@ namespace dana {
                     if (!word.empty() && word.back() == ',') {
                         word.remove_suffix(1);
                     }
-                    if (word.size() < 2 || word.front() != '-') {
+                    if (word.size() < 2 || (word.front() != '-' && word.front() != '+')) {
                         break;
                     }
                     if (matches(prefix, word)) {

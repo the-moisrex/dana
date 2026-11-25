@@ -225,9 +225,9 @@ namespace {
     void test_code_answer_is_nudged() {
         std::vector<std::string>     prompts;
         dana::ai::agent_loop_options options;
-        options.refusal_retries      = 1;
-        options.refusal_nudge        = "nudge";
-        options.nudge_on_code_answer = true;
+        options.refusal_retries    = 1;
+        options.refusal_nudge      = "nudge";
+        options.nudge_on_no_action = true;
         dana::ai::agent_loop_io io;
         io.turn = [&](std::string_view prompt) {
             prompts.emplace_back(prompt);
@@ -251,10 +251,10 @@ namespace {
 
     void test_completion_marker_keeps_previous_answer() {
         dana::ai::agent_loop_options options;
-        options.refusal_retries      = 1;
-        options.refusal_nudge        = "nudge";
-        options.nudge_on_code_answer = true;
-        options.completion_marker    = "DONE";
+        options.refusal_retries    = 1;
+        options.refusal_nudge      = "nudge";
+        options.nudge_on_no_action = true;
+        options.completion_marker  = "DONE";
         dana::ai::agent_loop_io io;
         int                     turns = 0;
         io.turn                       = [&](std::string_view) {
@@ -303,6 +303,73 @@ namespace {
         check_equal(prompts[1], "nudge", "the retry sends the nudge");
     }
 
+    void test_no_action_is_nudged() {
+        std::vector<std::string>     prompts;
+        dana::ai::agent_loop_options options;
+        options.refusal_retries    = 1;
+        options.refusal_nudge      = "nudge";
+        options.nudge_on_no_action = true;
+        dana::ai::agent_loop_io io;
+        io.turn = [&](std::string_view prompt) {
+            prompts.emplace_back(prompt);
+            if (prompts.size() == 1) {
+                return answered("I have not read the files yet, so I cannot fix them.");
+            }
+            return answered(prompts.size() == 2 ? "calling" : "finished");
+        };
+        io.run_tools = [](std::string_view answer) -> std::optional<std::string> {
+            if (answer == "calling") {
+                return "### Tool: read\nbody";
+            }
+            return std::nullopt;
+        };
+
+        auto const result = dana::ai::run_agent_loop("task", options, io);
+        check_equal(result.turns, std::size_t{3}, "a no-action answer is retried");
+        check_equal(result.answer, "finished", "the retry can recover");
+        check_equal(prompts[1], "nudge", "the retry sends the nudge");
+    }
+
+    void test_failed_tool_does_not_complete() {
+        std::vector<std::string>     prompts;
+        dana::ai::agent_loop_options options;
+        options.refusal_retries        = 2;
+        options.refusal_nudge          = "nudge";
+        options.completion_marker      = "DONE";
+        bool                    failed = false;
+        dana::ai::agent_loop_io io;
+        io.turn = [&](std::string_view prompt) {
+            prompts.emplace_back(prompt);
+            if (prompts.size() == 2) {
+                return answered("DONE");
+            }
+            if (prompts.size() == 3) {
+                return answered("fixed");
+            }
+            return answered(prompts.size() == 4 ? "finished" : "calling");
+        };
+        io.run_tools = [&](std::string_view answer) -> std::optional<std::string> {
+            if (answer == "calling") {
+                failed = true;
+                return "### Tool: edit\nStatus: failed (exit 1)";
+            }
+            if (answer == "fixed") {
+                failed = false;
+                return "### Tool: edit\nStatus: ok";
+            }
+            return std::nullopt;
+        };
+        io.tools_failed = [&failed] {
+            return failed;
+        };
+
+        auto const result = dana::ai::run_agent_loop("task", options, io);
+        check_equal(result.turns, std::size_t{4}, "a DONE after a failed edit is retried");
+        check_equal(result.answer, "finished", "the retry can recover");
+        check(prompts[2].starts_with("nudge"), "the retry sends the nudge");
+        check(prompts[2].find("last tool call failed") != std::string::npos, "the nudge names the failure");
+    }
+
     void test_plain_answer_is_not_retried() {
         int                          turns = 0;
         dana::ai::agent_loop_options options;
@@ -335,6 +402,8 @@ int main() {
     test_code_answer_is_nudged();
     test_completion_marker_keeps_previous_answer();
     test_site_tools_are_nudged();
+    test_no_action_is_nudged();
+    test_failed_tool_does_not_complete();
     test_plain_answer_is_not_retried();
     test_truncate();
 

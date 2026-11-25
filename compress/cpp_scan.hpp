@@ -15,6 +15,7 @@ namespace dana::compress::cpp {
         std::string signature;
         std::string doc;               // attached comment immediately above, or ""
         std::size_t line      = 0;     // 1-based line of the declaration
+        std::size_t end_line  = 0;     // 1-based line of the closing `}`/`;`
         std::size_t depth     = 0;     // container nesting (for indentation)
         bool        container = false; // opens a brace
         bool        close     = false; // synthetic `}` closing a container

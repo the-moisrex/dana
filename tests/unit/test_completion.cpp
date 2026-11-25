@@ -88,7 +88,7 @@ namespace {
     };
 
     completion_request request(std::string_view prefix, text::string_views prior) {
-        return completion_request{.prefix = prefix, .prior_args = prior};
+        return completion_request{.prefix = prefix, .prior_args = prior, .git_root = {}};
     }
 
     // `matches` is a plain prefix test, with the empty prefix matching everything.
@@ -107,6 +107,7 @@ namespace {
           "Options:\n"
           "  --head N     Keep only the first N lines\n"
           "  --type, -t   Diagram type\n"
+          "  +config      Embed the configuration\n"
           "  -h, --help   Show this help\n"
           "\n"
           "Examples:\n"
@@ -123,6 +124,22 @@ namespace {
         });
         check(has_line(short_flags, "-t"), "help flags: -t");
         check(!has_line(short_flags, "--type"), "help flags: -t does not match --type");
+
+        std::string plus_flags = render([&](std::ostream& os) {
+            completion::write_help_flags(os, "+", help);
+        });
+        check(has_line(plus_flags, "+config"), "help flags: +config");
+        check(!has_line(plus_flags, "--head"), "help flags: a + prefix does not match --flags");
+
+        // An empty prefix is the "what can I type here?" position and lists every
+        // flag, including the plus ones.
+        std::string empty_prefix = render([&](std::ostream& os) {
+            completion::write_help_flags(os, "", help);
+        });
+        check(has_line(empty_prefix, "--head"), "help flags: an empty prefix lists --head");
+        check(has_line(empty_prefix, "--type"), "help flags: an empty prefix lists --type");
+        check(has_line(empty_prefix, "+config"), "help flags: an empty prefix lists +config");
+        check(has_line(empty_prefix, "--help"), "help flags: an empty prefix lists --help");
 
         // A non-dash prefix never returns flags, and a help without Options yields
         // nothing.
@@ -224,6 +241,17 @@ namespace {
             check(has_line(flags, "--head"), "metadata help advertises --head");
         }
 
+        auto const* clang_tidy = find_prompt("clang-tidy");
+        if (clang_tidy != nullptr && clang_tidy->render_help_fn != nullptr) {
+            std::string help  = render([&](std::ostream& os) {
+                clang_tidy->render_help_fn(os);
+            });
+            std::string flags = render([&](std::ostream& os) {
+                completion::write_help_flags(os, "+", help);
+            });
+            check(has_line(flags, "+config"), "clang-tidy help advertises +config");
+        }
+
         auto const* diagram = find_prompt("diagram");
         if (diagram != nullptr && diagram->complete_fn != nullptr) {
             std::vector<std::string_view> after{"--type"};
@@ -267,6 +295,25 @@ namespace {
             });
             check(has_line(flags, "--format"), "shared: flags come from the prompt's own help");
             check(has_line(flags, "--head"), "shared: the shared options block contributes too");
+        }
+        if (auto const* metadata = find_prompt("metadata"); metadata != nullptr) {
+            std::string flags = render([&](std::ostream& os) {
+                write_prompt_candidates(*metadata, "", none, os);
+            });
+            check(has_line(flags, "--format"), "shared: an empty prefix offers the prompt's flags");
+        }
+        if (auto const* clang_tidy = find_prompt("clang-tidy"); clang_tidy != nullptr) {
+            std::string flags = render([&](std::ostream& os) {
+                write_prompt_candidates(*clang_tidy, "", none, os);
+            });
+            check(has_line(flags, "+config"), "shared: an empty prefix offers +config");
+            check(has_line(flags, "--help"), "shared: an empty prefix offers --help");
+
+            std::vector<std::string_view> const after_head{"--head"};
+            std::string                         value_position = render([&](std::ostream& os) {
+                write_prompt_candidates(*clang_tidy, "", after_head, os);
+            });
+            check(!has_line(value_position, "--help"), "shared: a flag value does not offer flags");
         }
         if (auto const* diagram = find_prompt("diagram"); diagram != nullptr) {
             std::vector<std::string_view> after{"--type"};

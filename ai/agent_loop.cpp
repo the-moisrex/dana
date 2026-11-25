@@ -114,11 +114,12 @@ namespace dana::ai {
             if (!blocks) {
                 bool const marker = !options.completion_marker.empty() &&
                                     text::strip(text::strip_newlines(answered.answer)) == options.completion_marker;
+                bool const failed = io.tools_failed && io.tools_failed();
                 // A nudge can also confirm that the previous answer was the
                 // finished result; keep that answer instead of the marker. Only
-                // trust it when a tool actually ran and the site did not take
-                // over the turn.
-                if (marker && acted && !answered.used_site_tools && refusals > 0) {
+                // trust it when a tool actually ran, the site did not take over
+                // the turn, and the last call did not fail.
+                if (marker && acted && !answered.used_site_tools && refusals > 0 && !failed) {
                     result.answer = std::move(last_answer);
                     return result;
                 }
@@ -127,8 +128,9 @@ namespace dana::ai {
                 // workspace", in any language) or reply with a patch instead of
                 // calling a tool. Nudge it before accepting that as the answer.
                 bool const retryable =
-                  answered.used_site_tools || looks_like_refusal(answered.answer) ||
-                  (options.nudge_on_code_answer && contains_fenced_block(answered.answer)) || (marker && !acted);
+                  failed || answered.used_site_tools || looks_like_refusal(answered.answer) ||
+                  (options.nudge_on_no_action && contains_fenced_block(answered.answer)) ||
+                  (options.nudge_on_no_action && !acted) || (marker && !acted);
                 if (refusals < options.refusal_retries && !options.refusal_nudge.empty() && retryable) {
                     ++refusals;
                     if (io.status) {
@@ -136,6 +138,12 @@ namespace dana::ai {
                     }
                     last_answer = std::move(answered.answer);
                     prompt      = options.refusal_nudge;
+                    if (failed) {
+                        prompt +=
+                          "\nThe last tool call failed. Read its error, correct the input, and emit a new "
+                          "call; do not reply DONE. If an `edit` failed with \"Could not find oldString\", "
+                          "the file changed since your snapshot: call `read` on it again before editing.\n";
+                    }
                     continue;
                 }
                 // The marker without any tool call is not a finished result;

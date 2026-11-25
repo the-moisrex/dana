@@ -16,6 +16,7 @@
 #include "../runtime/sink.hpp"
 #include "../runtime/stage.hpp"
 #include "../runtime/terminal.hpp"
+#include "../runtime/tool_call.hpp"
 #include "../runtime/tool_exec.hpp"
 
 #include <algorithm>
@@ -25,6 +26,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <filesystem>
+#include <functional>
 #include <optional>
 #include <ostream>
 #include <span>
@@ -33,6 +35,7 @@
 #include <sys/ioctl.h>
 #include <system_error>
 #include <unistd.h>
+#include <unordered_set>
 #include <vector>
 
 namespace {
@@ -506,6 +509,7 @@ namespace {
         bool                          any          = false;
         std::string                   tools;
         std::string                   provider;
+        std::string                   fallback_model;
         std::vector<std::string_view> forward;
     };
 
@@ -586,6 +590,10 @@ namespace {
             }
             if (auto value = match_value("--provider")) {
                 cli.provider = std::string(*value);
+                continue;
+            }
+            if (auto value = match_value("--fallback-model")) {
+                cli.fallback_model = std::string(*value);
                 continue;
             }
             if (arg == "--read-only") {
@@ -756,26 +764,28 @@ namespace {
         }
         auto session = ai::open_sink_session(std::move(setup));
 
-        int                    turn_number = 0;
+        // Web providers can route a task to their own site agent (GapGPT's
+        // `code-run`/`canvas`), which ignores the JSON tool protocol and repeats
+        // itself. A different model usually follows the protocol; fall back to
+        // one after the first site-tool turn unless the user chose a model.
+        std::string fallback_model = cli.fallback_model;
+        bool const  explicit_model = std::ranges::any_of(cli.forward, [](std::string_view arg) {
+            return arg == "-m" || arg == "--model" || arg.starts_with("--model=");
+        });
+        if (fallback_model.empty() && !explicit_model && session.canonical == "gap") {
+            fallback_model = "A-GPT-4.1";
+        }
+
+        int                    turn_number       = 0;
+        bool                   switched_model    = false;
+        bool                   send_initial_next = false;
+        bool                   saw_no_action     = false;
         ai::agent_loop_io      io;
         ai::agent_loop_options loop = cli.loop;
         loop.tool_result_prefix =
-          "The task is still in progress. Below are the results of the tool calls you\n"
-          "requested. You are the planner: the external harness runs every call for you,\n"
-          "so emit the next call as a fenced ```json block, for example\n"
-          "```json\n"
-          "{\"tool\": \"read\", \"input\": {\"file\": [\"path/to/file\"]}}\n"
-          "```\n"
-          "or\n"
-          "```json\n"
-          "{\"tool\": \"cli\", \"input\": {\"command\": [\"git\", \"status\"]}}\n"
-          "```\n"
-          "The available tools are the ones listed in the first message (by default:\n"
-          "read, grep, glob, edit, write, cli). Do not use a built-in interpreter or\n"
-          "sandbox and do not answer with a report. Never claim that you cannot access\n"
-          "the workspace or the files: the harness has them and runs every call. If a\n"
-          "result was truncated, call `read` again with an offset. When the task is\n"
-          "complete, answer with no tool block.\n\n";
+          "The tool results are below. Continue the task: emit the next fenced ```json\n"
+          "call, or answer without a tool block when done. Do not repeat a call whose\n"
+          "result is already shown, and do not use a built-in sandbox.\n\n";
         // Web models sometimes fall back to their site's own agent and refuse
         // ("I couldn't inspect or edit f.cpp in the workspace") when the task
         // arrives with embedded file content. One corrective turn usually gets
@@ -797,24 +807,67 @@ namespace {
           "actually run. If the task is already complete, reply with exactly: DONE\n";
         // A planner that answers with a patch instead of acting has not done
         // the task. Only worth nudging when this session can actually edit.
-        loop.nudge_on_code_answer = loop_can_edit(cli);
-        loop.completion_marker    = "DONE";
-        io.turn                   = [&](std::string_view prompt) {
+        loop.nudge_on_no_action = loop_can_edit(cli);
+        loop.completion_marker  = "DONE";
+        io.turn                 = [&](std::string_view prompt) {
             ++turn_number;
             write_stderr(
               v,
               r,
               "ai.loop: turn " + std::to_string(turn_number) + "/" + std::to_string(cli.loop.max_turns) + "\n");
-            auto turn_options = ai::make_turn_options(session.options, *session.chat);
-            auto out          = [&v, &r](std::string_view chunk) {
+            std::string_view const actual = send_initial_next ? std::string_view{initial} : prompt;
+            send_initial_next             = false;
+            auto turn_options             = ai::make_turn_options(session.options, *session.chat);
+            auto out                      = [&v, &r](std::string_view chunk) {
                 write_stdout(v, r, chunk);
             };
             auto err = [&v, &r](std::string_view chunk) {
                 write_stderr(v, r, chunk);
             };
-            return ai::run_turn(*session.chat, *session.instance, prompt, turn_options, out, err);
+            auto result = ai::run_turn(*session.chat, *session.instance, actual, turn_options, out, err);
+
+            bool const no_action = !result.used_site_tools && tool_call::extract(result.answer).empty();
+            if (!switched_model && !fallback_model.empty() &&
+                (result.used_site_tools || (saw_no_action && no_action && loop.nudge_on_no_action)))
+            {
+                switched_model = true;
+                std::vector<std::string> args;
+                for (std::size_t j = 0; j < cli.forward.size(); ++j) {
+                    std::string_view const arg = cli.forward[j];
+                    if (arg == "-m" || arg == "--model") {
+                        ++j;
+                        continue;
+                    }
+                    if (arg.starts_with("--model=")) {
+                        continue;
+                    }
+                    args.emplace_back(arg);
+                }
+                args.emplace_back("-m");
+                args.push_back(fallback_model);
+                text::string_views const fallback_args(args);
+                try {
+                    auto fallback     = ai::open_sink_session(ai::prepare_sink(provider, fallback_args));
+                    session           = std::move(fallback);
+                    send_initial_next = true;
+                    write_stderr(v,
+                                 r,
+                                 "ai.loop: the model did not use the tools; retrying with " + fallback_model + "\n");
+                } catch (std::exception const& failure) {
+                    write_stderr(v, r, "ai.loop: could not switch to " + fallback_model + ": " + failure.what() + "\n");
+                }
+            }
+            saw_no_action = no_action;
+            return result;
         };
-        io.run_tools = [&v, &cli, &aliases](std::string_view answer) -> std::optional<std::string> {
+        std::unordered_set<std::size_t> seen_results;
+        int                             repeated_results = 0;
+        bool                            last_edit_failed = false;
+        io.tools_failed                                  = [&last_edit_failed] {
+            return last_edit_failed;
+        };
+        io.run_tools = [&v, &cli, &aliases, &seen_results, &repeated_results, &last_edit_failed](
+                         std::string_view answer) -> std::optional<std::string> {
             tool_exec::options exec_options;
             exec_options.yes       = cli.yes;
             exec_options.max_calls = cli.loop.max_calls_per_turn;
@@ -822,7 +875,25 @@ namespace {
             if (outcome.calls.empty()) {
                 return std::nullopt;
             }
-            return aliases.hide(outcome.blocks);
+            // A failed edit/write/read means the task is not done, so a later
+            // "DONE" must not end the loop; let the agent loop nudge instead.
+            last_edit_failed    = std::ranges::any_of(outcome.failed_calls, [](std::string const& name) {
+                return name == "edit" || name == "write" || name == "read";
+            });
+            std::string blocks  = aliases.hide(outcome.blocks);
+            // A web model can get stuck re-emitting a call whose result it has
+            // already seen. Feeding the same block back repeats our own text
+            // and burns turns, so skip it and tell the model plainly to move on.
+            auto const inserted = seen_results.insert(std::hash<std::string>{}(blocks));
+            if (!inserted.second) {
+                ++repeated_results;
+                std::string note  = "### Tool: repeat\nStatus: skipped (";
+                note             += std::to_string(repeated_results);
+                note             += ")\nThis exact call already ran and its result is above. Do not call it again. ";
+                note             += "Make a different call or answer without a tool block.\n";
+                return aliases.hide(note);
+            }
+            return blocks;
         };
         io.status = [&v, &r](std::string_view text) {
             write_stderr(v, r, text);
@@ -889,6 +960,9 @@ namespace {
             << "  --yes                    Turn policy asks into allows (never a deny)\n"
             << "  --print-prompt           Print the assembled first message and exit\n"
             << "  --provider NAME          Use this provider\n"
+            << "  --fallback-model NAME    Switch to NAME if the model uses its site tools\n"
+            << "                           or refuses to act (GapGPT defaults to A-GPT-4.1\n"
+            << "                           when no -m is given)\n"
             << "  --any, --global          Infer the provider from the globally newest chat\n"
             << "  --here                   Infer it from this terminal (the default)\n"
             << "\n"

@@ -220,6 +220,10 @@ namespace dana {
         return {std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
     }
 
+    void append_numbered_line(std::string& output, std::size_t line_number, std::string_view line) {
+        output += std::format("{}: {}\n", line_number, line);
+    }
+
     std::string number_lines(std::string_view text, bool numbered) {
         if (!numbered || text.empty()) {
             return std::string(text);

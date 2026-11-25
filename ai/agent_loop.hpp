@@ -43,10 +43,11 @@ namespace dana::ai {
         // usually gets them to emit the tool call.
         int         refusal_retries = 0;
         std::string refusal_nudge;
-        // Also nudge when the answer contains a fenced code block. A planner
-        // that replies with a patch or a report instead of a tool call has not
-        // done the task; this catches refusals in any language.
-        bool nudge_on_code_answer = false;
+        // Also nudge when the answer contains a fenced code block, or when no
+        // tool has run at all yet. A planner that replies with a patch, a
+        // report, or "I can't access the files" (in any language) has not done
+        // the task; this catches refusals the keyword check misses.
+        bool nudge_on_no_action = false;
         // If a nudged turn answers with exactly this word, the previous answer
         // was already a finished result: keep it and stop instead of replacing
         // it with the marker.
@@ -58,6 +59,10 @@ namespace dana::ai {
         std::function<turn_result(std::string_view)> turn;
         // Execute the calls in an answer. nullopt means "no calls": the loop is done.
         std::function<std::optional<std::string>(std::string_view)> run_tools;
+        // True when the most recent `run_tools` batch had a failed call. A
+        // completion marker after a failed edit is premature, so the loop
+        // nudges instead of stopping.
+        std::function<bool()> tools_failed;
         // Progress lines for stderr (never part of the chain context).
         std::function<void(std::string_view)> status;
     };

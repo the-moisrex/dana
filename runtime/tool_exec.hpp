@@ -33,6 +33,9 @@ namespace dana::tool_exec {
     struct outcome {
         // The calls found in the input text (empty when there were none).
         std::vector<tool_call::call> calls;
+        // Names of the calls that failed, in call order. A loop uses this to
+        // tell a real completion from a premature "done" after a bad edit.
+        std::vector<std::string> failed_calls;
         // The `### Tool: <name>` blocks, in call order. Empty when there were no
         // calls; a call that produced no output still contributes its block.
         std::string blocks;

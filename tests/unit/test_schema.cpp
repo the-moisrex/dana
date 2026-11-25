@@ -131,7 +131,7 @@ Options:
 
         auto complete = [&](std::string_view prefix, std::vector<std::string_view> const& prior) {
             std::ostringstream       out;
-            completion_request const request{.prefix = prefix, .prior_args = prior};
+            completion_request const request{.prefix = prefix, .prior_args = prior, .git_root = {}};
             schema::complete(tool, request, out);
             return out.str();
         };

@@ -7,9 +7,12 @@
 #include "../runtime/file_scope.hpp"
 #include "../runtime/prompt_registry.hpp"
 
+#include <algorithm>
 #include <array>
 #include <filesystem>
+#include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace dana {
@@ -31,13 +34,77 @@ namespace dana {
             }
         }
 
+        // `+config`: also embed the `.clang-tidy` files that apply to the tree.
+        bool has_config_flag(text::string_views args) {
+            return std::ranges::find(args, std::string_view{"+config"}) != args.end();
+        }
+
+        std::vector<std::string_view> without_config_flag(text::string_views args) {
+            std::vector<std::string_view> out;
+            out.reserve(args.size());
+            for (std::string_view const arg : args) {
+                if (arg != "+config") {
+                    out.push_back(arg);
+                }
+            }
+            return out;
+        }
+
+        // Every `.clang-tidy` file in the repository (tracked or untracked), sorted.
+        // Without a repository the current tree is walked instead, skipping hidden
+        // directories the way the file prompts do.
+        std::vector<std::filesystem::path> find_clang_tidy_configs(std::string const& git_root) {
+            namespace fs = std::filesystem;
+
+            std::error_code error;
+            auto const      base = git_root.empty() ? fs::current_path(error) : fs::path(git_root);
+            if (base.empty()) {
+                return {};
+            }
+
+            std::vector<std::string> files;
+            try {
+                files = git::all_files(base.string());
+            } catch (...) {
+                files.clear();
+            }
+
+            std::vector<fs::path> configs;
+            if (!files.empty()) {
+                for (auto const& relative : files) {
+                    fs::path const path{relative};
+                    if (path.filename() == ".clang-tidy") {
+                        configs.push_back(base / path);
+                    }
+                }
+            } else {
+                fs::recursive_directory_iterator iterator(base, fs::directory_options::skip_permission_denied, error);
+                fs::recursive_directory_iterator const end;
+                while (!error && iterator != end) {
+                    auto const& path = iterator->path();
+                    if (iterator->is_directory(error) && path.filename().string().starts_with('.')) {
+                        iterator.disable_recursion_pending();
+                    } else if (!error && iterator->is_regular_file(error) && path.filename() == ".clang-tidy") {
+                        configs.push_back(path);
+                    }
+                    iterator.increment(error);
+                }
+            }
+
+            std::ranges::sort(configs);
+            configs.erase(std::ranges::unique(configs).begin(), configs.end());
+            return configs;
+        }
+
     } // namespace
 
     static void execute_clang_tidy(view const& v, result& r) {
         namespace fs    = std::filesystem;
         auto head_lines = head_lines_or_throw(v);
 
-        auto file_args = positional_args(v);
+        bool const with_config = has_config_flag(v.args);
+        auto const args        = without_config_flag(v.args);
+        auto const file_args   = positional_args(args);
 
         std::string git_root = git_toplevel();
 
@@ -49,7 +116,7 @@ namespace dana {
         std::vector<std::string> run_args;     // ARGS
         std::vector<std::string> display_args; // $*
         if (!file_args.empty()) {
-            for (std::string_view arg : v.args) {
+            for (std::string_view arg : args) {
                 display_args.emplace_back(arg);
             }
             run_args = file_args;
@@ -160,6 +227,18 @@ namespace dana {
         auto result = dana::process::run_command(storage);
 
         std::string output;
+        if (with_config) {
+            auto const configs = find_clang_tidy_configs(git_root);
+            if (!configs.empty()) {
+                output += "The following `.clang-tidy` configuration files apply to this tree:\n\n";
+                std::optional<std::filesystem::path> const root =
+                  git_root.empty() ? std::nullopt : std::optional<std::filesystem::path>(git_root);
+                for (auto const& config : configs) {
+                    auto const label  = dana::fs::relative_path(config, root).generic_string();
+                    output           += embed_file(config, label);
+                }
+            }
+        }
         output                 += '\n';
         output                 += "Review the following `" + command_str +
                                   "` output and fix the issues it reports. Warnings in included headers are "
@@ -181,14 +260,15 @@ namespace dana {
     }
 
     static void render_help_clang_tidy(std::ostream& os) {
-        os << R"EOF(Usage: prompt clang-tidy [--head N] [FILE...]
-       some-command | prompt clang-tidy [--head N] [FILE...]
+        os << R"EOF(Usage: prompt clang-tidy [--head N] [+config] [FILE...]
+       some-command | prompt clang-tidy [--head N] [+config] [FILE...]
 
 Runs `clang-tidy` on the provided files and outputs a prompt to fix the identified issues.
 If no files are provided, the files already mentioned earlier in the chain (for example by
 `.read`) are used; otherwise `fzf -m` is used to choose them interactively.
 
 Options:
+  +config    Also embed the `.clang-tidy` configuration files in the context
   --head N   Keep only the first N lines of the output
   -h, --help Show this help
 )EOF";

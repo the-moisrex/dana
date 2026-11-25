@@ -124,7 +124,7 @@ namespace dana {
       std::string_view             prefix,
       std::filesystem::path const& git_root,
       text::string_views           prior_args) {
-        if (prefix.empty() || prefix.front() == '-') {
+        if (prefix.empty() || prefix.front() == '-' || prefix.front() == '+') {
             return;
         }
 
@@ -318,6 +318,10 @@ namespace dana {
       text::string_views           prior_args,
       std::ostream&                out,
       std::filesystem::path const& git_root) {
+        // A previous token that is a flag means this is its value (a number, a
+        // format, ...), not another flag or a file.
+        bool const after_flag = !prior_args.empty() && prior_args.back().starts_with('-');
+
         // Flags first (they are what an empty prefix mostly wants), then whatever
         // the prompt knows about its own operands.
         std::string help;
@@ -325,14 +329,14 @@ namespace dana {
             std::ostringstream rendered;
             desc.render_help_fn(rendered);
             help = rendered.str();
-            completion::write_help_flags(out, prefix, help);
+            if (!after_flag) {
+                completion::write_help_flags(out, prefix, help);
+            }
         }
         if (desc.complete_fn != nullptr) {
-            desc.complete_fn(completion_request{.prefix = prefix, .prior_args = prior_args}, out);
+            desc.complete_fn(completion_request{.prefix = prefix, .prior_args = prior_args, .git_root = git_root}, out);
         }
-        // A file prompt's positional argument is a path. The previous token being a
-        // flag means this is its value (a number, a format, ...), not a file.
-        bool const after_flag = !prior_args.empty() && prior_args.back().starts_with('-');
+        // A file prompt's positional argument is a path.
         if ((desc.emits_files || usage_mentions_file(help)) && !after_flag) {
             write_file_candidates(out, prefix, git_root, prior_args);
         }

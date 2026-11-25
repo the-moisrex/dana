@@ -45,6 +45,10 @@ namespace dana {
 
     std::string read_file(std::filesystem::path const& path);
 
+    // Append `line_number: line\n` to `output`. Shared by `.read` and `.spp` so
+    // both use exactly the same numbered-line shape.
+    void append_numbered_line(std::string& output, std::size_t line_number, std::string_view line);
+
     // Prefix every line of `text` with a right-aligned line number and " | " when
     // `numbered`; returns `text` unchanged otherwise. The numbers are relative to
     // `text` (so a --head-trimmed file numbers 1..N) and the input's trailing

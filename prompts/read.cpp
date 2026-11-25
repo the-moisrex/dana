@@ -98,10 +98,6 @@ namespace dana {
             output += std::format("[Output truncated. Continue reading with offset: {}]\n", next_offset);
         }
 
-        void append_numbered_line(std::string& output, std::size_t line_number, std::string_view line) {
-            output += std::format("{}: {}\n", line_number, line);
-        }
-
     } // namespace
 
     static void execute_read(view const& v, result& r) {

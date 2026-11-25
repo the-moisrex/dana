@@ -87,6 +87,7 @@ namespace dana::tool_exec {
             } catch (prompt_error const& err) {
                 std::string const body  = body_of(err);
                 blocks                 += tool_call::format_result(call, body, err.exit_code(), false);
+                out.failed_calls.push_back(call.name);
                 record(report, call, body, err.exit_code(), false);
                 if (opts.abort_on_error) {
                     throw prompt_error{err.exit_code(), err.what(), blocks};
@@ -110,6 +111,7 @@ namespace dana::tool_exec {
             } catch (prompt_error const& err) {
                 std::string const body  = body_of(err);
                 blocks                 += tool_call::format_result(call, body, err.exit_code(), false);
+                out.failed_calls.push_back(call.name);
                 record(report, call, body, err.exit_code(), false);
                 if (opts.abort_on_error) {
                     throw prompt_error{err.exit_code(), err.what(), blocks};
